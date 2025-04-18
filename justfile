@@ -1,3 +1,8 @@
+# Default recipe (shows help)
+# This must be the first recipe in the file
+default:
+  just --list
+
 # Run all tests
 test:
   cargo test -- --nocapture
@@ -21,9 +26,18 @@ build:
 release:
   cargo build --release
 
-# Clean build artifacts
+# Run cargo clean
 clean:
   cargo clean
+
+# Clean all downloaded artifacts
+clean_dl:
+  rm -r *.tar.gz
+
+# Clean build artifacts
+clean_all:
+  just clean
+  just clean_dl
 
 # Generate documentation
 docs:
@@ -40,7 +54,3 @@ deps:
 # Update dependencies
 update-deps:
   cargo update
-
-# Default recipe (shows help)
-default:
-  @just --list

@@ -34,7 +34,9 @@
           "kind": "bin"
         }
       },
-      "args": [],
+      "args": [
+        "pirafrank/rust_exif_renamer"
+      ],
       "cwd": "${workspaceFolder}"
     },
     {
