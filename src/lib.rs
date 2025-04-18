@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::env::consts::{ARCH, FAMILY, OS};
 
-const SUPPORTED_FORMATS: [&str; 2] = ["tar.gz", "zip"];
+const SUPPORTED_FORMATS: [&str; 4] = ["tar.gz", "tar.xz", "tar.bz2", "zip"];
 
 lazy_static! {
     static ref OPERATING_SYSTEM: HashMap<&'static str, Vec<&'static str>> = {

@@ -1,10 +1,13 @@
 use reqwest;
 use serde::Deserialize;
 
+mod archives;
+mod filesys;
+
 #[derive(Deserialize, Debug)]
 struct ReleaseAsset {
     name: String,
-    //content_type: String,
+    content_type: String,
     //size: u64,
     browser_download_url: String,
     // Add other fields if needed
@@ -26,13 +29,13 @@ fn main() {
     }
 
     println!("Running on Linux");
-    let config_dir = get_config_dir();
+    let config_dir = filesys::get_config_dir();
     println!(
         "Config directory: {}",
         config_dir.ok_or(libc::ENOENT).unwrap()
     );
-    let data_dir = get_data_dir();
-    println!("Data directory: {}", data_dir.ok_or(libc::ENOENT).unwrap());
+    let data_dir: String = filesys::get_data_dir().ok_or(libc::ENOENT).unwrap();
+    println!("Data directory: {}", data_dir);
 
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
@@ -47,7 +50,7 @@ fn main() {
         .collect();
 
     if binaries.is_empty() {
-        println!("No compatible binaries found.");
+        println!("No compatible pre-built binaries found.");
         std::process::exit(100);
     }
     println!("Compatible binaries found:");
@@ -61,16 +64,47 @@ fn main() {
     println!("Downloading: {}", binary_url);
     let response = reqwest::blocking::get(binary_url).unwrap();
     if response.status().is_success() {
-        let mut file = std::fs::File::create(&binary.name).unwrap();
+        // Convert repo path to filesystem-friendly format by replacing '/' with OS separator
+        let repo_path = repo.replace('/', &std::path::MAIN_SEPARATOR.to_string());
+        // Create path for the download: data_dir/repo_path
+        let download_dir = std::path::Path::new(&data_dir).join(&repo_path);
+        // Ensure the directory exists
+        std::fs::create_dir_all(&download_dir).unwrap();
+
+        // Create the file path and open it for writing
+        let archive_path = download_dir.join(&binary.name);
+        let mut file = std::fs::File::create(&archive_path).unwrap();
+
+        println!("Saving to: {}", archive_path.display());
         std::io::copy(&mut response.bytes().unwrap().as_ref(), &mut file).unwrap();
-        println!("Downloaded: {}", binary.name);
+        println!("Download completed.");
+
+        archives::extract_to_dir_depending_on_content_type(
+            &binary.content_type,
+            &archive_path,
+            &data_dir,
+        )
+        .expect("Failed to extract archive");
+        println!("Extracted to: {}", data_dir);
+
+        // println!("Making {} executable", file_path.display());
+        // #[cfg(target_os = "linux")]
+        // {
+        //     use std::os::unix::fs::PermissionsExt;
+        //     let mut perms = file.metadata().unwrap().permissions();
+        //     perms.set_mode(0o755);
+        //     std::fs::set_permissions(&file_path, perms).unwrap();
+        // }
     } else {
         println!("Failed to download: {}", binary.name);
     }
 
-    println!("All downloads completed.");
     println!("Done.");
     std::process::exit(0);
+}
+
+fn is_linux() -> bool {
+    cfg!(target_os = "linux")
 }
 
 // TODO: make async, support multithreaded execution
@@ -115,38 +149,6 @@ fn get_list_of_chances(repo: &String) -> Vec<ReleaseAsset> {
             eprintln!("Failed to send request: {}", e);
             std::process::exit(99);
         }
-    }
-}
-
-fn is_linux() -> bool {
-    cfg!(target_os = "linux")
-}
-
-// ~/.config/APPNAME/config.json
-fn get_config_dir() -> Option<String> {
-    if let Some(app_name) = option_env!("CARGO_PKG_NAME") {
-        let home_dir = dirs::home_dir()?;
-        let config_dir = home_dir.join(".config").join(app_name);
-        if !config_dir.exists() {
-            std::fs::create_dir_all(&config_dir).ok()?;
-        }
-        Some(config_dir.display().to_string())
-    } else {
-        None
-    }
-}
-
-// ~/.local/share/APPNAME
-fn get_data_dir() -> Option<String> {
-    if let Some(app_name) = option_env!("CARGO_PKG_NAME") {
-        let home_dir = dirs::home_dir()?;
-        let data_dir = home_dir.join(".local").join("share").join(app_name);
-        if !data_dir.exists() {
-            std::fs::create_dir_all(&data_dir).ok()?;
-        }
-        Some(data_dir.display().to_string())
-    } else {
-        None
     }
 }
 

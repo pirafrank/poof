@@ -45,6 +45,9 @@ target/
 
 # archives
 *.gz
+*.bz2
+*.xz
 *.gzip
 *.tar
 *.zip
+*.7z

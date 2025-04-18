@@ -32,7 +32,11 @@ clean:
 
 # Clean all downloaded artifacts
 clean_dl:
-  rm -r *.tar.gz
+  rm -f *.tar.gz
+  rm -f *.tar.bz2
+  rm -f *.tar.xz
+  rm -f *.zip
+  rm -f *.tar
 
 # Clean build artifacts
 clean_all:
