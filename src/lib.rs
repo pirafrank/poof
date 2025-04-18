@@ -65,6 +65,19 @@ pub fn detect_fpu() -> &'static str {
     }
 }
 
+fn is_exec_name_only(arch: &&str, s: &String) -> bool {
+    // get index of arch in string
+    let arch_index = s.find(arch);
+    if let Some(index) = arch_index {
+        // check if the string after the arch is empty
+        let after_arch = &s[index + arch.len()..];
+        if after_arch.is_empty() {
+            return true;
+        }
+    }
+    false
+}
+
 pub fn are_env_compatible(input: Vec<String>) -> String {
     // Iterate through inputs and find a match for current OS and architecture
     for item_str in input {
@@ -82,7 +95,7 @@ pub fn is_env_compatible(input: &String) -> bool {
     // OPERATING_SYSTEM and CPU_ARCH are lowercase in the code above.
     let item = input.to_lowercase();
 
-    // TODO: atm avoiding musl compiled binaries on linux. support to come in stable
+    // TODO: avoiding musl binaries on linux for now. support to come in stable
     if item.contains("musl") && OS == "linux" {
         return false;
     }
@@ -97,11 +110,19 @@ pub fn is_env_compatible(input: &String) -> bool {
 
     // CPU_ARCH
     // Check if this architecture matches our current architecture
-    if !CPU_ARCH.get(ARCH).map_or(false, |aliases| {
-        aliases.iter().any(|alias| item.contains(alias))
-    }) {
-        return false;
-    }
+    let matching_arch_alias = match CPU_ARCH.get(ARCH) {
+        Some(aliases) => {
+            let found = aliases.iter().find(|&&alias| item.contains(alias));
+            if found.is_none() {
+                return false;
+            }
+            found.unwrap()
+        }
+        None => return false,
+    };
+    if is_exec_name_only(matching_arch_alias, &item) {
+        return true;
+    } // else continue execution
 
     // SUPPORTED_FORMATS
     // Check if the file extension is supported

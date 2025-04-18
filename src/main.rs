@@ -1,5 +1,3 @@
-use core::panic;
-
 use reqwest;
 use serde::Deserialize;
 
@@ -57,7 +55,7 @@ fn main() {
         println!("{}", binary.name);
     }
 
-    println!("Picking first...\nDownloading {}...", binaries[0].name);
+    println!("Downloading {}...", binaries[0].name);
     let binary = &binaries[0];
     let binary_url = &binary.browser_download_url;
     println!("Downloading: {}", binary_url);
@@ -75,7 +73,7 @@ fn main() {
     std::process::exit(0);
 }
 
-// TODO: this is a wip
+// TODO: make async, support multithreaded execution
 fn get_list_of_chances(repo: &String) -> Vec<ReleaseAsset> {
     let release_url = get_release_url(&repo, None);
     println!("Release URL: {}", release_url);
@@ -97,27 +95,25 @@ fn get_list_of_chances(repo: &String) -> Vec<ReleaseAsset> {
                         println!("Latest release tag: {}", release.tag_name);
                         println!("Latest release name: {}", release.name);
                         println!("Published at: {}", release.published_at);
-                        println!("Assets:");
+                        println!("Available assets:");
                         for asset in &release.assets {
                             println!("{}", asset.name);
                         }
                         return release.assets;
                     }
                     Err(e) => {
-                        panic!("Failed to parse JSON response: {}", e);
+                        eprintln!("Failed to parse JSON response: {}", e);
+                        std::process::exit(101);
                     }
                 }
             } else {
                 eprintln!("Request failed with status: {}", response.status());
-                // Optionally print the response body for non-JSON error messages
-                match response.text() {
-                    Ok(text) => panic!("Error response body: {}", text),
-                    Err(_) => panic!("Could not read error response body as text."),
-                }
+                std::process::exit(102);
             }
         }
         Err(e) => {
-            panic!("Failed to send request: {}", e);
+            eprintln!("Failed to send request: {}", e);
+            std::process::exit(99);
         }
     }
 }
