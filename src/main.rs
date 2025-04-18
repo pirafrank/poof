@@ -6,8 +6,8 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug)]
 struct ReleaseAsset {
     name: String,
-    content_type: String,
-    size: u64,
+    //content_type: String,
+    //size: u64,
     browser_download_url: String,
     // Add other fields if needed
 }
@@ -36,13 +36,48 @@ fn main() {
     let data_dir = get_data_dir();
     println!("Data directory: {}", data_dir.ok_or(libc::ENOENT).unwrap());
 
-    let binaries: Vec<ReleaseAsset> = get_list_of_chances();
-    //let
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: {} <username>/<repo>", args[0]);
+        std::process::exit(1);
+    }
+    let repo = &args[1];
+
+    let assets: Vec<ReleaseAsset> = get_list_of_chances(repo);
+    let binaries: Vec<ReleaseAsset> = assets.into_iter()
+        .filter(|asset| foop::is_env_compatible(&asset.name))
+        .collect();
+
+    if binaries.is_empty() {
+        println!("No compatible binaries found.");
+        std::process::exit(100);
+    }
+    println!("Compatible binaries found:");
+    for binary in &binaries {
+        println!("{}", binary.name);
+    }
+
+    println!("Picking first...\nDownloading {}...", binaries[0].name);
+    let binary = &binaries[0];
+    let binary_url = &binary.browser_download_url;
+    println!("Downloading: {}", binary_url);
+    let response = reqwest::blocking::get(binary_url).unwrap();
+    if response.status().is_success() {
+        let mut file = std::fs::File::create(&binary.name).unwrap();
+        std::io::copy(&mut response.bytes().unwrap().as_ref(), &mut file).unwrap();
+        println!("Downloaded: {}", binary.name);
+    } else {
+        println!("Failed to download: {}", binary.name);
+    }
+
+    println!("All downloads completed.");
+    println!("Done.");
+    std::process::exit(0);
 }
 
 // TODO: this is a wip
-fn get_list_of_chances() -> Vec<ReleaseAsset> {
-    let release_url = get_release_url("pirafrank", "rust_exif_renamer", None);
+fn get_list_of_chances(repo: &String) -> Vec<ReleaseAsset> {
+    let release_url = get_release_url(&repo, None);
     println!("Release URL: {}", release_url);
     let client = reqwest::blocking::Client::new();
 
@@ -119,15 +154,15 @@ fn get_data_dir() -> Option<String> {
     }
 }
 
-fn get_release_url(username: &str, repo: &str, tag: Option<&str>) -> String {
+fn get_release_url(repo: &String, tag: Option<&String>) -> String {
     match tag {
         Some(tag) => format!(
-            "https://api.github.com/repos/{}/{}/releases/tags/{}",
-            username, repo, tag
+            "https://api.github.com/repos/{}/releases/tags/{}",
+            repo, tag
         ),
         None => format!(
-            "https://api.github.com/repos/{}/{}/releases/latest",
-            username, repo
+            "https://api.github.com/repos/{}/releases/latest",
+            repo
         ),
     }
 }

@@ -42,3 +42,9 @@ target/
 *.code-workspace
 # Local History for Visual Studio Code
 .history/
+
+# archives
+*.gz
+*.gzip
+*.tar
+*.zip
