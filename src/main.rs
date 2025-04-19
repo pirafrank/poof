@@ -16,7 +16,6 @@ struct ReleaseAsset {
 #[derive(Deserialize, Debug)]
 struct Release {
     tag_name: String,
-    name: String,
     published_at: String, // Consider using chrono::DateTime<chrono::Utc> for proper date handling
     assets: Vec<ReleaseAsset>,
     // Add other fields if needed
@@ -127,7 +126,6 @@ fn get_list_of_chances(repo: &String) -> Vec<ReleaseAsset> {
                 match response.json::<Release>() {
                     Ok(release) => {
                         println!("Latest release tag: {}", release.tag_name);
-                        println!("Latest release name: {}", release.name);
                         println!("Published at: {}", release.published_at);
                         println!("Available assets:");
                         for asset in &release.assets {
