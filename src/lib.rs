@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::env::consts::{ARCH, FAMILY, OS};
 
-const SUPPORTED_FORMATS: [&str; 4] = ["tar.gz", "tar.xz", "tar.bz2", "zip"];
+pub const SUPPORTED_EXTENSIONS: [&str; 6] = [".tar.gz", ".tgz.", ".tar.xz", ".tar.bz2", "tbz", ".zip"];
 
 lazy_static! {
     static ref OPERATING_SYSTEM: HashMap<&'static str, Vec<&'static str>> = {
@@ -95,7 +95,7 @@ pub fn is_env_compatible(input: &String) -> bool {
     // OPERATING_SYSTEM and CPU_ARCH are lowercase in the code above.
     let item = input.to_lowercase();
 
-    // TODO: avoiding musl binaries on linux for now. support to come in stable
+    // TODO: Avoiding musl binaries on linux for now. Support to come later on.
     if item.contains("musl") && OS == "linux" {
         return false;
     }
@@ -124,9 +124,9 @@ pub fn is_env_compatible(input: &String) -> bool {
         return true;
     } // else continue execution
 
-    // SUPPORTED_FORMATS
+    // SUPPORTED_EXTENSIONS
     // Check if the file extension is supported
-    if !SUPPORTED_FORMATS
+    if !SUPPORTED_EXTENSIONS
         .iter()
         .any(|&format| item.ends_with(format))
     {

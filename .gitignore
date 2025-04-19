@@ -51,3 +51,6 @@ target/
 *.tar
 *.zip
 *.7z
+
+# testing data
+data/*

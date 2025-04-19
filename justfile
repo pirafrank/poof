@@ -1,5 +1,9 @@
 # Default recipe (shows help)
 # This must be the first recipe in the file
+
+# Set default shell based on OS
+set windows-powershell
+
 default:
   just --list
 
