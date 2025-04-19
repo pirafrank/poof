@@ -13,7 +13,7 @@
           "test",
           "--no-run",
           "--lib",
-          "--package=foop"
+          "--package=poof"
         ],
       },
       "args": [],
@@ -22,15 +22,15 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'foop'",
+      "name": "Debug executable 'poof'",
       "cargo": {
         "args": [
           "build",
-          "--bin=foop",
-          "--package=foop"
+          "--bin=poof",
+          "--package=poof"
         ],
         "filter": {
-          "name": "foop",
+          "name": "poof",
           "kind": "bin"
         }
       },
@@ -42,16 +42,16 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'foop'",
+      "name": "Debug unit tests in executable 'poof'",
       "cargo": {
         "args": [
           "test",
           "--no-run",
-          "--bin=foop",
-          "--package=foop"
+          "--bin=poof",
+          "--package=poof"
         ],
         "filter": {
-          "name": "foop",
+          "name": "poof",
           "kind": "bin"
         }
       },

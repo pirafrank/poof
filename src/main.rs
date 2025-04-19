@@ -46,7 +46,7 @@ fn main() {
 
     let assets: Vec<ReleaseAsset> = get_list_of_chances(repo);
     let binaries: Vec<ReleaseAsset> = assets.into_iter()
-        .filter(|asset| foop::is_env_compatible(&asset.name))
+        .filter(|asset| poof::is_env_compatible(&asset.name))
         .collect();
 
     if binaries.is_empty() {
@@ -77,7 +77,7 @@ fn main() {
 
         println!("Saving to: {}", archive_path.display());
         std::io::copy(&mut response.bytes().unwrap().as_ref(), &mut file).unwrap();
-        println!("Download completed.");
+        println!("Download complete.");
 
         archives::extract_to_dir_depending_on_content_type(
             &binary.content_type,
@@ -116,7 +116,7 @@ fn get_list_of_chances(repo: &String) -> Vec<ReleaseAsset> {
     // Make the request
     match client
         .get(&release_url)
-        .header("User-Agent", "rust_exif_renamer") // Keep User-Agent header for GitHub API
+        .header("User-Agent", "pirafrank/poof") // Keep User-Agent header for GitHub API
         .header("Accept", "application/vnd.github.v3+json")
         .send()
     {
