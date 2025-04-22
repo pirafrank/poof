@@ -4,6 +4,7 @@
 # Set default shell based on OS
 set windows-powershell
 
+# List available recipes
 default:
   just --list
 
@@ -14,6 +15,10 @@ test:
 # Run the formatter
 fmt:
   cargo fmt
+
+# Run the formatter checks
+fmt-check:
+  cargo fmt -- --check
 
 # Run the linter
 lint:
@@ -30,22 +35,23 @@ build:
 release:
   cargo build --release
 
-# Run cargo clean
+# Run cargo artifacts
 clean:
   cargo clean
 
 # Clean all downloaded artifacts
-clean_dl:
+clean-dl:
   rm -f *.tar.gz
   rm -f *.tar.bz2
   rm -f *.tar.xz
   rm -f *.zip
   rm -f *.tar
+  rm -f *.tgz
+  rm -f *.tbz2
+  rm -f *.tbz
 
-# Clean build artifacts
-clean_all:
-  just clean
-  just clean_dl
+# Clean all artifacts
+clean-all: clean clean-dl
 
 # Generate documentation
 docs:
@@ -62,3 +68,20 @@ deps:
 # Update dependencies
 update-deps:
   cargo update
+
+# Check for outdated dependencies
+outdated-deps:
+  cargo outdated --root-deps-only
+
+# Check for security vulnerabilities
+audit:
+  cargo audit
+
+# Check for license issues
+licenses:
+  cargo deny check licenses
+
+# Run CI checks
+ci: clean fmt-check lint
+# note: just test  # do not run tests on CI pipeline via just due freebsd and windows quirks
+
