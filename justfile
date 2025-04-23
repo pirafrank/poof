@@ -8,6 +8,10 @@ set windows-powershell
 default:
   just --list
 
+# Install git hooks
+install-hooks:
+  git config core.hooksPath hooks
+
 # Run all tests
 test:
   cargo test -- --nocapture
@@ -25,7 +29,13 @@ lint:
   cargo clippy -- -D warnings
 
 # Run the formatter and linter
-check: fmt lint
+better: fmt lint
+
+# Run pre-commit checks
+pre-commit: fmt-check lint
+
+# Run pre-push checks
+pre-push: test build
 
 # Build the project
 build:

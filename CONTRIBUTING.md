@@ -97,7 +97,7 @@ While the prerequisites above must be satisfied prior to having your pull reques
 * Follow the established coding style in the project.
 * Use meaningful variable and function names.
 * Write clear and concise comments where necessary.
-* Use `just check` to format and check for common mistakes before submitting a PR.
+* Use `just better` to format and lint code before submitting a PR. In an effort to improve the development workflow, git hooks are provided in the `hooks` dir. You may want to configure them to automatically performs some additional checks. To do so, run `just install-hooks` in the root of the repository.
 * Use `just test` to run tests and ensure your code is working as expected.
 * Avoid committing lines that are commented out or unused code.
 * Avoid committing edits that are not related to the issue being worked on and you want to submit a PR to.

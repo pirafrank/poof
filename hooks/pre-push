@@ -1,0 +1,12 @@
+#!/bin/bash
+
+echo "Running pre-push checks..."
+
+# Run just pre-push task
+if ! just pre-push; then
+    echo "❌ Pre-push check failed. Please fix the issues before pushing."
+    exit 1
+fi
+
+echo "✅ Pre-push checks passed."
+exit 0

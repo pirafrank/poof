@@ -16,6 +16,7 @@ categories = ["command-line-utilities"]
 exclude = [
     ".git",
     ".github",
+    "hooks",
     ".idea",
     ".vscode",
     ".DS_Store",
