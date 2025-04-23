@@ -85,3 +85,6 @@ licenses:
 ci: clean fmt-check lint
 # note: just test  # do not run tests on CI pipeline via just due freebsd and windows quirks
 
+# Run compliance checks
+# Run compliance checks (audit and license validation)
+compliance: audit licenses
