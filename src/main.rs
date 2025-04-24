@@ -6,30 +6,15 @@ use serde::Deserialize;
 
 mod archives;
 mod filesys;
+mod platform_info;
 
-// Version constants
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const COMMIT: &str = env!("GIT_COMMIT_HASH");
-const BUILD_DATE: &str = env!("BUILD_DATE");
+// Constants
 const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
 const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 const THIS_REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
 const GITHUB_API_URL: &str = "https://api.github.com/repos";
 const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
 const GITHUB_API_ACCEPT: &str = "application/vnd.github.v3+json";
-
-/// Returns a static string containing the version information.
-/// It uses Box::leak to convert a String into a &'static str.
-/// This is a workaround to avoid using a global static variable.
-fn long_version() -> &'static str {
-    Box::leak(
-        format!(
-            "\nVersion: {}\nCommit: {}\nBuild Date: {}",
-            VERSION, COMMIT, BUILD_DATE
-        )
-        .into_boxed_str(),
-    )
-}
 
 // Common arguments for repository operations
 #[derive(Parser, Clone)]
@@ -55,14 +40,18 @@ enum Cmd {
 
     /// Show version information
     Version,
+
+    /// Show debug information
+    #[command(hide = true)]
+    Debug,
 }
 
 #[derive(Parser)]
 #[command(
   author = AUTHOR,
-  version = long_version(),
+  version = platform_info::long_version(),
   about = DESCRIPTION,
-  long_version = long_version()
+  long_version = platform_info::long_version()
 )]
 struct Cli {
     /// Command to execute
@@ -119,7 +108,10 @@ fn main() {
             process_install(&args.repo, args.tag.as_deref());
         }
         Cmd::Version => {
-            println!("{}", long_version());
+            println!("{}", platform_info::long_version());
+        }
+        Cmd::Debug => {
+            platform_info::debug_info();
         }
     }
 }
