@@ -1,8 +1,7 @@
-use std::fs::File;
 use std::path::PathBuf;
+use std::{fs::File, path::Path};
 
 use clap::{Parser, Subcommand};
-use reqwest;
 use serde::Deserialize;
 
 mod archives;
@@ -25,7 +24,7 @@ const GITHUB_API_ACCEPT: &str = "application/vnd.github.v3+json";
 fn long_version() -> &'static str {
     Box::leak(
         format!(
-            "Version: {}\nCommit: {}\nBuild Date: {}",
+            "\nVersion: {}\nCommit: {}\nBuild Date: {}",
             VERSION, COMMIT, BUILD_DATE
         )
         .into_boxed_str(),
@@ -93,7 +92,10 @@ fn is_supported_arch() -> bool {
 fn main() {
     if !is_supported_arch() {
         println!("Sorry, {} is currenly unsupported.", std::env::consts::OS);
-        println!("Please open an issue at {}/issues, to ask for support.", THIS_REPO_URL);
+        println!(
+            "Please open an issue at {}/issues, to ask for support.",
+            THIS_REPO_URL
+        );
         std::process::exit(100);
     }
 
@@ -104,17 +106,17 @@ fn main() {
     match &cli.command {
         Cmd::Get(args) => {
             println!("Executing GET for repository: {}", &args.repo);
-            let current_dir = std::env::current_dir()
-                .expect("Failed to determine current directory");
+            let current_dir =
+                std::env::current_dir().expect("Failed to determine current directory");
             println!("Working directory: {}", current_dir.display());
 
-            let release = get_release(&args.repo, args.tag.as_ref().map(String::as_str));
+            let release = get_release(&args.repo, args.tag.as_deref());
             let binary = get_asset(&release);
             download_binary(&binary.name, &binary.browser_download_url, &current_dir);
         }
         Cmd::Install(args) => {
             println!("Executing INSTALL for repository: {}", &args.repo);
-            process_install(&args.repo, args.tag.as_ref().map(String::as_str));
+            process_install(&args.repo, args.tag.as_deref());
         }
         Cmd::Version => {
             println!("{}", long_version());
@@ -125,13 +127,13 @@ fn main() {
 fn process_install(repo: &str, tag: Option<&str>) {
     // let config_dir = filesys::get_config_dir().ok_or(libc::ENOENT).unwrap();
     // println!("Config directory: {}", config_dir);
-    let cache_dir: PathBuf  = filesys::get_cache_dir().ok_or(libc::ENOENT).unwrap();
+    let cache_dir: PathBuf = filesys::get_cache_dir().ok_or(libc::ENOENT).unwrap();
     println!("Cache directory: {}", cache_dir.display());
 
     // download binary
     let release = get_release(repo, tag);
     let binary = get_asset(&release);
-    let download_to = get_target_path(&cache_dir, &repo, &release.tag_name);
+    let download_to = get_target_path(&cache_dir, repo, &release.tag_name);
     download_binary(&binary.name, &binary.browser_download_url, &download_to);
 
     // extract binary
@@ -150,10 +152,10 @@ fn process_install(repo: &str, tag: Option<&str>) {
     std::process::exit(0);
 }
 
-fn install_binary(archive_path: &PathBuf, repo: &str, version: &str) {
+fn install_binary(archive_path: &Path, repo: &str, version: &str) {
     let data_dir: PathBuf = filesys::get_data_dir().ok_or(libc::ENOENT).unwrap();
     println!("Data directory: {}", data_dir.display());
-    let install_dir = get_target_path(&data_dir, &repo, &version);
+    let install_dir = get_target_path(&data_dir, repo, version);
     println!("Installing to: {}", install_dir.display());
     // Create the installation directory if it doesn't exist
     if !install_dir.exists() {
@@ -162,13 +164,19 @@ fn install_binary(archive_path: &PathBuf, repo: &str, version: &str) {
     let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
     println!("Bin directory: {}", bin_dir.display());
 
-    let execs_to_install: Vec<PathBuf> = filesys::find_exec_files_from_extracted_archive(archive_path);
+    let execs_to_install: Vec<PathBuf> =
+        filesys::find_exec_files_from_extracted_archive(archive_path);
     for exec in execs_to_install {
         let file_name = exec.file_name().unwrap();
         let installed_exec = install_dir.join(file_name);
         println!("Copying {} to {}", exec.display(), installed_exec.display());
         if let Err(e) = std::fs::copy(&exec, &installed_exec) {
-            println!("Error copying {} to {}: {}", exec.display(), installed_exec.display(), e);
+            println!(
+                "Error copying {} to {}: {}",
+                exec.display(),
+                installed_exec.display(),
+                e
+            );
             println!("Installation failed.");
             std::process::exit(103);
         }
@@ -183,30 +191,37 @@ fn install_binary(archive_path: &PathBuf, repo: &str, version: &str) {
             // Add executable bits to current permissions (equivalent to chmod +x)
             perms.set_mode(perms.mode() | 0o111);
             std::fs::set_permissions(&installed_exec, perms).unwrap();
-            println!("Set executable permissions for {}", installed_exec.display());
+            println!(
+                "Set executable permissions for {}",
+                installed_exec.display()
+            );
             // Create a symlink in the bin directory
             let symlink_path = bin_dir.join(file_name);
-            println!("Creating symlink {} -> {}", symlink_path.display(), installed_exec.display());
+            println!(
+                "Creating symlink {} -> {}",
+                symlink_path.display(),
+                installed_exec.display()
+            );
             if let Err(e) = filesys::symlink(&installed_exec, &symlink_path) {
                 println!("Error: Can't symlink. Installation failed. {}", e);
             } else {
-                println!("Symlink created: {} -> {}", symlink_path.display(), installed_exec.display());
+                println!(
+                    "Symlink created: {} -> {}",
+                    symlink_path.display(),
+                    installed_exec.display()
+                );
             }
         }
     }
 }
 
 // Function to handle downloading and potentially installing binaries
-fn download_binary(
-    filename: &String,
-    download_url: &String,
-    download_to: &PathBuf,
-) {
+fn download_binary(filename: &String, download_url: &String, download_to: &PathBuf) {
     println!("Downloading {}\n\tfrom {}", filename, download_url);
     let response = reqwest::blocking::get(download_url).unwrap();
     if response.status().is_success() {
         // Ensure the directory exists
-        std::fs::create_dir_all(&download_to).unwrap();
+        std::fs::create_dir_all(download_to).unwrap();
 
         // Create the file path and open it for writing
         let archive_path = download_to.join(filename);
@@ -221,15 +236,16 @@ fn download_binary(
     }
 }
 
-fn get_target_path(base: &PathBuf, repo: &str, version: &str) -> PathBuf {
+fn get_target_path(base: &Path, repo: &str, version: &str) -> PathBuf {
     // Convert repo path to filesystem-friendly format by replacing '/' with OS separator
-    let repo_path = repo.replace('/', &std::path::MAIN_SEPARATOR.to_string());
+    let repo_path = repo.replace('/', std::path::MAIN_SEPARATOR_STR);
     // Creating path as: base_dir/username/reponame/version
-    base.join(&repo_path).join(&version)
+    base.join(&repo_path).join(version)
 }
 
 fn get_asset(release: &Release) -> ReleaseAsset {
-    let binaries: Vec<ReleaseAsset> = release.assets
+    let binaries: Vec<ReleaseAsset> = release
+        .assets
         .iter()
         .filter(|asset| poof::is_env_compatible(&asset.name))
         .cloned()
@@ -279,7 +295,7 @@ fn get_release(repo: &str, tag: Option<&str>) -> Release {
                         for asset in &release.assets {
                             println!("\t{}", asset.name);
                         }
-                        return release;
+                        release
                     }
                     Err(e) => {
                         eprintln!("Failed to parse JSON response: {}", e);
@@ -300,10 +316,7 @@ fn get_release(repo: &str, tag: Option<&str>) -> Release {
 
 fn get_release_url(repo: &str, tag: Option<&str>) -> String {
     match tag {
-        Some(tag) => format!(
-            "{}/{}/releases/tags/{}",
-            GITHUB_API_URL, repo, tag
-        ),
+        Some(tag) => format!("{}/{}/releases/tags/{}", GITHUB_API_URL, repo, tag),
         None => format!("{}/{}/releases/latest", GITHUB_API_URL, repo),
     }
 }

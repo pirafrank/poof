@@ -1,10 +1,10 @@
-use std::process::Command;
 use chrono::Utc;
+use std::process::Command;
 
 fn main() {
     // Get the short commit hash
     let output = Command::new("git")
-        .args(&["rev-parse", "HEAD"])
+        .args(["rev-parse", "HEAD"])
         .output()
         .expect("Failed to execute git command");
 

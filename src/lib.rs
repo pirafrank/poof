@@ -2,7 +2,8 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::env::consts::{ARCH, FAMILY, OS};
 
-pub const SUPPORTED_EXTENSIONS: [&str; 6] = [".tar.gz", ".tgz.", ".tar.xz", ".tar.bz2", "tbz", ".zip"];
+pub const SUPPORTED_EXTENSIONS: [&str; 6] =
+    [".tar.gz", ".tgz.", ".tar.xz", ".tar.bz2", "tbz", ".zip"];
 
 lazy_static! {
     static ref OPERATING_SYSTEM: HashMap<&'static str, Vec<&'static str>> = {
@@ -65,7 +66,7 @@ pub fn detect_fpu() -> &'static str {
     }
 }
 
-fn is_exec_name_only(arch: &&str, s: &String) -> bool {
+fn is_exec_name_only(arch: &&str, s: &str) -> bool {
     // get index of arch in string
     let arch_index = s.find(arch);
     if let Some(index) = arch_index {
@@ -90,7 +91,7 @@ pub fn are_env_compatible(input: Vec<String>) -> String {
     String::from("")
 }
 
-pub fn is_env_compatible(input: &String) -> bool {
+pub fn is_env_compatible(input: &str) -> bool {
     // Convert item to lowercase for comparison as
     // OPERATING_SYSTEM and CPU_ARCH are lowercase in the code above.
     let item = input.to_lowercase();
@@ -102,9 +103,10 @@ pub fn is_env_compatible(input: &String) -> bool {
 
     // OPERATING_SYSTEM
     // Check if this OS matches our current OS
-    if !OPERATING_SYSTEM.get(OS).map_or(false, |aliases| {
-        aliases.iter().any(|alias| item.contains(alias))
-    }) {
+    if !OPERATING_SYSTEM
+        .get(OS)
+        .is_some_and(|aliases| aliases.iter().any(|alias| item.contains(alias)))
+    {
         return false;
     }
 
@@ -134,7 +136,7 @@ pub fn is_env_compatible(input: &String) -> bool {
     }
 
     // if we got this far, we have a winner
-    return true;
+    true
 }
 
 pub fn check_platform_compatibility() -> bool {

@@ -1,4 +1,7 @@
-use std::{io::Read, path::{Path, PathBuf}};
+use std::{
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use poof::SUPPORTED_EXTENSIONS;
 
@@ -90,29 +93,34 @@ fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
 }
 
 fn strip_supported_extensions(path: &Path) -> &str {
-    let filename = path.file_name().and_then(|f| f.to_str()).unwrap_or_default();
+    let filename = path
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or_default();
     for ext in &(SUPPORTED_EXTENSIONS) {
-        if filename.ends_with(ext) {
-            return &filename[..filename.len() - ext.len()];
+        if let Some(stripped) = filename.strip_suffix(ext) {
+            return stripped;
         }
     }
     // fallback
-    path.file_stem().and_then(|s| s.to_str()).unwrap_or(filename)
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(filename)
 }
 
-pub fn find_exec_files_from_extracted_archive(archive_path: &PathBuf) -> Vec<PathBuf> {
+pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBuf> {
     let archive_parent = archive_path.parent().unwrap();
     // Get the filename without the extension
     // and create the path of a directory with the same name as the archive, minus the extension.
     // If it exists, we will search for executables in that directory.
     // If it doesn't exist, we will search for executables in the parent directory.
     // This is useful for archives that contain a directory with the same name as the archive.
-    let filename_no_ext_str = strip_supported_extensions(&archive_path);
+    let filename_no_ext_str = strip_supported_extensions(archive_path);
     let dir = archive_parent.join(filename_no_ext_str);
     if dir.exists() {
-        return find_exec_files_in_dir(&dir);
+        find_exec_files_in_dir(&dir)
     } else {
-        return find_exec_files_in_dir(&PathBuf::from(archive_parent));
+        find_exec_files_in_dir(&PathBuf::from(archive_parent))
     }
 }
 

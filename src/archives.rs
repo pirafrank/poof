@@ -1,11 +1,10 @@
+use bzip2::read::BzDecoder;
+use flate2::read::GzDecoder;
 use std::fs::File;
 use std::path::PathBuf;
-use zip::ZipArchive;
 use tar::Archive;
-use flate2::read::GzDecoder;
 use xz2::read::XzDecoder;
-use bzip2::read::BzDecoder;
-use sevenz_rust2;
+use zip::ZipArchive;
 
 /// Extracts an archive to a specified directory based on its content type.
 /// Currently supports zip, tar.gz, tar.xz, and tar.bz2 formats.
@@ -19,11 +18,11 @@ use sevenz_rust2;
 /// * `Ok(())` if the extraction was successful.
 /// * `Err` if there was an error during extraction.
 ///
-pub fn extract_to_dir_depending_on_content_type(content_type: &String,
+pub fn extract_to_dir_depending_on_content_type(
+    content_type: &String,
     archive_path: &PathBuf,
     extract_to: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
-
     // Check the content type and extract accordingly
     match content_type.as_str() {
         "application/zip" => {
@@ -31,44 +30,67 @@ pub fn extract_to_dir_depending_on_content_type(content_type: &String,
             let zip_file = File::open(archive_path)?;
             let mut archive = ZipArchive::new(zip_file)?;
             archive.extract(extract_to)?;
-            println!("Successfully extracted zip archive to {}", extract_to.to_string_lossy());
+            println!(
+                "Successfully extracted zip archive to {}",
+                extract_to.to_string_lossy()
+            );
         }
-        "application/gzip" | "application/x-gtar" => { // Assuming this is tar.gz
+        "application/gzip" | "application/x-gtar" => {
+            // Assuming this is tar.gz
             println!("Extracting tar.gz archive: {}", archive_path.display());
             let tar_gz_file = File::open(archive_path)?;
             let tar = GzDecoder::new(tar_gz_file);
             let mut archive = Archive::new(tar);
             archive.unpack(extract_to)?;
-            println!("Successfully extracted tar.gz archive to {}", extract_to.to_string_lossy());
+            println!(
+                "Successfully extracted tar.gz archive to {}",
+                extract_to.to_string_lossy()
+            );
         }
-        "application/x-xz" => { // Assuming this is tar.xz
+        "application/x-xz" => {
+            // Assuming this is tar.xz
             println!("Extracting tar.xz archive: {}", archive_path.display());
             let tar_xz_file = File::open(archive_path)?;
             let tar = XzDecoder::new(tar_xz_file);
             let mut archive = Archive::new(tar);
             archive.unpack(extract_to)?;
-            println!("Successfully extracted tar.xz archive to {}", extract_to.to_string_lossy());
+            println!(
+                "Successfully extracted tar.xz archive to {}",
+                extract_to.to_string_lossy()
+            );
         }
-        "application/x-bzip2" => { // Assuming this is tar.bz2
+        "application/x-bzip2" => {
+            // Assuming this is tar.bz2
             println!("Extracting tar.bz2 archive: {}", archive_path.display());
             let tar_bz2_file = File::open(archive_path)?;
             let tar = BzDecoder::new(tar_bz2_file);
             let mut archive = Archive::new(tar);
             archive.unpack(extract_to)?;
-            println!("Successfully extracted tar.bz2 archive to {}", extract_to.to_string_lossy());
+            println!(
+                "Successfully extracted tar.bz2 archive to {}",
+                extract_to.to_string_lossy()
+            );
         }
-        "application/x-tar" => { // Assuming this is tar
+        "application/x-tar" => {
+            // Assuming this is tar
             println!("Extracting tar archive: {}", archive_path.display());
             let tar_file = File::open(archive_path)?;
             let mut archive = Archive::new(tar_file);
             archive.unpack(extract_to)?;
-            println!("Successfully extracted tar archive to {}", extract_to.to_string_lossy());
+            println!(
+                "Successfully extracted tar archive to {}",
+                extract_to.to_string_lossy()
+            );
         }
         // TODO: 7z-support is experimental because untested
-        "application/x-7z-compressed" => { // Assuming this is 7z
+        "application/x-7z-compressed" => {
+            // Assuming this is 7z
             println!("Extracting 7z archive: {}", archive_path.display());
             sevenz_rust2::decompress_file(archive_path, extract_to).expect("complete");
-            println!("Successfully extracted 7z archive to {}", extract_to.to_string_lossy());
+            println!(
+                "Successfully extracted 7z archive to {}",
+                extract_to.to_string_lossy()
+            );
         }
         _ => {
             // Consider returning an error instead of just printing
@@ -79,4 +101,3 @@ pub fn extract_to_dir_depending_on_content_type(content_type: &String,
     }
     Ok(())
 }
-
