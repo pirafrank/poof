@@ -37,6 +37,11 @@ pre-commit: fmt-check lint
 # Run pre-push checks
 pre-push: test build
 
+# Generate changelog (git-cliff required)
+changelog:
+  git cliff -o CHANGELOG.md
+  glow CHANGELOG.md
+
 # Build the project
 build:
   cargo build
