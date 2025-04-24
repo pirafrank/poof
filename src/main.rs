@@ -2,6 +2,8 @@ use std::path::PathBuf;
 use std::{fs::File, path::Path};
 
 use clap::{Parser, Subcommand};
+use clap_verbosity_flag::{InfoLevel, Verbosity};
+use log::{debug, error, info, warn};
 use serde::Deserialize;
 
 mod archives;
@@ -57,6 +59,10 @@ struct Cli {
     /// Command to execute
     #[command(subcommand)]
     command: Cmd,
+
+    /// Enable debug logging
+    #[command(flatten)]
+    verbose: Verbosity<InfoLevel>, // default to INFO
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -80,8 +86,8 @@ fn is_supported_arch() -> bool {
 
 fn main() {
     if !is_supported_arch() {
-        println!("Sorry, {} is currenly unsupported.", std::env::consts::OS);
-        println!(
+        error!("Sorry, {} is currenly unsupported.", std::env::consts::OS);
+        error!(
             "Please open an issue at {}/issues, to ask for support.",
             THIS_REPO_URL
         );
@@ -90,21 +96,36 @@ fn main() {
 
     // Parse command-line arguments
     let cli = Cli::parse();
+    // Set up logging
+    env_logger::Builder::new()
+        .filter_level(cli.verbose.log_level_filter())
+        .format_timestamp(None)
+        .format_module_path(false)
+        .format_target(false)
+        .init();
 
     // Execute different logic based on command
     match &cli.command {
         Cmd::Get(args) => {
-            println!("Executing GET for repository: {}", &args.repo);
+            info!(
+                "Downloading {} {} to current dir",
+                &args.repo,
+                args.tag.as_deref().unwrap_or("(latest)")
+            );
             let current_dir =
                 std::env::current_dir().expect("Failed to determine current directory");
-            println!("Working directory: {}", current_dir.display());
+            debug!("Working directory: {}", current_dir.display());
 
             let release = get_release(&args.repo, args.tag.as_deref());
             let binary = get_asset(&release);
             download_binary(&binary.name, &binary.browser_download_url, &current_dir);
         }
         Cmd::Install(args) => {
-            println!("Executing INSTALL for repository: {}", &args.repo);
+            info!(
+                "Installing {} {}",
+                &args.repo,
+                args.tag.as_deref().unwrap_or("(latest)")
+            );
             process_install(&args.repo, args.tag.as_deref());
         }
         Cmd::Version => {
@@ -118,9 +139,9 @@ fn main() {
 
 fn process_install(repo: &str, tag: Option<&str>) {
     // let config_dir = filesys::get_config_dir().ok_or(libc::ENOENT).unwrap();
-    // println!("Config directory: {}", config_dir);
+    // info!("Config directory: {}", config_dir);
     let cache_dir: PathBuf = filesys::get_cache_dir().ok_or(libc::ENOENT).unwrap();
-    println!("Cache directory: {}", cache_dir.display());
+    debug!("Cache directory: {}", cache_dir.display());
 
     // download binary
     let release = get_release(repo, tag);
@@ -136,43 +157,43 @@ fn process_install(repo: &str, tag: Option<&str>) {
         &download_to,
     )
     .expect("Failed to extract archive");
-    println!("Extracted to: {}", download_to.display());
+    debug!("Extracted to: {}", download_to.display());
 
     // install binary
     install_binary(&archive_path, repo, &release.tag_name);
-    println!("{} installed successfully.", binary.name);
+    info!("{} installed successfully.", binary.name);
     std::process::exit(0);
 }
 
 fn install_binary(archive_path: &Path, repo: &str, version: &str) {
     let data_dir: PathBuf = filesys::get_data_dir().ok_or(libc::ENOENT).unwrap();
-    println!("Data directory: {}", data_dir.display());
+    debug!("Data directory: {}", data_dir.display());
     let install_dir = get_target_path(&data_dir, repo, version);
-    println!("Installing to: {}", install_dir.display());
+    debug!("Installing to: {}", install_dir.display());
     // Create the installation directory if it doesn't exist
     if !install_dir.exists() {
         std::fs::create_dir_all(&install_dir).unwrap();
     }
     let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
-    println!("Bin directory: {}", bin_dir.display());
+    info!("Bin directory: {}", bin_dir.display());
 
     let execs_to_install: Vec<PathBuf> =
         filesys::find_exec_files_from_extracted_archive(archive_path);
     for exec in execs_to_install {
         let file_name = exec.file_name().unwrap();
         let installed_exec = install_dir.join(file_name);
-        println!("Copying {} to {}", exec.display(), installed_exec.display());
+        debug!("Copying {} to {}", exec.display(), installed_exec.display());
         if let Err(e) = std::fs::copy(&exec, &installed_exec) {
-            println!(
+            error!(
                 "Error copying {} to {}: {}",
                 exec.display(),
                 installed_exec.display(),
                 e
             );
-            println!("Installation failed.");
+            error!("Installation failed.");
             std::process::exit(103);
         }
-        println!("Making {} executable", file_name.to_string_lossy());
+        debug!("Making {} executable", file_name.to_string_lossy());
         // Set executable permissions, platform-specific
         // Note: Windows does not require setting executable permissions
         #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -183,21 +204,21 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
             // Add executable bits to current permissions (equivalent to chmod +x)
             perms.set_mode(perms.mode() | 0o111);
             std::fs::set_permissions(&installed_exec, perms).unwrap();
-            println!(
+            debug!(
                 "Set executable permissions for {}",
                 installed_exec.display()
             );
             // Create a symlink in the bin directory
             let symlink_path = bin_dir.join(file_name);
-            println!(
+            debug!(
                 "Creating symlink {} -> {}",
                 symlink_path.display(),
                 installed_exec.display()
             );
             if let Err(e) = filesys::symlink(&installed_exec, &symlink_path) {
-                println!("Error: Can't symlink. Installation failed. {}", e);
+                error!("Can't symlink. Installation failed. {}", e);
             } else {
-                println!(
+                debug!(
                     "Symlink created: {} -> {}",
                     symlink_path.display(),
                     installed_exec.display()
@@ -209,7 +230,7 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
 
 // Function to handle downloading and potentially installing binaries
 fn download_binary(filename: &String, download_url: &String, download_to: &PathBuf) {
-    println!("Downloading {}\n\tfrom {}", filename, download_url);
+    info!("Downloading {} from {}", filename, download_url);
     let response = reqwest::blocking::get(download_url).unwrap();
     if response.status().is_success() {
         // Ensure the directory exists
@@ -219,11 +240,11 @@ fn download_binary(filename: &String, download_url: &String, download_to: &PathB
         let archive_path = download_to.join(filename);
         let mut file = File::create(&archive_path).unwrap();
 
-        println!("Saving to: {}", archive_path.display());
+        debug!("Saving to: {}", archive_path.display());
         std::io::copy(&mut response.bytes().unwrap().as_ref(), &mut file).unwrap();
-        println!("Download complete.");
+        info!("Download complete.");
     } else {
-        println!("Error: Download failed!");
+        error!("Download failed!");
         std::process::exit(99)
     }
 }
@@ -244,15 +265,15 @@ fn get_asset(release: &Release) -> ReleaseAsset {
         .collect();
 
     if binaries.is_empty() {
-        println!("No compatible pre-built binaries found.");
+        error!("No compatible pre-built binaries found.");
         std::process::exit(100);
     }
-    println!("Compatible binaries found:");
+    debug!("Compatible binaries found:");
     for binary in &binaries {
-        println!("\t{}", binary.name);
+        debug!("\t{}", binary.name);
     }
     if binaries.len() > 1 {
-        println!("Multiple compatible binaries found. Downloading first...");
+        warn!("Multiple compatible binaries found. Downloading first...");
         // TODO: allow to specify which binary to download via explicit URL given to 'install' command
     }
     // Return the first compatible binary
@@ -261,7 +282,7 @@ fn get_asset(release: &Release) -> ReleaseAsset {
 
 fn get_release(repo: &str, tag: Option<&str>) -> Release {
     let release_url = get_release_url(repo, tag);
-    println!("Release URL: {}", release_url);
+    info!("Release URL: {}", release_url);
     let client = reqwest::blocking::Client::new();
 
     // Make the request
@@ -272,35 +293,35 @@ fn get_release(repo: &str, tag: Option<&str>) -> Release {
         .send()
     {
         Ok(response) => {
-            println!("Response Status: {}", response.status());
+            debug!("Response Status: {}", response.status());
             if response.status().is_success() {
                 // Attempt to parse the JSON response into a Vec<Release>
                 match response.json::<Release>() {
                     Ok(release) => {
                         if tag.is_some() {
-                            println!("Selected release tag: {}", tag.unwrap());
+                            info!("Selected release tag: {}", tag.unwrap());
                         } else {
-                            println!("Latest release tag: {}", release.tag_name);
+                            info!("Current latest release tag: {}", release.tag_name);
                         }
-                        println!("Published at: {}", release.published_at);
-                        println!("Available assets:");
+                        info!("Published at: {}", release.published_at);
+                        debug!("Available assets:");
                         for asset in &release.assets {
-                            println!("\t{}", asset.name);
+                            debug!("\t{}", asset.name);
                         }
                         release
                     }
                     Err(e) => {
-                        eprintln!("Failed to parse JSON response: {}", e);
+                        error!("Failed to parse JSON response: {}", e);
                         std::process::exit(101);
                     }
                 }
             } else {
-                eprintln!("Request failed with status: {}", response.status());
+                error!("Request failed with status: {}", response.status());
                 std::process::exit(102);
             }
         }
         Err(e) => {
-            eprintln!("Failed to send request: {}", e);
+            error!("Failed to send request: {}", e);
             std::process::exit(91);
         }
     }
