@@ -4,7 +4,12 @@
 
 # poof 🪄 - magic manager of pre-built software
 
-Easy to use zero-config, zero-install, zero-dependencies binary manager in user-space that works like magic!
+[![Release](https://github.com/pirafrank/poof/actions/workflows/release.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/release.yml)
+[![Security audit](https://github.com/pirafrank/poof/actions/workflows/compliance.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/compliance.yml)
+
+Easy to use zero-config, zero-install, zero-dependencies binary manager in user-space that works like magic.
+
+You just run `poof install someuser/somerepo` and... *poof!* it is installed and available in your shell.
 
 > *"poof-poof"*
 >
@@ -43,8 +48,20 @@ More and more often modern tools are built with languages like Rust and Go, and 
 ## Quick start
 
 1. Get `poof` using one of the methods below:
-    - **Pre-built binary**: Download the latest pre-built binary from [releases page](https://github.com/pirafrank/poof/releases), and put it in your `$PATH`
-    - **From source**: Build and install to `$HOME/.cargo/bin` compiling from source. You need to have [Rust](https://www.rust-lang.org/) installed.
+    - **Pre-built binary**: Download the binary from [latest release](https://github.com/pirafrank/poof/releases), and move it to `$PATH`.
+    - **binstall**: If you have [binstall](https://github.com/cargo-bins/cargo-binstall), you can get the binary using `cargo` and skip compilation:
+
+    ```sh
+    cargo binstall exif_renamer
+    ```
+
+    - **cargo**: Build and install latest release on crates.io using `cargo`:
+
+    ```sh
+    cargo install --locked poof
+    ```
+
+    - **From source**: Build and install from source code on GitHub:
 
     ```sh
     cargo install --locked --git https://github.com/pirafrank/poof --tag VERSION
