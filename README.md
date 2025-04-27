@@ -81,17 +81,19 @@ Having a dedicated directory for `poof` binaries is a good practice, as it allow
 ```txt
 Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic
 
-Usage: poof <COMMAND>
+Usage: poof [OPTIONS] <COMMAND>
 
 Commands:
-  get      Only download binary for the platform in current directory. No install
-  install  Download binary for the platform and install it
-  version  Show version information
-  help     Print this message or the help of the given subcommand(s)
+  download  Only download binary for the platform in current directory. No install
+  install   Download binary for the platform and install it
+  version   Show version information
+  help      Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help     Print help
-  -V, --version  Print version
+  -v, --verbose...  Increase logging verbosity
+  -q, --quiet...    Decrease logging verbosity
+  -h, --help        Print help
+  -V, --version     Print version
 ```
 
 ## Disable

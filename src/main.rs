@@ -35,7 +35,7 @@ struct CmdArgs {
 #[derive(Subcommand, Clone)]
 enum Cmd {
     /// Only download binary for the platform in current directory. No install.
-    Get(CmdArgs),
+    Download(CmdArgs),
 
     /// Download binary for the platform and install it
     Install(CmdArgs),
@@ -106,7 +106,7 @@ fn main() {
 
     // Execute different logic based on command
     match &cli.command {
-        Cmd::Get(args) => {
+        Cmd::Download(args) => {
             info!(
                 "Downloading {} {} to current dir",
                 &args.repo,
