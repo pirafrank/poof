@@ -146,7 +146,7 @@ fn process_install(repo: &str, tag: Option<&str>) {
     // download binary
     let release = get_release(repo, tag);
     let binary = get_asset(&release);
-    let download_to = get_target_path(&cache_dir, repo, &release.tag_name);
+    let download_to = get_install_path(&cache_dir, repo, &release.tag_name);
     download_binary(&binary.name, &binary.browser_download_url, &download_to);
 
     // extract binary
@@ -168,11 +168,18 @@ fn process_install(repo: &str, tag: Option<&str>) {
 fn install_binary(archive_path: &Path, repo: &str, version: &str) {
     let data_dir: PathBuf = filesys::get_data_dir().ok_or(libc::ENOENT).unwrap();
     debug!("Data directory: {}", data_dir.display());
-    let install_dir = get_target_path(&data_dir, repo, version);
+    let install_dir = get_install_path(&data_dir, repo, version);
     debug!("Installing to: {}", install_dir.display());
     // Create the installation directory if it doesn't exist
     if !install_dir.exists() {
         std::fs::create_dir_all(&install_dir).unwrap();
+    } else {
+        warn!(
+            "Version is already installed. Check content in {} dir.",
+            install_dir.display()
+        );
+        warn!("If you want to reinstall, please remove the directory first.");
+        std::process::exit(0);
     }
     let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
     info!("Bin directory: {}", bin_dir.display());
@@ -249,7 +256,7 @@ fn download_binary(filename: &String, download_url: &String, download_to: &PathB
     }
 }
 
-fn get_target_path(base: &Path, repo: &str, version: &str) -> PathBuf {
+fn get_install_path(base: &Path, repo: &str, version: &str) -> PathBuf {
     // Convert repo path to filesystem-friendly format by replacing '/' with OS separator
     let repo_path = repo.replace('/', std::path::MAIN_SEPARATOR_STR);
     // Creating path as: base_dir/username/reponame/version
