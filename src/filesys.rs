@@ -8,8 +8,7 @@ use poof::SUPPORTED_EXTENSIONS;
 // ~/.config/APPNAME/config.json
 pub fn _get_config_dir() -> Option<PathBuf> {
     if let Some(app_name) = option_env!("CARGO_PKG_NAME") {
-        let home_dir = dirs::home_dir()?;
-        let config_dir = home_dir.join(".config").join(app_name);
+        let config_dir = dirs::config_dir()?.join(app_name);
         if !config_dir.exists() {
             std::fs::create_dir_all(&config_dir).ok()?;
         }
@@ -22,8 +21,7 @@ pub fn _get_config_dir() -> Option<PathBuf> {
 // ~/.local/share/APPNAME
 pub fn get_data_dir() -> Option<PathBuf> {
     if let Some(app_name) = option_env!("CARGO_PKG_NAME") {
-        let home_dir = dirs::home_dir()?;
-        let data_dir = home_dir.join(".local").join("share").join(app_name);
+        let data_dir = dirs::data_dir()?.join(app_name);
         if !data_dir.exists() {
             std::fs::create_dir_all(&data_dir).ok()?;
         }
@@ -44,8 +42,7 @@ pub fn get_bin_dir() -> Option<PathBuf> {
 // ~/.cache/APPNAME
 pub fn get_cache_dir() -> Option<PathBuf> {
     if let Some(app_name) = option_env!("CARGO_PKG_NAME") {
-        let home_dir = dirs::home_dir()?;
-        let cache_dir = home_dir.join(".cache").join(app_name);
+        let cache_dir = dirs::cache_dir()?.join(app_name);
         if !cache_dir.exists() {
             std::fs::create_dir_all(&cache_dir).ok()?;
         }
