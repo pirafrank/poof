@@ -52,8 +52,13 @@ More and more often modern tools are built with languages like Rust and Go, and 
 
     Note: Replace `VERSION` with the desired version to install. Not specifying a tag will install from `main` branch. `main` branch should be stable, but it's unreleased software and may contain bugs or breaking changes. It should considered beta quality software.
 
-2. Add poof's `bin` directory to `$PATH`:
-    - Paste `export PATH="${HOME}/.local/share/poof/bin:${PATH}"` to your `~/.bashrc` or `~/.zshrc`
+2. Add poof's `bin` directory to `$PATH`. Paste:
+
+    ```txt
+    export PATH="${HOME}/.local/share/poof/bin:${PATH}"
+    ```
+
+    to your `~/.bashrc` or `~/.zshrc`.
 3. Done! Now try to install something, for example:
 
     ```txt
