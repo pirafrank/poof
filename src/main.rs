@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::path::PathBuf;
 use std::{fs::File, path::Path};
 
@@ -7,6 +8,7 @@ use log::{debug, error, info, warn};
 use serde::Deserialize;
 
 mod archives;
+mod asset;
 mod filesys;
 mod platform_info;
 mod utils;
@@ -40,6 +42,9 @@ enum Cmd {
 
     /// Download binary for the platform and install it
     Install(CmdArgs),
+
+    /// List installed binaries and their versions
+    List,
 
     /// Check if poof's bin directory is in the PATH
     Check,
@@ -138,6 +143,27 @@ fn main() {
                 args.tag.as_deref().unwrap_or("(latest)")
             );
             process_install(&args.repo, args.tag.as_deref());
+        }
+        Cmd::List => {
+            let list = filesys::list_installed_assets();
+            if list.is_empty() {
+                info!("No installed binaries found.");
+            } else {
+                let mut stdout = std::io::stdout().lock();
+                writeln!(stdout, "Installed binaries").unwrap();
+                writeln!(stdout, "\n{:<40} {:<15}", "Repository", "Versions").unwrap();
+                writeln!(stdout, "{:<40} {:<15}", "----------", "--------").unwrap();
+                for asset in list {
+                    writeln!(
+                        stdout,
+                        "{:<40} {:?}",
+                        asset.get_name(),
+                        asset.get_versions()
+                    )
+                    .unwrap();
+                }
+                drop(stdout); // explicitly release the lock
+            }
         }
         Cmd::Check => {
             check_if_bin_in_path();
@@ -373,7 +399,7 @@ fn check_if_bin_in_path() {
             );
             warn!("This is required to run the installed binaries.");
         }
-        1 => info!("It looks good. Bin directory is the first in PATH."),
+        1 => debug!("Everything looks good. Bin directory is the first in PATH."),
         _ => {
             warn!("Bin directory is not the first in PATH.");
             warn!(

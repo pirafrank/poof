@@ -1,9 +1,11 @@
+use log::debug;
 use std::{
     fs::File,
     io::Read,
     path::{Path, PathBuf},
 };
 
+use crate::asset::Asset;
 use poof::SUPPORTED_EXTENSIONS;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -199,4 +201,57 @@ pub fn symlink(source: &PathBuf, target: &PathBuf) -> std::io::Result<()> {
     // On Unix-like systems create a symbolic link to the installed binary at target.
     std::os::unix::fs::symlink(source, target)?;
     Ok(())
+}
+
+pub fn list_installed_assets() -> Vec<Asset> {
+    // List all files in the bin directory.
+    let data_dir = get_data_dir().unwrap();
+    let mut installed_assets: Vec<Asset> = Vec::new();
+    let mut map: std::collections::HashMap<String, Asset> = std::collections::HashMap::new();
+
+    // Look through each subdirectory in data_dir for any installed assets
+    if let Ok(entries) = std::fs::read_dir(&data_dir) {
+        for user in entries.flatten() {
+            debug!("username: {}", user.path().display());
+            let username: String = user.file_name().into_string().unwrap_or_default();
+            if user.path().is_dir() {
+                for repo in user.path().read_dir().unwrap() {
+                    let repo = repo.unwrap();
+                    debug!("repo: {}", repo.path().display());
+                    if repo.path().is_dir() {
+                        // Get the name of the repository
+                        let repo_name: String = repo.file_name().into_string().unwrap_or_default();
+                        let slug: String = format!("{}/{}", username, repo_name);
+                        // Get the version of the repository
+                        for version in repo.path().read_dir().unwrap() {
+                            let version = version.unwrap();
+                            debug!("version: {}", version.path().display());
+                            if version.path().is_dir() {
+                                // Check if the version directory contains any executable files
+                                if version.path().is_dir()
+                                    && version.path().read_dir().unwrap().count() > 0
+                                {
+                                    let version_name =
+                                        version.file_name().into_string().unwrap_or_default();
+                                    if let Some(asset) = map.get_mut(&slug) {
+                                        // If the asset already exists, add the version to it
+                                        asset.add_version(version_name);
+                                    } else {
+                                        // If the asset doesn't exist, create a new one
+                                        let asset = Asset::new(slug.clone(), vec![version_name]);
+                                        map.insert(slug.clone(), asset);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Convert the HashMap to a Vec<Asset>
+    for (_, asset) in map {
+        installed_assets.push(asset);
+    }
+    installed_assets
 }
