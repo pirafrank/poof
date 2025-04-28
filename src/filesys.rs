@@ -1,9 +1,21 @@
 use std::{
+    fs::File,
     io::Read,
     path::{Path, PathBuf},
 };
 
 use poof::SUPPORTED_EXTENSIONS;
+
+// Constants for magic numbers
+#[cfg(target_os = "macos")]
+const MACHO_MAGIC_NUMBERS: &[[u8; 4]] = &[
+    [0xFE, 0xED, 0xFA, 0xCE], // Mach-O 32-bit (little-endian)
+    [0xFE, 0xED, 0xFA, 0xCF], // Mach-O 64-bit (little-endian)
+    [0xCE, 0xFA, 0xED, 0xFE], // Mach-O 32-bit (big-endian)
+    [0xCF, 0xFA, 0xED, 0xFE], // Mach-O 64-bit (big-endian)
+    [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O universal ('fat') binary (little-endian)
+    [0xBE, 0xBA, 0xFE, 0xCA], // Mach-O universal ('fat') binary (big-endian)
+];
 
 // ~/.config/APPNAME/config.json
 pub fn _get_config_dir() -> Option<PathBuf> {
@@ -52,22 +64,56 @@ pub fn get_cache_dir() -> Option<PathBuf> {
     }
 }
 
-fn read_file_magic_number(path: &PathBuf) -> Option<Vec<u8>> {
-    let mut file = std::fs::File::open(path).ok()?;
-    let mut buffer = vec![0; 4];
-    if file.read_exact(&mut buffer).is_ok() {
-        Some(buffer)
-    } else {
-        None
-    }
+#[cfg(target_os = "linux")]
+fn is_exec_magic(buffer: &[u8; 4]) -> bool {
+    // Linux expects ELF binaries
+    buffer == &[0x7F, 0x45, 0x4C, 0x46] // ELF
 }
 
+#[cfg(target_os = "windows")]
+fn is_exec_magic(buffer: &[u8; 4]) -> bool {
+    // Windows expects PE binaries (MZ header).
+    // Checking only the first two bytes because the other two may change,
+    // as they depend on the DOS stub.
+    buffer[..2] == [0x4D, 0x5A]
+}
+
+#[cfg(target_os = "macos")]
+fn is_exec_magic(buffer: &[u8; 4]) -> bool {
+    // macOS expects Mach-O formats
+    MACHO_MAGIC_NUMBERS.contains(buffer)
+}
+
+#[cfg(not(target_os = "windows"))]
 fn is_exec_by_magic_number(path: &PathBuf) -> bool {
-    if let Some(magic_number) = read_file_magic_number(path) {
-        // Check for common executable magic numbers
-        return magic_number == [0x7F, 0x45, 0x4C, 0x46] // ELF (Linux)
-            || magic_number == [0x4D, 0x5A, 0x90, 0x00] // PE (Win)
-            || magic_number == [0xCA, 0xFE, 0xBA, 0xBE]; // Mach-O (macOS)
+    if let Ok(mut file) = File::open(path) {
+        let mut buffer = [0u8; 4];
+        if file.read_exact(&mut buffer).is_ok() {
+            return is_exec_magic(&buffer);
+        }
+    }
+    false
+}
+
+#[cfg(target_os = "windows")]
+fn is_exec_by_magic_number(path: &PathBuf) -> bool {
+    // We need to first check the file extension for Windows binaries,
+    // as it uses the PE format (MZ header) for file types other than
+    // .exe (e.g. .dll, .sys, etc.).
+    // Then we check the first two bytes of the .exe file because the
+    // other two may change (they depend on the DOS stub).
+    let extension = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default();
+    if extension != "exe" {
+        return false;
+    }
+    if let Ok(mut file) = File::open(path) {
+        let mut buffer = [0u8; 4];
+        if file.read_exact(&mut buffer).is_ok() {
+            return is_exec_magic(&buffer);
+        }
     }
     false
 }
@@ -123,7 +169,7 @@ pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBu
 
 pub fn symlink(source: &PathBuf, target: &PathBuf) -> std::io::Result<()> {
     // TODO: support windows symlinks in userspace somehow, or just copy the exe file to dir in PATH!
-    // On Unix-like systems, use the `ln` command to create a symbolic link
+    // On Unix-like systems create a symbolic link to the installed binary at target.
     std::os::unix::fs::symlink(source, target)?;
     Ok(())
 }
