@@ -4,12 +4,15 @@ use std::{fs::File, path::Path};
 
 use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
+use github::models::{Release, ReleaseAsset};
 use log::{debug, error, info, warn};
-use serde::Deserialize;
 
 mod archives;
 mod asset;
 mod filesys;
+mod github;
+use github::client::get_release;
+use poof::is_env_compatible;
 mod platform_info;
 mod utils;
 
@@ -17,9 +20,6 @@ mod utils;
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
 const THIS_REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
-const GITHUB_API_URL: &str = "https://api.github.com/repos";
-const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
-const GITHUB_API_ACCEPT: &str = "application/vnd.github.v3+json";
 
 // Common arguments for repository operations
 #[derive(Parser, Clone)]
@@ -81,21 +81,6 @@ struct Cli {
     verbose: Verbosity<InfoLevel>, // default to INFO
 }
 
-#[derive(Clone, Deserialize, Debug)]
-struct ReleaseAsset {
-    name: String,
-    content_type: String,
-    //size: u64,
-    browser_download_url: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct Release {
-    tag_name: String,
-    published_at: String, // Consider using chrono::DateTime<chrono::Utc> for proper date handling
-    assets: Vec<ReleaseAsset>,
-}
-
 fn is_supported_os() -> bool {
     cfg!(any(target_os = "linux", target_os = "macos"))
 }
@@ -134,7 +119,7 @@ fn main() {
 
             let release = get_release(&args.repo, args.tag.as_deref());
             let binary = get_asset(&release);
-            download_binary(&binary.name, &binary.browser_download_url, &current_dir);
+            download_binary(binary.name(), binary.browser_download_url(), &current_dir);
         }
         Cmd::Install(args) => {
             info!(
@@ -186,13 +171,13 @@ fn process_install(repo: &str, tag: Option<&str>) {
     // download binary
     let release = get_release(repo, tag);
     let binary = get_asset(&release);
-    let download_to = get_install_path(&cache_dir, repo, &release.tag_name);
-    download_binary(&binary.name, &binary.browser_download_url, &download_to);
+    let download_to = get_install_path(&cache_dir, repo, release.tag_name());
+    download_binary(binary.name(), binary.browser_download_url(), &download_to);
 
     // extract binary
-    let archive_path = download_to.join(&binary.name);
+    let archive_path = download_to.join(binary.name());
     archives::extract_to_dir_depending_on_content_type(
-        &binary.content_type,
+        binary.content_type(),
         &archive_path,
         &download_to,
     )
@@ -200,8 +185,8 @@ fn process_install(repo: &str, tag: Option<&str>) {
     debug!("Extracted to: {}", download_to.display());
 
     // install binary
-    install_binary(&archive_path, repo, &release.tag_name);
-    info!("{} installed successfully.", binary.name);
+    install_binary(&archive_path, repo, release.tag_name());
+    info!("{} installed successfully.", binary.name());
     check_if_bin_in_path();
     std::process::exit(0);
 }
@@ -319,11 +304,11 @@ fn get_install_path(base: &Path, repo: &str, version: &str) -> PathBuf {
     base.join(&repo_path).join(version)
 }
 
-fn get_asset(release: &Release) -> ReleaseAsset {
+pub fn get_asset(release: &Release) -> ReleaseAsset {
     let binaries: Vec<ReleaseAsset> = release
-        .assets
+        .assets()
         .iter()
-        .filter(|asset| poof::is_env_compatible(&asset.name))
+        .filter(|asset| is_env_compatible(asset.name()))
         .cloned()
         .collect();
 
@@ -333,7 +318,7 @@ fn get_asset(release: &Release) -> ReleaseAsset {
     }
     debug!("Compatible binaries found:");
     for binary in &binaries {
-        debug!("\t{}", binary.name);
+        debug!("\t{}", binary.name());
     }
     if binaries.len() > 1 {
         warn!("Multiple compatible binaries found. Downloading first...");
@@ -341,60 +326,6 @@ fn get_asset(release: &Release) -> ReleaseAsset {
     }
     // Return the first compatible binary
     binaries[0].clone()
-}
-
-fn get_release(repo: &str, tag: Option<&str>) -> Release {
-    let release_url = get_release_url(repo, tag);
-    info!("Release URL: {}", release_url);
-    let client = reqwest::blocking::Client::new();
-
-    // Make the request
-    match client
-        .get(&release_url)
-        .header("User-Agent", GITHUB_API_USER_AGENT) // Keep User-Agent header for GitHub API
-        .header("Accept", GITHUB_API_ACCEPT)
-        .send()
-    {
-        Ok(response) => {
-            debug!("Response Status: {}", response.status());
-            if response.status().is_success() {
-                // Attempt to parse the JSON response into a Vec<Release>
-                match response.json::<Release>() {
-                    Ok(release) => {
-                        if tag.is_some() {
-                            info!("Selected release tag: {}", tag.unwrap());
-                        } else {
-                            info!("Current latest release tag: {}", release.tag_name);
-                        }
-                        info!("Published at: {}", release.published_at);
-                        debug!("Available assets:");
-                        for asset in &release.assets {
-                            debug!("\t{}", asset.name);
-                        }
-                        release
-                    }
-                    Err(e) => {
-                        error!("Failed to parse JSON response: {}", e);
-                        std::process::exit(101);
-                    }
-                }
-            } else {
-                error!("Request failed with status: {}", response.status());
-                std::process::exit(102);
-            }
-        }
-        Err(e) => {
-            error!("Failed to send request: {}", e);
-            std::process::exit(91);
-        }
-    }
-}
-
-fn get_release_url(repo: &str, tag: Option<&str>) -> String {
-    match tag {
-        Some(tag) => format!("{}/{}/releases/tags/{}", GITHUB_API_URL, repo, tag),
-        None => format!("{}/{}/releases/latest", GITHUB_API_URL, repo),
-    }
 }
 
 fn check_if_bin_in_path() {

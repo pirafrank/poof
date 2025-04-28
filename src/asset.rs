@@ -25,4 +25,19 @@ impl Asset {
     pub fn get_latest_version(&self) -> Option<&String> {
         self.versions.last()
     }
+    pub fn set_name(&mut self, name: String) {
+        self.name = name;
+    }
+    pub fn set_versions(&mut self, versions: Vec<String>) {
+        self.versions = versions;
+    }
+    pub fn clear_versions(&mut self) {
+        self.versions.clear();
+    }
+    pub fn is_empty(&self) -> bool {
+        self.versions.is_empty()
+    }
+    pub fn contains_version(&self, version: &String) -> bool {
+        self.versions.contains(version)
+    }
 }
