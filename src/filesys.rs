@@ -197,6 +197,19 @@ pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBu
 }
 
 #[cfg(not(target_os = "windows"))]
+pub fn is_executable(path: &PathBuf) -> bool {
+    // Check if the file is executable
+    use std::os::unix::fs::PermissionsExt;
+    if let Ok(metadata) = std::fs::metadata(path) {
+        if metadata.is_file() {
+            let permissions = metadata.permissions();
+            return permissions.mode() & 0o111 != 0;
+        }
+    }
+    false
+}
+
+#[cfg(not(target_os = "windows"))]
 pub fn make_executable(installed_exec: &Path) {
     // Unix-like systems require setting executable permissions
     use std::os::unix::fs::PermissionsExt;

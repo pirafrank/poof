@@ -43,6 +43,9 @@ enum Cmd {
     /// Download binary for the platform and install it
     Install(CmdArgs),
 
+    /// Make an installed version the one to be used by default
+    Use(CmdArgs),
+
     /// List installed binaries and their versions
     List,
 
@@ -128,6 +131,15 @@ fn main() {
                 args.tag.as_deref().unwrap_or("(latest)")
             );
             process_install(&args.repo, args.tag.as_deref());
+        }
+        Cmd::Use(args) => {
+            let version = args.tag.as_deref().unwrap_or("latest");
+            info!(
+                "Setting version '{}' as default for {}",
+                version, &args.repo
+            );
+            make_default(&args.repo, version);
+            info!("Version '{}' set as default.", version);
         }
         Cmd::List => {
             let list = filesys::list_installed_assets();
@@ -355,4 +367,88 @@ fn check_if_bin_in_path() {
 fn get_export_command() -> String {
     let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
     format!("export PATH=\"{}:$PATH\"", bin_dir.to_str().unwrap())
+}
+
+fn make_default(repo: &str, version: &str) {
+    let data_dir: PathBuf = filesys::get_data_dir().ok_or(libc::ENOENT).unwrap();
+    let wanted_dir: PathBuf = get_install_path(&data_dir, repo, version);
+    if !wanted_dir.exists() {
+        error!(
+            "Version {} of repository '{}' not installed. Quitting.",
+            version, repo
+        );
+        std::process::exit(110);
+    }
+    // Get the bin directory
+    let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    // List all executable files in the directory with the wanted version
+    let entries = match std::fs::read_dir(&wanted_dir) {
+        Ok(entries) => entries,
+        Err(e) => {
+            error!("Failed to read directory {}: {}", wanted_dir.display(), e);
+            std::process::exit(1);
+        }
+    };
+    // Process each binary in wanted_dir
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(e) => {
+                warn!("Failed to read entry: {}", e);
+                continue;
+            }
+        };
+
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+
+        // Check if the file is executable
+        #[cfg(not(target_os = "windows"))]
+        if !filesys::is_executable(&path) {
+            continue;
+        }
+
+        let file_name = match path.file_name() {
+            Some(name) => name,
+            None => continue,
+        };
+
+        let symlink_path = bin_dir.join(file_name);
+
+        // Delete existing symlink if it exists
+        if symlink_path.exists() {
+            info!("Removing existing symlink: {}", symlink_path.display());
+            if let Err(e) = std::fs::remove_file(&symlink_path) {
+                warn!(
+                    "Failed to remove existing symlink {}: {}",
+                    symlink_path.display(),
+                    e
+                );
+                continue;
+            }
+        }
+
+        // Create new symlink
+        debug!(
+            "Creating symlink {} -> {}",
+            symlink_path.display(),
+            path.display()
+        );
+        if let Err(e) = filesys::symlink(&path, &symlink_path) {
+            error!(
+                "Failed to create symlink {} -> {}: {}",
+                symlink_path.display(),
+                path.display(),
+                e
+            );
+        } else {
+            info!(
+                "Symlink created: {} -> {}",
+                symlink_path.display(),
+                path.display()
+            );
+        }
+    }
 }
