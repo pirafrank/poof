@@ -80,12 +80,12 @@ struct Release {
     assets: Vec<ReleaseAsset>,
 }
 
-fn is_supported_arch() -> bool {
-    cfg!(target_os = "linux")
+fn is_supported_os() -> bool {
+    cfg!(any(target_os = "linux", target_os = "macos"))
 }
 
 fn main() {
-    if !is_supported_arch() {
+    if !is_supported_os() {
         error!("Sorry, {} is currenly unsupported.", std::env::consts::OS);
         error!(
             "Please open an issue at {}/issues, to ask for support.",
