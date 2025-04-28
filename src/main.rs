@@ -214,14 +214,16 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
     // Create the installation directory if it doesn't exist
     if !install_dir.exists() {
         std::fs::create_dir_all(&install_dir).unwrap();
-    } else {
+    } else if install_dir.is_dir() && install_dir.read_dir().unwrap().count() > 0 {
+        // Check if the directory is not empty
+        // If it is not empty, warn the user and exit
         warn!(
             "Version is already installed. Check content in {} dir.",
             install_dir.display()
         );
         warn!("If you want to reinstall, please remove the directory first.");
         std::process::exit(0);
-    }
+    } // else overwrite empty dir of possibly left-over dumb file with dir name
 
     let execs_to_install: Vec<PathBuf> =
         filesys::find_exec_files_from_extracted_archive(archive_path);
@@ -242,18 +244,10 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
         debug!("Making {} executable", file_name.to_string_lossy());
         // Set executable permissions, platform-specific
         // Note: Windows does not require setting executable permissions
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        #[cfg(not(target_os = "windows"))]
         {
-            // Unix-like systems require setting executable permissions
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&installed_exec).unwrap().permissions();
-            // Add executable bits to current permissions (equivalent to chmod +x)
-            perms.set_mode(perms.mode() | 0o111);
-            std::fs::set_permissions(&installed_exec, perms).unwrap();
-            debug!(
-                "Set executable permissions for {}",
-                installed_exec.display()
-            );
+            // Make the file executable on Unix-like systems
+            filesys::make_executable(&installed_exec);
             // Create a symlink in the bin directory
             let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
             let symlink_path = bin_dir.join(file_name);
@@ -262,6 +256,15 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
                 symlink_path.display(),
                 installed_exec.display()
             );
+            // check if symlink already exists
+            if symlink_path.exists() {
+                warn!(
+                    "Symlink {} already exists. Skipping.",
+                    symlink_path.display()
+                );
+                continue;
+            }
+            // if symlink does not exist, create it to make exec available in PATH
             if let Err(e) = filesys::symlink(&installed_exec, &symlink_path) {
                 error!(
                     "Cannot symlink {} -> {}.\n\nInstallation failed. {}",

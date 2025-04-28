@@ -196,6 +196,20 @@ pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBu
     }
 }
 
+#[cfg(not(target_os = "windows"))]
+pub fn make_executable(installed_exec: &Path) {
+    // Unix-like systems require setting executable permissions
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = std::fs::metadata(installed_exec).unwrap().permissions();
+    // Add executable bits to current permissions (equivalent to chmod +x)
+    perms.set_mode(perms.mode() | 0o111);
+    std::fs::set_permissions(installed_exec, perms).unwrap();
+    debug!(
+        "Set executable permissions for {}",
+        installed_exec.display()
+    );
+}
+
 pub fn symlink(source: &PathBuf, target: &PathBuf) -> std::io::Result<()> {
     // TODO: support windows symlinks in userspace somehow, or just copy the exe file to dir in PATH!
     // On Unix-like systems create a symbolic link to the installed binary at target.
