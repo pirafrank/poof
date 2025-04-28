@@ -1,3 +1,6 @@
+use crate::filesys;
+use crate::utils;
+
 // Constants for version information
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const DESCRIPTION: &str = "magic manager of pre-built software";
@@ -7,6 +10,16 @@ const BUILD_DATE: &str = env!("BUILD_DATE");
 
 // Constants for platform information
 const UNKNOWN: &str = "Unknown";
+
+#[cfg(not(target_os = "windows"))]
+const ENV_PATH_SEPARATOR: &str = ":";
+#[cfg(target_os = "windows")]
+const ENV_PATH_SEPARATOR: &str = ";";
+
+/// Return the separator used in the PATH environment variable.
+pub fn env_path_separator() -> &'static str {
+    ENV_PATH_SEPARATOR
+}
 
 /// Returns a static string containing the version information.
 /// It uses Box::leak to convert a String into a &'static str.
@@ -25,7 +38,7 @@ pub fn short_description() -> &'static str {
     DESCRIPTION
 }
 
-fn get_env_var(var: &str) -> String {
+pub fn get_env_var(var: &str) -> String {
     std::env::var(var).unwrap_or_else(|_| UNKNOWN.to_string())
 }
 
@@ -82,6 +95,12 @@ fn get_shell_info() -> String {
     format!("{} version: {}", shell_name, shell_version)
 }
 
+pub fn check_dir_in_path(dir: &str) -> u16 {
+    let path = get_env_var("PATH");
+    let sep = env_path_separator();
+    utils::position_of_str_in_string(path, sep, dir)
+}
+
 /// Print platform information useful for debug purposes.
 pub fn debug_info() {
     print!("\n{} - {}\n{}\n", APP_NAME, DESCRIPTION, long_version());
@@ -114,5 +133,14 @@ pub fn debug_info() {
     println!("  SHELL: {}", get_shell_info());
     println!("  USER: {}", get_env_var("USER"));
     println!("  HOME: {}", get_env_var("HOME"));
-    println!("  PATH: {}", get_env_var("PATH"));
+
+    let bin_dir = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    println!(
+        "  PATH: {}",
+        match check_dir_in_path(bin_dir.to_str().unwrap()) {
+            0 => "Not in PATH",
+            1 => "In PATH at the beginning",
+            _ => "In PATH, but NOT at the beginning",
+        }
+    );
 }

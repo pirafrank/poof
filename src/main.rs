@@ -9,6 +9,7 @@ use serde::Deserialize;
 mod archives;
 mod filesys;
 mod platform_info;
+mod utils;
 
 // Constants
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -39,6 +40,9 @@ enum Cmd {
 
     /// Download binary for the platform and install it
     Install(CmdArgs),
+
+    /// Check if poof's bin directory is in the PATH
+    Check,
 
     /// Show version information
     Version,
@@ -135,6 +139,9 @@ fn main() {
             );
             process_install(&args.repo, args.tag.as_deref());
         }
+        Cmd::Check => {
+            check_if_bin_in_path();
+        }
         Cmd::Version => {
             println!("{}", platform_info::long_version());
         }
@@ -169,6 +176,7 @@ fn process_install(repo: &str, tag: Option<&str>) {
     // install binary
     install_binary(&archive_path, repo, &release.tag_name);
     info!("{} installed successfully.", binary.name);
+    check_if_bin_in_path();
     std::process::exit(0);
 }
 
@@ -350,4 +358,33 @@ fn get_release_url(repo: &str, tag: Option<&str>) -> String {
         Some(tag) => format!("{}/{}/releases/tags/{}", GITHUB_API_URL, repo, tag),
         None => format!("{}/{}/releases/latest", GITHUB_API_URL, repo),
     }
+}
+
+fn check_if_bin_in_path() {
+    let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    let position = platform_info::check_dir_in_path(bin_dir.to_str().unwrap());
+    match position {
+        0 => {
+            warn!("Bin directory not found in PATH.");
+            warn!(
+                "Please add {} to your PATH. For example, run: \n\n{}\n",
+                bin_dir.display(),
+                get_export_command()
+            );
+            warn!("This is required to run the installed binaries.");
+        }
+        1 => info!("It looks good. Bin directory is the first in PATH."),
+        _ => {
+            warn!("Bin directory is not the first in PATH.");
+            warn!(
+                "Please move {} to the beginning of your PATH.",
+                bin_dir.display()
+            );
+        }
+    }
+}
+
+fn get_export_command() -> String {
+    let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    format!("export PATH=\"{}:$PATH\"", bin_dir.to_str().unwrap())
 }

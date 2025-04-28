@@ -22,7 +22,7 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'poof'",
+      "name": "Debug exec: 'poof install'",
       "cargo": {
         "args": [
           "build",
@@ -37,6 +37,26 @@
       "args": [
         "install",
         "pirafrank/rust_exif_renamer"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug exec: 'poof check'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=poof",
+          "--package=poof"
+        ],
+        "filter": {
+          "name": "poof",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        "check"
       ],
       "cwd": "${workspaceFolder}"
     },
