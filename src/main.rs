@@ -209,11 +209,21 @@ fn process_install(repo: &str, tag: Option<&str>) {
 fn install_binary(archive_path: &Path, repo: &str, version: &str) {
     let data_dir: PathBuf = filesys::get_data_dir().ok_or(libc::ENOENT).unwrap();
     debug!("Data directory: {}", data_dir.display());
-    let install_dir = get_install_path(&data_dir, repo, version);
+    let install_dir: PathBuf = get_install_path(&data_dir, repo, version);
+    prepare_install_dir(&install_dir);
+
+    let execs_to_install: Vec<PathBuf> =
+        filesys::find_exec_files_from_extracted_archive(archive_path);
+    for exec in execs_to_install {
+        install_executable(&exec, &install_dir);
+    }
+}
+
+fn prepare_install_dir(install_dir: &PathBuf) {
     debug!("Installing to: {}", install_dir.display());
     // Create the installation directory if it doesn't exist
     if !install_dir.exists() {
-        std::fs::create_dir_all(&install_dir).unwrap();
+        std::fs::create_dir_all(install_dir).unwrap();
     } else if install_dir.is_dir() && install_dir.read_dir().unwrap().count() > 0 {
         // Check if the directory is not empty
         // If it is not empty, warn the user and exit
@@ -224,61 +234,59 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
         warn!("If you want to reinstall, please remove the directory first.");
         std::process::exit(0);
     } // else overwrite empty dir of possibly left-over dumb file with dir name
+}
 
-    let execs_to_install: Vec<PathBuf> =
-        filesys::find_exec_files_from_extracted_archive(archive_path);
-    for exec in execs_to_install {
-        let file_name = exec.file_name().unwrap();
-        let installed_exec = install_dir.join(file_name);
-        debug!("Copying {} to {}", exec.display(), installed_exec.display());
-        if let Err(e) = std::fs::copy(&exec, &installed_exec) {
+fn install_executable(exec: &PathBuf, install_dir: &Path) {
+    let file_name = exec.file_name().unwrap();
+    let installed_exec = install_dir.join(file_name);
+    debug!("Copying {} to {}", exec.display(), installed_exec.display());
+    if let Err(e) = std::fs::copy(exec, &installed_exec) {
+        error!(
+            "Error copying {} to {}: {}",
+            exec.display(),
+            installed_exec.display(),
+            e
+        );
+        error!("Installation failed.");
+        std::process::exit(103);
+    }
+    debug!("Making {} executable", file_name.to_string_lossy());
+    // Set executable permissions, platform-specific
+    // Note: Windows does not require setting executable permissions
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Make the file executable on Unix-like systems
+        filesys::make_executable(&installed_exec);
+        // Create a symlink in the bin directory
+        let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+        let symlink_path = bin_dir.join(file_name);
+        debug!(
+            "Creating symlink {} -> {}",
+            symlink_path.display(),
+            installed_exec.display()
+        );
+        // check if symlink already exists
+        if symlink_path.exists() {
+            warn!(
+                "Symlink {} already exists. Skipping.",
+                symlink_path.display()
+            );
+            return;
+        }
+        // if symlink does not exist, create it to make exec available in PATH
+        if let Err(e) = filesys::symlink(&installed_exec, &symlink_path) {
             error!(
-                "Error copying {} to {}: {}",
-                exec.display(),
+                "Cannot symlink {} -> {}.\n\nInstallation failed. {}",
+                symlink_path.display(),
                 installed_exec.display(),
                 e
             );
-            error!("Installation failed.");
-            std::process::exit(103);
-        }
-        debug!("Making {} executable", file_name.to_string_lossy());
-        // Set executable permissions, platform-specific
-        // Note: Windows does not require setting executable permissions
-        #[cfg(not(target_os = "windows"))]
-        {
-            // Make the file executable on Unix-like systems
-            filesys::make_executable(&installed_exec);
-            // Create a symlink in the bin directory
-            let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
-            let symlink_path = bin_dir.join(file_name);
-            debug!(
-                "Creating symlink {} -> {}",
+        } else {
+            info!(
+                "Symlink created: {} -> {}",
                 symlink_path.display(),
                 installed_exec.display()
             );
-            // check if symlink already exists
-            if symlink_path.exists() {
-                warn!(
-                    "Symlink {} already exists. Skipping.",
-                    symlink_path.display()
-                );
-                continue;
-            }
-            // if symlink does not exist, create it to make exec available in PATH
-            if let Err(e) = filesys::symlink(&installed_exec, &symlink_path) {
-                error!(
-                    "Cannot symlink {} -> {}.\n\nInstallation failed. {}",
-                    symlink_path.display(),
-                    installed_exec.display(),
-                    e
-                );
-            } else {
-                info!(
-                    "Symlink created: {} -> {}",
-                    symlink_path.display(),
-                    installed_exec.display()
-                );
-            }
         }
     }
 }
