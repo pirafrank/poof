@@ -1141,6 +1141,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
+ "regex",
  "reqwest",
  "serde",
  "sevenz-rust2",

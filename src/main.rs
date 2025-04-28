@@ -2,10 +2,12 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::{fs::File, path::Path};
 
+use clap::builder::ValueParser;
 use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use github::models::{Release, ReleaseAsset};
 use log::{debug, error, info, warn};
+use regex::Regex;
 
 mod archives;
 mod asset;
@@ -26,7 +28,13 @@ const THIS_REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
 struct CmdArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     /// e.g. pirafrank/rust_exif_renamer
-    #[arg(required = true)]
+    #[arg(required = true, value_parser = ValueParser::new(|s: &str| {
+        if Regex::new(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$").unwrap().is_match(s) {
+            Ok(s.to_string())
+        } else {
+            Err(format!("Repository must be in the format USERNAME/REPO, got: {}", s))
+        }
+    }))]
     repo: String,
 
     /// Optional release tag (defaults to 'latest')
