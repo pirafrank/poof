@@ -181,8 +181,6 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
         warn!("If you want to reinstall, please remove the directory first.");
         std::process::exit(0);
     }
-    let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
-    info!("Bin directory: {}", bin_dir.display());
 
     let execs_to_install: Vec<PathBuf> =
         filesys::find_exec_files_from_extracted_archive(archive_path);
@@ -216,6 +214,7 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
                 installed_exec.display()
             );
             // Create a symlink in the bin directory
+            let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
             let symlink_path = bin_dir.join(file_name);
             debug!(
                 "Creating symlink {} -> {}",
@@ -223,9 +222,14 @@ fn install_binary(archive_path: &Path, repo: &str, version: &str) {
                 installed_exec.display()
             );
             if let Err(e) = filesys::symlink(&installed_exec, &symlink_path) {
-                error!("Can't symlink. Installation failed. {}", e);
+                error!(
+                    "Cannot symlink {} -> {}.\n\nInstallation failed. {}",
+                    symlink_path.display(),
+                    installed_exec.display(),
+                    e
+                );
             } else {
-                debug!(
+                info!(
                     "Symlink created: {} -> {}",
                     symlink_path.display(),
                     installed_exec.display()
