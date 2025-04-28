@@ -1,6 +1,6 @@
 // Constants for version information
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
-const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+const DESCRIPTION: &str = "magic manager of pre-built software";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const COMMIT: &str = env!("GIT_COMMIT_HASH");
 const BUILD_DATE: &str = env!("BUILD_DATE");
@@ -19,6 +19,10 @@ pub fn long_version() -> &'static str {
         )
         .into_boxed_str(),
     )
+}
+
+pub fn short_description() -> &'static str {
+    DESCRIPTION
 }
 
 fn get_env_var(var: &str) -> String {
@@ -82,7 +86,7 @@ fn get_shell_info() -> String {
 pub fn debug_info() {
     print!("\n{} - {}\n{}\n", APP_NAME, DESCRIPTION, long_version());
     // Print system information
-    println!("Platform Information:");
+    println!("\nPlatform Information:");
     println!("  OS family: {}", std::env::consts::OS);
     println!("  OS version: {}", get_os_version());
     println!("  Architecture: {}", std::env::consts::ARCH);

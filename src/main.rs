@@ -11,8 +11,8 @@ mod filesys;
 mod platform_info;
 
 // Constants
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
-const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 const THIS_REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
 const GITHUB_API_URL: &str = "https://api.github.com/repos";
 const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
@@ -50,10 +50,17 @@ enum Cmd {
 
 #[derive(Parser)]
 #[command(
+  name = APP_NAME,
   author = AUTHOR,
   version = platform_info::long_version(),
-  about = DESCRIPTION,
-  long_version = platform_info::long_version()
+  about = platform_info::short_description(),
+  long_version = platform_info::long_version(),
+  help_template = "\n\n{name} - {about}\n\n\
+    {usage-heading} {usage}\n\n\
+    {all-args}{after-help}",
+  after_help = format!("For more information, visit: {}\n\n\
+    If you encounter any issues, please report them at:\n{}/issues\n",
+    THIS_REPO_URL, THIS_REPO_URL),
 )]
 struct Cli {
     /// Command to execute
