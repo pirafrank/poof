@@ -9,7 +9,7 @@ lazy_static! {
     static ref OPERATING_SYSTEM: HashMap<&'static str, Vec<&'static str>> = {
         let mut m = HashMap::new();
         m.insert("windows", vec!["windows", "win"]);
-        m.insert("macos", vec!["macos", "darwin", "mac"]);
+        m.insert("macos", vec!["macos", "darwin", "mac", "osx"]);
         m.insert("linux", vec!["linux"]);
         m.insert("openbsd", vec!["openbsd"]);
         m.insert("freebsd", vec!["freebsd"]);
