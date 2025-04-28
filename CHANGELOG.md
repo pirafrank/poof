@@ -2,6 +2,33 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.3.0] - 2025-04-28
+
+### 🚀 Features
+
+- Better dir structure in data dir
+- Minor improvement in messages output to the user
+- Better pkg description and repo info
+- Check poof bin dir in PATH
+- Enhanced debug info
+- Added 'list' command to show installed binaries and their versions
+- Improved installation handling of multiple versions
+- Added 'use' command to change symlinked version
+- Added validation of passed args
+
+### 🚜 Refactor
+
+- Split up of install function and improvements
+- Reorder github interaction code
+
+### 🔧 Setup & Quality
+
+- Schedule compliance workflow
+
+### ⚙️ Miscellaneous Tasks
+
+- Update cargo-deny settings
+
 ## [0.2.0] - 2025-04-27
 
 ### 🚀 Features
@@ -37,7 +64,7 @@ useful for debug purposes
 - License and readme
 - Code of conduct and CONTRIBUTING files
 - Update dirs dep to 6.0
-- Bump to version 0.2.0
+- Prepare for version 0.2.0
 
 ## [0.1.0-pre] - 2025-04-21
 

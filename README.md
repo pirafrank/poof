@@ -102,13 +102,17 @@ Having a dedicated directory for `poof` binaries is a good practice, as it allow
 ## Usage
 
 ```txt
-Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic
+
+poof - magic manager of pre-built software
 
 Usage: poof [OPTIONS] <COMMAND>
 
 Commands:
   download  Only download binary for the platform in current directory. No install
   install   Download binary for the platform and install it
+  use       Make an installed version the one to be used by default
+  list      List installed binaries and their versions
+  check     Check if poof's bin directory is in the PATH
   version   Show version information
   help      Print this message or the help of the given subcommand(s)
 
@@ -117,6 +121,12 @@ Options:
   -q, --quiet...    Decrease logging verbosity
   -h, --help        Print help
   -V, --version     Print version
+
+For more information, visit: https://github.com/pirafrank/poof
+
+If you encounter any issues, please report them at:
+https://github.com/pirafrank/poof/issues
+
 ```
 
 ## Disable

@@ -36,13 +36,14 @@ Got a feature request? Open an [issue](https://github.com/pirafrank/poof/labels/
 - [ ] `disable`, remove poof's bin directory from `$PATH` in current shell session
 - [x] `get`, only download the binary for current platform to current directory
 - [x] `install`, download the binary for current platform and install to poof's bin directory
-- [ ] `list`, list all installed binaries
-- [ ] `list --all`, list all installed binaries and their versions
+- [x] `list`, list all installed binaries
+- [x] `use`, make an installed version the one to be used by default
 - [ ] `update`, update an installed binary to the latest version
 - [ ] `update --all`, update all installed binaries to their latest versions
 - [ ] `update --self`, use poof to update poof itself
 - [ ] `remove`, remove symlink to a binary installed in poof
 - [ ] `purge`, remove all installed binaries
+- [x] `check`, check if poof's bin directory is in the `$PATH`
 - [x] `version`, show version information about poof
 - [x] `debug`, show debug information for troubleshooting
 - [ ] `export`, export installed apps and their version in JSON or YAML format
