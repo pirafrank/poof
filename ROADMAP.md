@@ -56,8 +56,8 @@ Got a feature request? Open an [issue](https://github.com/pirafrank/poof/labels/
 
 - [x] Linux x86_64 support
 - [x] Linux aarch64 support
-- [ ] macOS x86_64 support
-- [ ] macOS aarch64 support
+- [x] macOS x86_64 support
+- [x] macOS aarch64 support
 - [ ] FreeBSD x86_64 support
 - [ ] Windows x86_64 support
 - [ ] Windows aarch64 support

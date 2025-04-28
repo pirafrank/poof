@@ -27,7 +27,7 @@ You just run `poof install someuser/somerepo` and... *poof!* it is installed and
 - **📦 Zero-install**: Simply download the binary for your platform and use it right away
 - **🔗 Zero-dependencies**: It runs standalone without requiring any additional software
 - **👤 User-space**: Designed to work in user-space, no root access needed
-- **🌍 Cross-platform**: Works on Linux (macOS, FreeBSD and Windows support is planned)
+- **🌍 Cross-platform**: Works on Linux and macOS (FreeBSD and Windows support is planned)
 - **🚀 Easy to use**: Just run `poof` and it will do the rest
 
 Bonus:
@@ -69,13 +69,20 @@ More and more often modern tools are built with languages like Rust and Go, and 
 
     Note: Replace `VERSION` with the desired version to install. Not specifying a tag will install from `main` branch. `main` branch should be stable, but it's unreleased software and may contain bugs or breaking changes. It should considered beta quality software.
 
-2. Add poof's `bin` directory to `$PATH`. Paste:
+2. Add poof's `bin` directory to `$PATH`. Paste the following to your `~/.bashrc` or `~/.zshrc`:
+
+    On Linux:
 
     ```txt
     export PATH="${HOME}/.local/share/poof/bin:${PATH}"
     ```
 
-    to your `~/.bashrc` or `~/.zshrc`.
+    On macOS:
+
+    ```txt
+    export PATH="${HOME}/Library/Application Support/poof/bin:${PATH}"
+    ```
+
 3. Done! Now try to install something, for example:
 
     ```txt
@@ -85,12 +92,6 @@ More and more often modern tools are built with languages like Rust and Go, and 
 ## About poof's `bin` directory
 
 After installing `poof`, you need to add its `bin` directory to your `$PATH`. Be sure it is at the beginning of your `$PATH` so that it takes precedence over any other version of the same binary you may have installed other ways.
-
-For example, for Linux you add the following line to your `~/.bashrc` or `~/.zshrc` file:
-
-```sh
-export PATH="${HOME}/.local/share/poof/bin:${PATH}"
-```
 
 Having a dedicated directory for `poof` binaries is a good practice, as it allows you to:
 
