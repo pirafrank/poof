@@ -27,7 +27,7 @@ pub fn env_path_separator() -> &'static str {
 pub fn long_version() -> &'static str {
     Box::leak(
         format!(
-            "\nVersion: {}\nCommit: {}\nBuild Date: {}",
+            "\nVersion   : {}\nCommit    : {}\nBuild Date: {}",
             VERSION, COMMIT, BUILD_DATE
         )
         .into_boxed_str(),
@@ -106,13 +106,13 @@ pub fn debug_info() {
     print!("\n{} - {}\n{}\n", APP_NAME, DESCRIPTION, long_version());
     // Print system information
     println!("\nPlatform Information:");
-    println!("  OS family: {}", std::env::consts::OS);
+    println!("  OS family : {}", std::env::consts::FAMILY);
+    println!("  OS type   : {}", std::env::consts::OS);
     println!("  OS version: {}", get_os_version());
-    println!("  Architecture: {}", std::env::consts::ARCH);
+    println!("  Arch      : {}", std::env::consts::ARCH);
     println!("  Endianness: {}", get_platform_endianness());
-    println!("  Family: {}", std::env::consts::FAMILY);
     println!(
-        "  Kernel: {}",
+        "  Kernel    : {}",
         std::process::Command::new("uname")
             .arg("-a")
             .output()
@@ -124,15 +124,15 @@ pub fn debug_info() {
         std::env::current_exe().unwrap_or_default().display()
     );
     println!(
-        "  Current directory: {}",
+        "  Cwd       : {}",
         std::env::current_dir().unwrap_or_default().display()
     );
 
     // Environment variables
     print!("\nEnvironment:\n");
     println!("  SHELL: {}", get_shell_info());
-    println!("  USER: {}", get_env_var("USER"));
-    println!("  HOME: {}", get_env_var("HOME"));
+    println!("  USER : {}", get_env_var("USER"));
+    println!("  HOME : {}", get_env_var("HOME"));
 
     let bin_dir = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
     println!(
@@ -143,4 +143,16 @@ pub fn debug_info() {
             _ => "In PATH, but NOT at the beginning",
         }
     );
+
+    // Dirs
+    println!("\nDirectories:");
+    println!(
+        "  Cache dir: {}",
+        filesys::get_cache_dir().unwrap_or_default().display()
+    );
+    println!(
+        "  Data dir : {}",
+        filesys::get_data_dir().unwrap_or_default().display()
+    );
+    println!("  Bin dir  : {}", bin_dir.display());
 }
