@@ -3,6 +3,11 @@ use serde::Deserialize;
 use super::ReleaseAsset;
 
 #[derive(Deserialize, Debug)]
+/// Represents a GitHub release.
+/// The `tag_name` is the version tag of the release.
+/// The `published_at` is the date when the release was published.
+/// The `assets` is a list of assets associated with the release.
+/// The `Release` struct is used to deserialize the JSON response from the GitHub API.
 pub struct Release {
     tag_name: String,
     published_at: String, // Consider using chrono::DateTime<chrono::Utc> for proper date handling
@@ -10,14 +15,6 @@ pub struct Release {
 }
 
 impl Release {
-    pub fn new(tag_name: String, published_at: String, assets: Vec<ReleaseAsset>) -> Self {
-        Self {
-            tag_name,
-            published_at,
-            assets,
-        }
-    }
-
     pub fn tag_name(&self) -> &String {
         &self.tag_name
     }
