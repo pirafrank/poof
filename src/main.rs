@@ -2,10 +2,10 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::{fs::File, path::Path};
 
-use clap::builder::ValueParser;
 use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use github::models::{Release, ReleaseAsset};
+use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use regex::Regex;
 
@@ -16,6 +16,7 @@ mod github;
 use github::client::get_release;
 use poof::is_env_compatible;
 mod platform_info;
+mod semver_utils;
 mod utils;
 
 // Constants
@@ -23,18 +24,27 @@ const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
 const THIS_REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
 
+lazy_static! {
+    static ref REPO_REGEX: Regex = Regex::new(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$").unwrap();
+}
+
+fn validate_repo_format(s: &str) -> Result<String, String> {
+    if REPO_REGEX.is_match(s) {
+        Ok(s.to_string())
+    } else {
+        Err(format!(
+            "Repository must be in the format USERNAME/REPO, got: {}",
+            s
+        ))
+    }
+}
+
 // Common arguments for repository operations
 #[derive(Parser, Clone)]
 struct CmdArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     /// e.g. pirafrank/rust_exif_renamer
-    #[arg(required = true, value_parser = ValueParser::new(|s: &str| {
-        if Regex::new(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$").unwrap().is_match(s) {
-            Ok(s.to_string())
-        } else {
-            Err(format!("Repository must be in the format USERNAME/REPO, got: {}", s))
-        }
-    }))]
+    #[arg(required = true, value_parser = validate_repo_format)]
     repo: String,
 
     /// Optional release tag (defaults to 'latest')
