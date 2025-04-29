@@ -15,6 +15,7 @@ mod filesys;
 mod github;
 use github::client::get_release;
 use poof::is_env_compatible;
+use semver_utils::SemverStringConversion;
 mod platform_info;
 mod semver_utils;
 mod utils;
@@ -165,15 +166,15 @@ fn main() {
                 info!("No installed binaries found.");
             } else {
                 let mut stdout = std::io::stdout().lock();
-                writeln!(stdout, "Installed binaries").unwrap();
-                writeln!(stdout, "\n{:<40} {:<15}", "Repository", "Versions").unwrap();
+                writeln!(stdout).unwrap();
+                writeln!(stdout, "{:<40} {:<15}", "Repository", "Versions").unwrap();
                 writeln!(stdout, "{:<40} {:<15}", "----------", "--------").unwrap();
                 for asset in list {
                     writeln!(
                         stdout,
                         "{:<40} {:?}",
                         asset.get_name(),
-                        asset.get_versions()
+                        asset.get_versions().to_string()
                     )
                     .unwrap();
                 }
