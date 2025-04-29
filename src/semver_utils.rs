@@ -29,12 +29,12 @@ impl SemverSort for Vec<String> {
     }
 }
 
-pub trait SemverConversion {
+pub trait SemverArrayConversion {
     /// Converts a vector of strings to a vector of Version objects.
     fn to_version(&self) -> Vec<Version>;
 }
 
-impl SemverConversion for Vec<String> {
+impl SemverArrayConversion for Vec<String> {
     /// Converts a vector of strings to a vector of Version objects.
     fn to_version(&self) -> Vec<Version> {
         let mut versions: Vec<Version> = Vec::new();
@@ -60,23 +60,26 @@ impl SemverVersionConversion for String {
     }
 }
 
+impl SemverVersionConversion for &str {
+    /// Converts a version String to an optional Version object.
+    fn to_version(&self) -> Option<Version> {
+        Version::parse(self).ok()
+    }
+}
+
 pub trait SemverStringConversion {
     /// Converts a vector of Version objects to a vector of strings.
-    fn to_string(&self) -> Vec<String>;
+    fn to_string_vec(&self) -> Vec<String>;
 }
 
 impl SemverStringConversion for Vec<Version> {
     /// Converts a vector of Version objects to a vector of strings.
-    fn to_string(&self) -> Vec<String> {
+    fn to_string_vec(&self) -> Vec<String> {
         self.iter().map(|v| v.to_string()).collect()
     }
 }
 
 pub trait SemverStringPrefix {
-    /// Fixes the version strings in the vector by removing any leading 'v' or 'V'.
-    /// Edits happen in place.
-    fn strip_v_in_place(&mut self);
-
     /// Fixes the version strings in the vector by removing any leading 'v' or 'V'.
     /// It returns a new vector without modifying the original.
     fn strip_v(&self) -> Self;
@@ -84,42 +87,56 @@ pub trait SemverStringPrefix {
 
 impl SemverStringPrefix for Vec<String> {
     /// Strips the leading 'v' or 'V' from each version string in the vector.
-    /// It modifies the vector in place.
-    /// This is useful to avoid version parsing issues when using semver crate.
-    fn strip_v_in_place(&mut self) {
-        for version_str in self.iter_mut() {
-            if version_str.starts_with(['v', 'V']) {
-                *version_str = version_str[1..].to_string();
-            }
-        }
-    }
-
-    /// Strips the leading 'v' or 'V' from each version string in the vector.
     /// It returns a new vector without modifying the original.
     /// This is useful to avoid version parsing issues when using semver crate.
     fn strip_v(&self) -> Self {
-        let mut new_vec = self.clone();
-        new_vec.strip_v_in_place();
+        let mut new_vec: Vec<String> = Vec::new();
+        for version in self {
+            if version.starts_with(['v', 'V']) {
+                new_vec.push(version.clone()[1..].to_string());
+            } else {
+                new_vec.push(version.clone());
+            }
+        }
         new_vec
     }
 }
 
 impl SemverStringPrefix for String {
     /// Strips the leading 'v' or 'V' from the version string.
-    /// It modifies the string in place.
-    /// This is useful to avoid version parsing issues when using semver crate.
-    fn strip_v_in_place(&mut self) {
-        if self.starts_with(['v', 'V']) {
-            *self = self[1..].to_string();
-        }
-    }
-
-    /// Strips the leading 'v' or 'V' from the version string.
-    /// It returns a new string without modifying the original.
+    /// It does not modify the original.
     /// This is useful to avoid version parsing issues when using semver crate.
     fn strip_v(&self) -> Self {
-        let mut new_str = self.clone();
-        new_str.strip_v_in_place();
-        new_str
+        let mut s: String = self.clone();
+        if s.starts_with(['v', 'V']) {
+            s.remove(0);
+        }
+        s
+    }
+}
+
+impl SemverStringPrefix for &String {
+    /// Strips the leading 'v' or 'V' from the version string.
+    /// It does not modify the original.
+    /// This is useful to avoid version parsing issues when using semver crate.
+    fn strip_v(&self) -> Self {
+        let s: &String = self;
+        if s.starts_with(['v', 'V']) {
+            s[1..].to_string();
+        }
+        s
+    }
+}
+
+impl SemverStringPrefix for &str {
+    /// Strips the leading 'v' or 'V' from the version string.
+    /// It does not modify the original.
+    /// This is useful to avoid version parsing issues when using semver crate.
+    fn strip_v(&self) -> Self {
+        if self.starts_with(['v', 'V']) {
+            &self[1..]
+        } else {
+            self
+        }
     }
 }

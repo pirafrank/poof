@@ -9,8 +9,8 @@ use std::{
 use rayon::prelude::*;
 use std::fs;
 
-use crate::asset::Asset;
-use crate::asset::VecAssets;
+use crate::models::asset::Asset;
+use crate::models::asset::VecAssets;
 use poof::SUPPORTED_EXTENSIONS;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");

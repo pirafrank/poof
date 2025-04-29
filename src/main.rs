@@ -10,12 +10,12 @@ use log::{debug, error, info, warn};
 use regex::Regex;
 
 mod archives;
-mod asset;
 mod filesys;
 mod github;
+mod models;
 use github::client::get_release;
 use poof::is_env_compatible;
-use semver_utils::SemverStringConversion;
+use semver_utils::{SemverStringConversion, SemverStringPrefix};
 mod platform_info;
 mod semver_utils;
 mod utils;
@@ -174,7 +174,7 @@ fn main() {
                         stdout,
                         "{:<40} {:?}",
                         asset.get_name(),
-                        asset.get_versions().to_string()
+                        asset.get_versions().to_string_vec()
                     )
                     .unwrap();
                 }
@@ -216,7 +216,8 @@ fn process_install(repo: &str, tag: Option<&str>) {
     debug!("Extracted to: {}", download_to.display());
 
     // install binary
-    install_binary(&archive_path, repo, release.tag_name());
+    let version: String = release.tag_name().strip_v();
+    install_binary(&archive_path, repo, &version);
     info!("{} installed successfully.", binary.name());
     check_if_bin_in_path();
     std::process::exit(0);
@@ -292,7 +293,7 @@ fn install_executable(exec: &PathBuf, install_dir: &Path) {
         // if symlink does not exist, create it to make exec available in PATH
         if let Err(e) = filesys::symlink(&installed_exec, &symlink_path) {
             error!(
-                "Cannot symlink {} -> {}.\n\nInstallation failed. {}",
+                "Cannot symlink {} -> {}\n\nInstallation failed. {}",
                 symlink_path.display(),
                 installed_exec.display(),
                 e
@@ -309,7 +310,7 @@ fn install_executable(exec: &PathBuf, install_dir: &Path) {
 
 // Function to handle downloading and potentially installing binaries
 fn download_binary(filename: &String, download_url: &String, download_to: &PathBuf) {
-    info!("Downloading {} from {}", filename, download_url);
+    info!("Downloading {}\nfrom {}", filename, download_url);
     let response = reqwest::blocking::get(download_url).unwrap();
     if response.status().is_success() {
         // Ensure the directory exists

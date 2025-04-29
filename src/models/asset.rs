@@ -5,9 +5,11 @@ use crate::semver_utils::*;
 use semver::Version;
 use std::cmp::Ordering;
 
+use super::repostring::RepoString;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub struct Asset {
-    name: String,
+    name: RepoString,
     versions: Vec<Version>,
 }
 
@@ -17,14 +19,20 @@ pub struct Asset {
 impl Asset {
     /// Creates a new Asset instance with the given name and versions.
     pub fn new(name: String, versions: Vec<Version>) -> Self {
-        Self { name, versions }
+        Self {
+            name: RepoString(name),
+            versions,
+        }
     }
 
     /// Creates a new Asset instance with the given name and versions as strings.
     pub fn new_as_string(name: String, versions_str: Vec<String>) -> Self {
         let mut versions = versions_str.strip_v().to_version();
         versions.sort();
-        Self { name, versions }
+        Self {
+            name: RepoString(name),
+            versions,
+        }
     }
 
     /// Creates a new Asset instance with the given name and an empty version list.
@@ -39,7 +47,7 @@ impl Asset {
 
     /// Sets the name of the asset.
     pub fn set_name(&mut self, name: String) {
-        self.name = name;
+        self.name = RepoString(name);
     }
 
     /// Sets the vector of versions.
@@ -126,7 +134,7 @@ impl Asset {
     }
 }
 
-/// Return a String representation of the Asset instance.
+/// Return a String representation of Asset.
 impl std::fmt::Display for Asset {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let versions_str = self
