@@ -1,8 +1,10 @@
 //! GitHub API interaction for fetching releases and assets.
 
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 
 use crate::github::models::Release;
+
+use super::models::ReleaseAsset;
 
 const GITHUB_API_URL: &str = "https://api.github.com/repos";
 const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
@@ -60,4 +62,31 @@ pub fn get_release_url(repo: &str, tag: Option<&str>) -> String {
         Some(tag) => format!("{}/{}/releases/tags/{}", GITHUB_API_URL, repo, tag),
         None => format!("{}/{}/releases/latest", GITHUB_API_URL, repo),
     }
+}
+
+pub fn get_asset<F>(release: &Release, f: F) -> ReleaseAsset
+where
+    F: Fn(&str) -> bool,
+{
+    let binaries: Vec<ReleaseAsset> = release
+        .assets()
+        .iter()
+        .filter(|asset| f(asset.name()))
+        .cloned()
+        .collect();
+
+    if binaries.is_empty() {
+        error!("No compatible pre-built binaries found.");
+        std::process::exit(100);
+    }
+    debug!("Compatible binaries found:");
+    for binary in &binaries {
+        debug!("\t{}", binary.name());
+    }
+    if binaries.len() > 1 {
+        warn!("Multiple compatible binaries found. Downloading first...");
+        // TODO: allow to specify which binary to download via explicit URL given to 'install' command
+    }
+    // Return the first compatible binary
+    binaries[0].clone()
 }
