@@ -95,7 +95,7 @@ fn get_shell_info() -> String {
     format!("{} version: {}", shell_name, shell_version)
 }
 
-pub fn check_dir_in_path(dir: &str) -> u16 {
+pub fn check_dir_in_path(dir: &str) -> i16 {
     let path = get_env_var("PATH");
     let sep = env_path_separator();
     utils::position_of_str_in_string(path, sep, dir)
@@ -138,8 +138,8 @@ pub fn debug_info() {
     println!(
         "  PATH: {}",
         match check_dir_in_path(bin_dir.to_str().unwrap()) {
-            0 => "Not in PATH",
-            1 => "In PATH at the beginning",
+            -1 => "Not in PATH",
+            0 => "In PATH at the beginning",
             _ => "In PATH, but NOT at the beginning",
         }
     );
