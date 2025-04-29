@@ -4,7 +4,6 @@ use std::{fs::File, path::Path};
 
 use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
-use github::models::{Release, ReleaseAsset};
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use regex::Regex;
@@ -13,7 +12,7 @@ mod archives;
 mod filesys;
 mod github;
 mod models;
-use github::client::get_release;
+use github::client::{get_asset, get_release};
 use poof::is_env_compatible;
 use semver_utils::{SemverStringConversion, SemverStringPrefix};
 mod platform_info;
@@ -140,7 +139,7 @@ fn main() {
             debug!("Working directory: {}", current_dir.display());
 
             let release = get_release(&args.repo, args.tag.as_deref());
-            let binary = get_asset(&release);
+            let binary = get_asset(&release, is_env_compatible);
             download_binary(binary.name(), binary.browser_download_url(), &current_dir);
         }
         Cmd::Install(args) => {
@@ -201,7 +200,7 @@ fn process_install(repo: &str, tag: Option<&str>) {
 
     // download binary
     let release = get_release(repo, tag);
-    let binary = get_asset(&release);
+    let binary = get_asset(&release, is_env_compatible);
     let download_to = get_install_path(&cache_dir, repo, release.tag_name());
     download_binary(binary.name(), binary.browser_download_url(), &download_to);
 
@@ -334,30 +333,6 @@ fn get_install_path(base: &Path, repo: &str, version: &str) -> PathBuf {
     let repo_path = repo.replace('/', std::path::MAIN_SEPARATOR_STR);
     // Creating path as: base_dir/username/reponame/version
     base.join(&repo_path).join(version)
-}
-
-pub fn get_asset(release: &Release) -> ReleaseAsset {
-    let binaries: Vec<ReleaseAsset> = release
-        .assets()
-        .iter()
-        .filter(|asset| is_env_compatible(asset.name()))
-        .cloned()
-        .collect();
-
-    if binaries.is_empty() {
-        error!("No compatible pre-built binaries found.");
-        std::process::exit(100);
-    }
-    debug!("Compatible binaries found:");
-    for binary in &binaries {
-        debug!("\t{}", binary.name());
-    }
-    if binaries.len() > 1 {
-        warn!("Multiple compatible binaries found. Downloading first...");
-        // TODO: allow to specify which binary to download via explicit URL given to 'install' command
-    }
-    // Return the first compatible binary
-    binaries[0].clone()
 }
 
 fn check_if_bin_in_path() {
