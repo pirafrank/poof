@@ -7,7 +7,7 @@
 [![Release](https://github.com/pirafrank/poof/actions/workflows/release.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/release.yml)
 [![Security audit](https://github.com/pirafrank/poof/actions/workflows/compliance.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/compliance.yml)
 
-Easy to use zero-config, zero-install, zero-dependencies binary manager in user-space that works like magic.
+Easy-to-use all-in-one binary with zero-config, zero-install, and zero-dependencies.
 
 You just run `poof install someuser/somerepo` and... *poof!* it is installed and available in your shell.
 
@@ -52,7 +52,7 @@ More and more often modern tools are built with languages like Rust and Go, and 
     - **binstall**: If you have [binstall](https://github.com/cargo-bins/cargo-binstall), you can get the binary using `cargo` and skip compilation:
 
     ```sh
-    cargo binstall exif_renamer
+    cargo binstall poof
     ```
 
     - **cargo**: Build and install latest release on crates.io using `cargo`:
@@ -73,19 +73,19 @@ More and more often modern tools are built with languages like Rust and Go, and 
 
     On Linux:
 
-    ```txt
+    ```sh
     export PATH="${HOME}/.local/share/poof/bin:${PATH}"
     ```
 
     On macOS:
 
-    ```txt
+    ```sh
     export PATH="${HOME}/Library/Application Support/poof/bin:${PATH}"
     ```
 
 3. Done! Now try to install something, for example:
 
-    ```txt
+    ```sh
     poof install pirafrank/rust_exif_renamer
     ```
 
