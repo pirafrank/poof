@@ -2,6 +2,17 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.3.1] - 2025-04-30
+
+### 🐛 Bug Fixes
+
+- 'check' command may not work properly
+
+### 🚜 Refactor
+
+- Args validation regex as static
+- Better path traversal in list command, added Asset struct
+
 ## [0.3.0] - 2025-04-28
 
 ### 🚀 Features
@@ -9,7 +20,7 @@ All notable changes to the project will be documented in this file.
 - Better dir structure in data dir
 - Minor improvement in messages output to the user
 - Better pkg description and repo info
-- Check poof bin dir in PATH
+- Added 'check' command to look for poof bin dir in PATH
 - Enhanced debug info
 - Added 'list' command to show installed binaries and their versions
 - Improved installation handling of multiple versions
@@ -28,6 +39,7 @@ All notable changes to the project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Update cargo-deny settings
+- Prepare for 0.3.0
 
 ## [0.2.0] - 2025-04-27
 
