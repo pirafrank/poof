@@ -1,16 +1,10 @@
-use log::debug;
+use log::{debug, warn};
 use std::{
-    collections::HashMap,
     fs::File,
     io::Read,
     path::{Path, PathBuf},
 };
 
-use rayon::prelude::*;
-use std::fs;
-
-use crate::models::asset::Asset;
-use crate::models::asset::VecAssets;
 use poof::SUPPORTED_EXTENSIONS;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -98,6 +92,15 @@ pub fn get_cache_dir() -> Option<PathBuf> {
     Some(cache_dir)
 }
 
+// Function to get a path for a binary file with the directory
+// structure for a specific repository and version.
+pub fn get_binary_nest(base: &Path, repo: &str, version: &str) -> PathBuf {
+    // Convert repo path to filesystem-friendly format by replacing '/' with OS separator
+    let repo_path = repo.replace('/', std::path::MAIN_SEPARATOR_STR);
+    // Creating path as: base_dir/username/reponame/version
+    base.join(&repo_path).join(version)
+}
+
 #[cfg(target_os = "linux")]
 fn is_exec_magic(buffer: &[u8; 4]) -> bool {
     // Linux expects ELF binaries
@@ -152,7 +155,7 @@ fn is_exec_by_magic_number(path: &PathBuf) -> bool {
     false
 }
 
-fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
+pub fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -215,99 +218,86 @@ pub fn is_executable(path: &PathBuf) -> bool {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn make_executable(installed_exec: &Path) {
+pub fn make_executable(file: &Path) {
+    if !file.is_file() {
+        debug!("File {} is not a regular file", file.to_string_lossy());
+        return;
+    }
+    debug!("Making {} executable", file.to_string_lossy());
     // Unix-like systems require setting executable permissions
     use std::os::unix::fs::PermissionsExt;
-    let mut perms = std::fs::metadata(installed_exec).unwrap().permissions();
+    let mut perms = std::fs::metadata(file).unwrap().permissions();
     // Add executable bits to current permissions (equivalent to chmod +x)
     perms.set_mode(perms.mode() | 0o111);
-    std::fs::set_permissions(installed_exec, perms).unwrap();
-    debug!(
-        "Set executable permissions for {}",
-        installed_exec.display()
-    );
+    std::fs::set_permissions(file, perms).unwrap();
+    debug!("Set executable permissions for {}", file.display());
 }
 
-pub fn symlink(source: &PathBuf, target: &PathBuf) -> std::io::Result<()> {
-    // TODO: support windows symlinks in userspace somehow, or just copy the exe file to dir in PATH!
-    // On Unix-like systems create a symbolic link to the installed binary at target.
-    std::os::unix::fs::symlink(source, target)?;
+pub fn copy_file(source: &PathBuf, target: &PathBuf) -> Result<(), String> {
+    debug!(
+        "Copying file from {} to {}",
+        source.display(),
+        target.display()
+    );
+    if let Err(e) = std::fs::copy(source, target) {
+        let e_msg = format!(
+            "Error copying {} to {}: {}",
+            source.display(),
+            target.display(),
+            e
+        );
+        return Err(e_msg);
+    };
+    debug!("File copied successfully");
     Ok(())
 }
 
-pub fn list_installed_assets() -> Vec<Asset> {
-    // List all files in the bin directory.
-    // Making this iterative for clarity and performance,
-    // data dir as a known structure with fixed number of levels.
-    // we traverse the directory tree to find all installed assets
-    // and their versions without needing to recursively search through
-    // the entire directory structure.
-    // This is a performance optimization for the case as the data directory
-    // may contain a large number of directories.
-    // We will use a parallel iterator (provided by the rayon crate) to
-    // speed up the process. We wont' need
-    // to use a mutex because each thread will be working on a different
-    // directory, with data aggregated sequentially at the end.
-    let data_dir: PathBuf = get_data_dir().unwrap();
+#[cfg(not(target_os = "windows"))]
+pub fn create_symlink(
+    source: &PathBuf,
+    target: &PathBuf,
+    remove_existing: bool,
+) -> Result<(), String> {
+    use log::info;
 
-    // Look through each subdirectory in data_dir for any installed assets.
-    // Read user directories in parallel.
-
-    let entries = match fs::read_dir(&data_dir) {
-        Ok(entries) => entries.flatten().collect::<Vec<_>>(),
-        Err(_) => return Vec::new(),
-    };
-
-    let assets: Vec<(String, String)> = entries
-        .into_par_iter()
-        .filter(|user| user.path().is_dir())
-        .flat_map(|user| {
-            let username = user.file_name().into_string().unwrap_or_default();
-            fs::read_dir(user.path())
-                .ok()
-                .into_iter()
-                .flatten()
-                .flatten()
-                .filter(|repo| repo.path().is_dir())
-                .flat_map(move |repo| {
-                    let repo_name = repo.file_name().into_string().unwrap_or_default();
-                    let slug = format!("{}/{}", username, repo_name);
-
-                    fs::read_dir(repo.path())
-                        .ok()
-                        .into_iter()
-                        .flatten()
-                        .flatten()
-                        .filter_map(move |version| {
-                            let version_path = version.path();
-                            if version_path.is_dir()
-                                && version_path
-                                    .read_dir()
-                                    .map(|mut d| d.next().is_some())
-                                    .unwrap_or(false)
-                            {
-                                let version_name =
-                                    version.file_name().into_string().unwrap_or_default();
-                                Some((slug.clone(), version_name))
-                            } else {
-                                None
-                            }
-                        })
-                })
-                .collect::<Vec<_>>()
-        })
-        .collect();
-
-    let mut map: HashMap<String, Asset> = HashMap::new();
-    for (slug, version) in assets {
-        // cloning here is necessary and impact is bare
-        let s = slug.clone();
-        map.entry(slug)
-            .and_modify(|asset| asset.add_version_as_string(&version))
-            .or_insert_with(|| Asset::new_as_string(s, vec![version]));
+    let msg = if remove_existing { "" } else { " NOT" };
+    debug!(
+        "Creating symlink {} -> {},{} removing existing",
+        source.display(),
+        target.display(),
+        msg
+    );
+    if target.exists() {
+        if remove_existing {
+            if let Err(e) = std::fs::remove_file(target) {
+                return Err(format!("Cannot remove {}, Error: {}", target.display(), e));
+            }
+            debug!("Removed existing symlink {}", target.display());
+        } else {
+            // If the symlink already exists and we don't want to remove it, skip.
+            warn!("Symlink {} already exists. Skipping.", target.display());
+            return Ok(());
+        }
     }
 
-    let mut result: Vec<Asset> = map.into_values().collect();
-    result.sort();
-    result
+    // Create a symlink in the target directory pointing to the installed binary.
+    match std::os::unix::fs::symlink(source, target) {
+        Ok(_) => {
+            info!(
+                "Symlink created: {} -> {}",
+                source.display(),
+                target.display()
+            );
+        }
+        Err(e) => {
+            let e_msg = format!(
+                "Error creating symlink {} -> {}: {}",
+                source.display(),
+                target.display(),
+                e
+            );
+            return Err(e_msg);
+        }
+    }
+    Ok(())
 }
