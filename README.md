@@ -129,6 +129,20 @@ https://github.com/pirafrank/poof/issues
 
 ```
 
+## Where poof stores data
+
+`poof` stores its data in standard directories via the [dirs](https://crates.io/crates/dirs) crate. Specifically, it uses the following directories:
+
+Installed binaries and `bin` directory:
+
+- **Linux**: `~/.local/share/poof`
+- **macOS**: `~/Library/Application Support/poof`
+
+Cache of downloaded releases:
+
+- **Linux**: `~/.cache/poof`
+- **macOS**: `~/Library/Caches/poof`
+
 ## Disable
 
 If you want to disable `poof`, you can do so by removing its `bin` directory from your `$PATH`.
@@ -144,6 +158,8 @@ If you have installed it using `cargo`, you can uninstall it with:
 ```sh
 cargo uninstall poof
 ```
+
+After you uninstall `poof`, you should remove its `bin` directory from your `$PATH`, and delete its data and cache directories as well.
 
 ## Project goals
 
