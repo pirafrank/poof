@@ -1,15 +1,6 @@
+use crate::constants::*;
 use crate::datadirs;
 use crate::utils;
-
-// Constants for version information
-const APP_NAME: &str = env!("CARGO_PKG_NAME");
-const DESCRIPTION: &str = "magic manager of pre-built software";
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const COMMIT: &str = env!("GIT_COMMIT_HASH");
-const BUILD_DATE: &str = env!("BUILD_DATE");
-
-// Constants for platform information
-const UNKNOWN: &str = "Unknown";
 
 #[cfg(not(target_os = "windows"))]
 const ENV_PATH_SEPARATOR: &str = ":";
@@ -81,7 +72,7 @@ pub fn get_platform_endianness() -> String {
     .to_string()
 }
 
-fn get_shell_info() -> String {
+pub fn get_shell_info() -> String {
     let shell_name = get_env_var("SHELL");
     let shell_version = if shell_name != UNKNOWN {
         std::process::Command::new(&shell_name)
