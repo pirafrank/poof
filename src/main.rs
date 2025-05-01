@@ -8,6 +8,7 @@ use regex::Regex;
 
 mod archives;
 mod commands;
+mod constants;
 mod datadirs;
 mod filesys;
 mod github;
@@ -17,14 +18,12 @@ mod selector;
 mod semver_utils;
 mod utils;
 
+use crate::constants::*;
 use crate::selector::is_env_compatible;
 use github::client::{get_asset, get_release};
 use semver_utils::SemverStringConversion;
 
 // Constants
-const APP_NAME: &str = env!("CARGO_PKG_NAME");
-const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
-const THIS_REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
 
 lazy_static! {
     static ref REPO_REGEX: Regex = Regex::new(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$").unwrap();

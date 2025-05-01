@@ -1,8 +1,6 @@
 use std::path::{Path, PathBuf};
 
-const APP_NAME: &str = env!("CARGO_PKG_NAME");
-const DATA_SUBDIR: &str = "data";
-const BIN_SUBDIR: &str = "bin";
+use crate::constants::*;
 
 /// This function returns the path to the config directory for the application.
 /// It creates the directory if it doesn't exist.
