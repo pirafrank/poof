@@ -11,12 +11,14 @@ mod commands;
 mod filesys;
 mod github;
 mod models;
-use github::client::{get_asset, get_release};
-use poof::is_env_compatible;
-use semver_utils::SemverStringConversion;
 mod platform_info;
+mod selector;
 mod semver_utils;
 mod utils;
+
+use crate::selector::is_env_compatible;
+use github::client::{get_asset, get_release};
+use semver_utils::SemverStringConversion;
 
 // Constants
 const APP_NAME: &str = env!("CARGO_PKG_NAME");

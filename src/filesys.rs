@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use poof::SUPPORTED_EXTENSIONS;
+use crate::selector::SUPPORTED_EXTENSIONS;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const DATA_SUBDIR: &str = "data";
