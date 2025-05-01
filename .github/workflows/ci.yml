@@ -2,9 +2,15 @@ name: CI
 run-name: CI on ${{ github.ref_name }}
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - pre/**
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.json'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.txt'
   workflow_dispatch:
 
 jobs:
@@ -34,71 +40,3 @@ jobs:
 
       - name: Perform CI checks
         run: just ci
-
-  make_matrix:
-    name: Create matrix
-    needs: ci_checks
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    env:
-      MATRIX_FILE: matrix.jsonc
-    steps:
-      - name: Clone repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - id: set-matrix
-        run: |
-          echo "matrix=$(grep -v '//' $MATRIX_FILE | jq -c '.')" >> "$GITHUB_OUTPUT"
-
-  build:
-    name: Build for ${{ matrix.target }}
-    needs: make_matrix
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix: ${{fromJson(needs.make_matrix.outputs.matrix)}}
-      max-parallel: 5
-    steps:
-      - name: Clone repo
-        uses: actions/checkout@v4
-
-      - name: Extract toolchain channel
-        id: extract_toolchain
-        shell: bash
-        run: |
-          TOOLCHAIN_CHANNEL=$(grep 'channel' rust-toolchain.toml | cut -d '"' -f 2)
-          echo "Toolchain channel: $TOOLCHAIN_CHANNEL"
-          echo "TOOLCHAIN_CHANNEL=$TOOLCHAIN_CHANNEL" >> $GITHUB_OUTPUT
-
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ steps.extract_toolchain.outputs.TOOLCHAIN_CHANNEL }}
-
-      - name: Setup just runner
-        uses: extractions/setup-just@v2
-
-      - name: Install cross-compilation tools
-        uses: taiki-e/setup-cross-toolchain-action@v1
-        with:
-          target: ${{ matrix.target }}
-
-      - name: Test project
-        # Skip tests on FreeBSD, because testing are not supported by cross on FreeBSD.
-        # https://github.com/cross-rs/cross#supported-targets
-        if: ${{ !contains(matrix.target, 'freebsd') && !contains(matrix.target, 'aarch64-pc-windows-msvc') }}
-        run: just test
-
-      - name: Build project
-        run: cargo build --target ${{ matrix.target }}
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: poof-${{ matrix.target }}
-          path: target/${{ matrix.target }}/debug/poof*
-          if-no-files-found: error
-          retention-days: 1
-          compression-level: 0  # no compression

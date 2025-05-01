@@ -35,16 +35,21 @@ better: fmt lint
 pre-commit: fmt-check lint
 
 # Run pre-push checks
-pre-push: test build
+pre-push: build test
 
 # Generate changelog (git-cliff required)
-changelog:
-  git cliff -o CHANGELOG.md
-  glow CHANGELOG.md
+changelog version:
+  git cliff --tag {{version}} -o CHANGELOG.md
+  glow CHANGELOG.md | less
 
 # Build the project
 build:
   cargo build
+
+# Prepare release
+prepare-release version:
+  cargo set-version {{version}}
+  git cliff --tag {{version}} -o CHANGELOG.md
 
 # Build for release
 release:
@@ -97,8 +102,7 @@ licenses:
   cargo deny check licenses
 
 # Run CI checks
-ci: clean fmt-check lint
-# note: just test  # do not run tests on CI pipeline via just due freebsd and windows quirks
+ci: clean fmt-check lint build test
 
 # Run compliance checks
 # Run compliance checks (audit and license validation)

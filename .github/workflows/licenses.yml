@@ -1,14 +1,18 @@
-name: Security audit
+name: Licenses check
 
 on:
+  push:
+    branches:
+      - pre/**
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
   pull_request:
     branches:
       - main
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
-  schedule:
-    - cron: '0 0 * * 1' # Every Monday at midnight
   workflow_dispatch:
 
 permissions:
@@ -17,7 +21,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  security_audit:
+  licenses_check:
+    name: Licenses check
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
@@ -36,9 +41,6 @@ jobs:
         with:
           toolchain: ${{ steps.extract_toolchain.outputs.TOOLCHAIN_CHANNEL }}
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
-
       - name: Setup cargo-deny
         run: cargo install cargo-deny --locked
 
@@ -46,4 +48,4 @@ jobs:
         uses: extractions/setup-just@v2
 
       - name: Perform compliance checks
-        run: just compliance
+        run: just licenses

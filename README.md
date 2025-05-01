@@ -5,7 +5,7 @@
 # poof 🪄 - magic manager of pre-built software
 
 [![Release](https://github.com/pirafrank/poof/actions/workflows/release.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/release.yml)
-[![Security audit](https://github.com/pirafrank/poof/actions/workflows/compliance.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/compliance.yml)
+[![Security audit](https://github.com/pirafrank/poof/actions/workflows/security.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/security.yml)
 
 Easy-to-use all-in-one binary with zero-config, zero-install, and zero-dependencies.
 
