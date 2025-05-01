@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
-use std::env::consts::{ARCH, FAMILY, OS};
+use std::env::consts::{ARCH, OS};
 
 pub const SUPPORTED_EXTENSIONS: [&str; 6] =
     [".tar.gz", ".tgz.", ".tar.xz", ".tar.bz2", "tbz", ".zip"];
@@ -47,22 +47,16 @@ lazy_static! {
     };
 }
 
-pub fn get_platform_info() -> String {
-    let arch = ARCH;
-    let os = OS;
-    format!("Platform: {}, OS: {}, Architecture: {}", FAMILY, os, arch)
-}
-
 #[cfg(target_arch = "arm")]
-pub fn detect_fpu() -> &'static str {
+pub fn hf_supported() -> &'static bool {
     #[cfg(target_feature = "vfp2")]
     {
-        "HF Supported"
+        &true
     }
 
     #[cfg(not(target_feature = "vfp2"))]
     {
-        "HF Not Supported"
+        &false
     }
 }
 
@@ -77,18 +71,6 @@ fn is_exec_name_only(arch: &&str, s: &str) -> bool {
         }
     }
     false
-}
-
-pub fn are_env_compatible(input: Vec<String>) -> String {
-    // Iterate through inputs and find a match for current OS and architecture
-    for item_str in input {
-        if is_env_compatible(&item_str) {
-            // Return the first matching item
-            return item_str;
-        }
-    }
-    // Default return if no match is found
-    String::from("")
 }
 
 pub fn is_env_compatible(input: &str) -> bool {
@@ -139,16 +121,13 @@ pub fn is_env_compatible(input: &str) -> bool {
     true
 }
 
-pub fn check_platform_compatibility() -> bool {
-    let os = OS;
-    let arch = ARCH;
-
-    // Check if the OS and architecture are supported
-    // TODO: more platforms to come
-    if os == "linux" && (arch == "x86_64" || arch == "aarch64") {
-        return true;
-    }
-    false
+#[allow(dead_code)]
+/// Check if the input string is compatible with the current OS and architecture.
+pub fn are_env_compatible(input: Vec<String>) -> Option<String> {
+    // Iterate through inputs and find a match for current OS and architecture
+    input
+        .into_iter()
+        .find(|item_str| is_env_compatible(item_str))
 }
 
 #[cfg(test)]
@@ -191,15 +170,6 @@ mod tests {
     ];
 
     #[test]
-    fn test_get_platform_info() {
-        let info = get_platform_info();
-        println!("{}", info);
-        assert!(info.contains("Platform:"));
-        assert!(info.contains("OS:"));
-        assert!(info.contains("Architecture:"));
-    }
-
-    #[test]
     fn test_is_env_compatible() {
         let linux = String::from("ipinfo_3.3.1_linux_amd64.tar.gz");
         let windows = String::from("ipinfo_3.3.1_windows_amd64.zip");
@@ -227,7 +197,7 @@ mod tests {
         // Warning: This assertion depends on the platform running the test.
         // If running on Linux AMD64, this should pass.
         if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-            assert_eq!(result, "ipinfo_3.3.1_linux_amd64.tar.gz");
+            assert_eq!(result.clone().unwrap(), "ipinfo_3.3.1_linux_amd64.tar.gz");
         }
         // If running on Windows with MSVC, this should pass.
         if cfg!(all(
@@ -235,7 +205,7 @@ mod tests {
             target_arch = "x86_64",
             target_env = "msvc"
         )) {
-            assert_eq!(result, "ipinfo_3.3.1_windows_amd64.zip");
+            assert_eq!(result.unwrap(), "ipinfo_3.3.1_windows_amd64.zip");
         }
     }
 }

@@ -2,8 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::selector::is_env_compatible;
 use log::{debug, error, info, warn};
-use poof::is_env_compatible;
 
 use crate::{
     archives,
