@@ -1,5 +1,4 @@
 use crate::constants::*;
-use crate::datadirs;
 use crate::utils;
 
 #[cfg(not(target_os = "windows"))]
@@ -90,60 +89,4 @@ pub fn check_dir_in_path(dir: &str) -> i16 {
     let path = get_env_var("PATH");
     let sep = env_path_separator();
     utils::position_of_str_in_string(path, sep, dir)
-}
-
-/// Print platform information useful for debug purposes.
-pub fn debug_info() {
-    print!("\n{} - {}\n{}\n", APP_NAME, DESCRIPTION, long_version());
-    // Print system information
-    println!("\nPlatform Information:");
-    println!("  OS family : {}", std::env::consts::FAMILY);
-    println!("  OS type   : {}", std::env::consts::OS);
-    println!("  OS version: {}", get_os_version());
-    println!("  Arch      : {}", std::env::consts::ARCH);
-    println!("  Endianness: {}", get_platform_endianness());
-    println!(
-        "  Kernel    : {}",
-        std::process::Command::new("uname")
-            .arg("-a")
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .unwrap_or_else(|_| UNKNOWN.to_string())
-    );
-    println!(
-        "  Executable: {}",
-        std::env::current_exe().unwrap_or_default().display()
-    );
-    println!(
-        "  Cwd       : {}",
-        std::env::current_dir().unwrap_or_default().display()
-    );
-
-    // Environment variables
-    print!("\nEnvironment:\n");
-    println!("  SHELL: {}", get_shell_info());
-    println!("  USER : {}", get_env_var("USER"));
-    println!("  HOME : {}", get_env_var("HOME"));
-
-    let bin_dir = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
-    println!(
-        "  PATH: {}",
-        match check_dir_in_path(bin_dir.to_str().unwrap()) {
-            -1 => "Not in PATH",
-            0 => "In PATH at the beginning",
-            _ => "In PATH, but NOT at the beginning",
-        }
-    );
-
-    // Dirs
-    println!("\nDirectories:");
-    println!(
-        "  Cache dir: {}",
-        datadirs::get_cache_dir().unwrap_or_default().display()
-    );
-    println!(
-        "  Data dir : {}",
-        datadirs::get_data_dir().unwrap_or_default().display()
-    );
-    println!("  Bin dir  : {}", bin_dir.display());
 }
