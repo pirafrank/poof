@@ -62,21 +62,20 @@ enum Cmd {
     /// Download binary for the platform and install it
     Install(CmdArgs),
 
-    /// Make an installed version the one to be used by default
-    Use(CmdArgs),
-
     /// List installed binaries and their versions
     List,
+
+    /// Make an installed version the one to be used by default
+    Use(CmdArgs),
 
     /// Check if poof's bin directory is in the PATH
     Check,
 
+    /// Show install and environment information
+    Info,
+
     /// Show version information
     Version,
-
-    /// Show debug information
-    #[command(hide = true)]
-    Debug,
 }
 
 #[derive(Parser)]
@@ -185,6 +184,7 @@ fn main() {
                     )
                     .unwrap();
                 }
+                writeln!(stdout).unwrap();
                 drop(stdout); // explicitly release the lock
             }
         }
@@ -194,8 +194,8 @@ fn main() {
         Cmd::Version => {
             println!("{}", platform_info::long_version());
         }
-        Cmd::Debug => {
-            platform_info::debug_info();
+        Cmd::Info => {
+            commands::info::show_info();
         }
     }
 }
