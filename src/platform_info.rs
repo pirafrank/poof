@@ -1,4 +1,4 @@
-use crate::filesys;
+use crate::datadirs;
 use crate::utils;
 
 // Constants for version information
@@ -134,7 +134,7 @@ pub fn debug_info() {
     println!("  USER : {}", get_env_var("USER"));
     println!("  HOME : {}", get_env_var("HOME"));
 
-    let bin_dir = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    let bin_dir = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
     println!(
         "  PATH: {}",
         match check_dir_in_path(bin_dir.to_str().unwrap()) {
@@ -148,11 +148,11 @@ pub fn debug_info() {
     println!("\nDirectories:");
     println!(
         "  Cache dir: {}",
-        filesys::get_cache_dir().unwrap_or_default().display()
+        datadirs::get_cache_dir().unwrap_or_default().display()
     );
     println!(
         "  Data dir : {}",
-        filesys::get_data_dir().unwrap_or_default().display()
+        datadirs::get_data_dir().unwrap_or_default().display()
     );
     println!("  Bin dir  : {}", bin_dir.display());
 }

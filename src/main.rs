@@ -8,6 +8,7 @@ use regex::Regex;
 
 mod archives;
 mod commands;
+mod datadirs;
 mod filesys;
 mod github;
 mod models;

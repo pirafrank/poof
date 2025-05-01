@@ -8,7 +8,7 @@ use log::{debug, error, info, warn};
 use crate::{
     archives,
     commands::{self, download::download_binary},
-    filesys,
+    datadirs, filesys,
     github::client::{get_asset, get_release},
     semver_utils::SemverStringPrefix,
 };
@@ -16,14 +16,14 @@ use crate::{
 pub fn process_install(repo: &str, tag: Option<&str>) {
     // let config_dir = filesys::get_config_dir().ok_or(libc::ENOENT).unwrap();
     // info!("Config directory: {}", config_dir);
-    let cache_dir: PathBuf = filesys::get_cache_dir().ok_or(libc::ENOENT).unwrap();
+    let cache_dir: PathBuf = datadirs::get_cache_dir().ok_or(libc::ENOENT).unwrap();
     debug!("Cache directory: {}", cache_dir.display());
 
     // download binary
     let release = get_release(repo, tag);
     let binary = get_asset(&release, is_env_compatible);
     let version: String = release.tag_name().strip_v();
-    let download_to = filesys::get_binary_nest(&cache_dir, repo, &version);
+    let download_to = datadirs::get_binary_nest(&cache_dir, repo, &version);
     download_binary(binary.name(), binary.browser_download_url(), &download_to);
 
     // extract binary
@@ -63,9 +63,9 @@ fn prepare_install_dir(install_dir: &PathBuf) {
 }
 
 fn install_binaries(archive_path: &Path, repo: &str, version: &str) {
-    let data_dir: PathBuf = filesys::get_data_dir().ok_or(libc::ENOENT).unwrap();
+    let data_dir: PathBuf = datadirs::get_data_dir().ok_or(libc::ENOENT).unwrap();
     debug!("Data directory: {}", data_dir.display());
-    let install_dir: PathBuf = filesys::get_binary_nest(&data_dir, repo, version);
+    let install_dir: PathBuf = datadirs::get_binary_nest(&data_dir, repo, version);
     prepare_install_dir(&install_dir);
 
     let execs_to_install: Vec<PathBuf> =
@@ -74,7 +74,7 @@ fn install_binaries(archive_path: &Path, repo: &str, version: &str) {
         // copy the executable files to the install directory
         // make them executable
         // and create symlinks to them in the bin directory
-        let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+        let bin_dir: PathBuf = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
         if let Err(e) = install_binary(&exec, &install_dir, &bin_dir) {
             error!("Failed to install {}: {}", exec.display(), e);
             std::process::exit(109);

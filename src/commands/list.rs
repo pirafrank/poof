@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::filesys::get_data_dir;
+use crate::datadirs::get_data_dir;
 use crate::models::asset::Asset;
 use crate::models::asset::VecAssets;
 
