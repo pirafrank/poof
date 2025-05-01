@@ -2,11 +2,12 @@ use std::path::PathBuf;
 
 use log::error;
 
-use crate::filesys::{self, get_binary_nest};
+use crate::datadirs;
+use crate::filesys;
 
 pub fn set_default(repo: &str, version: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let data_dir: PathBuf = filesys::get_data_dir().ok_or(libc::ENOENT).unwrap();
-    let install_dir: PathBuf = get_binary_nest(&data_dir, repo, version);
+    let data_dir: PathBuf = datadirs::get_data_dir().ok_or(libc::ENOENT).unwrap();
+    let install_dir: PathBuf = datadirs::get_binary_nest(&data_dir, repo, version);
     if !install_dir.exists() {
         error!(
             "Version {} of repository '{}' not installed. Quitting.",
@@ -15,7 +16,7 @@ pub fn set_default(repo: &str, version: &str) -> Result<(), Box<dyn std::error::
         std::process::exit(110);
     }
     // Get the bin directory
-    let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    let bin_dir: PathBuf = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
     // Process each binary in wanted_dir
     for path in filesys::find_exec_files_in_dir(&install_dir) {
         // Skip non-executable files (they all should be since they have

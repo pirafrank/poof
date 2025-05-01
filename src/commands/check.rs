@@ -3,11 +3,11 @@
 use log::{debug, warn};
 use std::path::PathBuf;
 
-use crate::filesys;
+use crate::datadirs;
 use crate::platform_info;
 
 pub fn check_if_bin_in_path() {
-    let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    let bin_dir: PathBuf = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
     let position = platform_info::check_dir_in_path(bin_dir.to_str().unwrap());
     match position {
         -1 => {
@@ -31,6 +31,6 @@ pub fn check_if_bin_in_path() {
 }
 
 fn get_export_command() -> String {
-    let bin_dir: PathBuf = filesys::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    let bin_dir: PathBuf = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
     format!("export PATH=\"{}:$PATH\"", bin_dir.to_str().unwrap())
 }
