@@ -37,6 +37,10 @@ pre-commit: fmt-check lint
 # Run pre-push checks
 pre-push: build test
 
+# Run pre-push checks with tags
+pre-push-tag:
+  hooks_scripts/pre-push-tag.sh
+
 # Generate changelog (git-cliff required)
 changelog version:
   git cliff --tag {{version}} -o CHANGELOG.md
