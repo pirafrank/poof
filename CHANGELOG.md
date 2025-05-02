@@ -2,6 +2,35 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.4.0] - 2025-05-02
+
+### 🚀 Features
+
+- `info` command to show install and env information
+- *(enable)* Add `enable` command with tests (#3)
+the PR implements the poof enable command to persistently add poof’s bin directory to the user’s shell PATH by appending to ~/.bashrc or ~/.zshrc.
+
+### 🚜 Refactor
+
+- Data models and version string cleanup
+- Move function to github client
+- Code cleanup
+- Move commands code out of main.rs
+- Renamed lib to selector not exposing it as crate lib
+- Moved data dir functions to own file
+- Moved constants to own file
+
+### 🔧 Setup & Quality
+
+- Organize pipeline checks
+- Run CI checks for all branches
+- Add pre tag push checks
+
+### ⚙️ Miscellaneous Tasks
+
+- Dependencies update
+- Moved roadmap to repository wiki
+
 ## [0.3.1] - 2025-04-30
 
 ### 🐛 Bug Fixes
@@ -39,7 +68,6 @@ All notable changes to the project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Update cargo-deny settings
-- Prepare for 0.3.0
 
 ## [0.2.0] - 2025-04-27
 
@@ -76,7 +104,6 @@ useful for debug purposes
 - License and readme
 - Code of conduct and CONTRIBUTING files
 - Update dirs dep to 6.0
-- Prepare for version 0.2.0
 
 ## [0.1.0-pre] - 2025-04-21
 
