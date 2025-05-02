@@ -2,11 +2,28 @@
 
 echo "Running pre-push checks..."
 
-# Run just pre-push task
-if ! just pre-push; then
-    echo "❌ Pre-push check failed. Please fix the issues before pushing."
-    exit 1
-fi
+while read local_ref local_sha remote_ref remote_sha; do
+  if [[ "$remote_ref" == refs/tags/* ]]; then
+    echo "Tag push detected: $remote_ref"
+    if ! just pre-push-tag; then
+        echo "❌ Pre-push tag check failed. Please fix the issues before pushing."
+        exit 1
+    fi
 
-echo "✅ Pre-push checks passed."
+    echo "✅ Pre-tag-push checks passed."
+    exit 0
+  else
+    # Run just pre-push task
+    if ! just pre-push; then
+        echo "❌ Pre-push check failed. Please fix the issues before pushing."
+        exit 1
+    fi
+
+    echo "✅ Pre-push checks passed."
+    exit 0
+  fi
+done
+
+# If no refs were read, exit with success
+echo "No refs to push. Exiting."
 exit 0
