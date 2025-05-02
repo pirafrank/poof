@@ -76,6 +76,9 @@ enum Cmd {
 
     /// Show version information
     Version,
+
+    /// Persistently add poof’s bin directory to your shell PATH
+    Enable,
 }
 
 #[derive(Parser)]
@@ -196,6 +199,9 @@ fn main() {
         }
         Cmd::Info => {
             commands::info::show_info();
+        }
+        Cmd::Enable => {
+            commands::enable::run();
         }
     }
 }
