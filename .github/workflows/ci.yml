@@ -3,8 +3,15 @@ run-name: CI on ${{ github.ref_name }}
 
 on:
   push:
-    branches:
-      - pre/**
+    branches-ignore:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.json'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.txt'
+  pull_request:
     paths-ignore:
       - '**/*.md'
       - '**/*.json'
