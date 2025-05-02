@@ -1,9 +1,11 @@
 //! sibellavia: persistently add poof's bin directory to PATH
-//! here I am using `eprintln` and `println`, but we can evaluate
-//! using `anyhow` instead! Also, for now I'm not considering Windows.
+//! we can evaluate using `anyhow` instead!
+//! Also, for now we are not considering Windows.
 //! TODO: add support for Windows.
 
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
+
+use log::{error, info};
 
 use crate::datadirs::get_bin_dir;
 
@@ -12,7 +14,7 @@ pub fn run() {
     let bin_dir = match get_bin_dir() {
         Some(p) => p,
         None => {
-            eprintln!("poof‑enable: cannot locate bin directory");
+            error!("Cannot locate bin directory");
             return;
         }
     };
@@ -22,21 +24,22 @@ pub fn run() {
     let home = match dirs::home_dir() {
         Some(h) => h,
         None => {
-            eprintln!("poof‑enable: cannot find $HOME");
+            error!("Cannot find $HOME");
             return;
         }
     };
+
     let shell = std::env::var("SHELL").unwrap_or_default();
     let rc: PathBuf = if shell.ends_with("zsh") {
         home.join(".zshrc")
     } else {
-        home.join(".bashrc") 
+        home.join(".bashrc")
     };
 
     /* 3 ─ if the PATH line is already there, do nothing */
     if let Ok(text) = std::fs::read_to_string(&rc) {
         if text.contains(bin.as_ref()) {
-            println!("poof already enabled in {}", rc.display());
+            info!("poof already enabled in {}", rc.display());
             return;
         }
     }
@@ -45,17 +48,17 @@ pub fn run() {
     let mut file = match OpenOptions::new().create(true).append(true).open(&rc) {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("poof‑enable: cannot open {}: {}", rc.display(), e);
+            error!("Cannot open {}: {}", rc.display(), e);
             return;
         }
     };
 
     if writeln!(file, "\n# added by poof\nexport PATH=\"{}:$PATH\"", bin).is_err() {
-        eprintln!("poof‑enable: could not write to {}", rc.display());
+        error!("Could not write to {}", rc.display());
         return;
     }
 
-    println!(
+    info!(
         "🪄 Added poof to {}.\n   Run `source {0}` or open a new terminal.",
         rc.display()
     );
