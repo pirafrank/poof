@@ -68,6 +68,9 @@ enum Cmd {
     /// Make an installed version the one to be used by default
     Use(CmdArgs),
 
+    /// Persistently add poof’s bin directory to your shell PATH
+    Enable,
+
     /// Check if poof's bin directory is in the PATH
     Check,
 
@@ -76,9 +79,6 @@ enum Cmd {
 
     /// Show version information
     Version,
-
-    /// Persistently add poof’s bin directory to your shell PATH
-    Enable,
 }
 
 #[derive(Parser)]
