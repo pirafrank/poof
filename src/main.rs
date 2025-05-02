@@ -79,6 +79,10 @@ enum Cmd {
 
     /// Show version information
     Version,
+
+    /// Show debug information
+    #[command(hide = true)]
+    Debug,
 }
 
 #[derive(Parser)]
@@ -198,6 +202,9 @@ fn main() {
             println!("{}", platform_info::long_version());
         }
         Cmd::Info => {
+            commands::info::show_info();
+        }
+        Cmd::Debug => {
             commands::info::show_info();
         }
         Cmd::Enable => {
