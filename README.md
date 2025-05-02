@@ -114,6 +114,7 @@ Commands:
   list      List installed binaries and their versions
   check     Check if poof's bin directory is in the PATH
   version   Show version information
+  enable    Persistently add poof’s bin directory to your shell PATH
   help      Print this message or the help of the given subcommand(s)
 
 Options:
@@ -142,6 +143,24 @@ Cache of downloaded releases:
 
 - **Linux**: `~/.cache/poof`
 - **macOS**: `~/Library/Caches/poof`
+
+## Enable
+
+To enable Poof in every new terminal session, run:
+
+```bash
+poof enable
+```
+
+This will append a line to your `~/.bashrc` or `~/.zshrc` that adds poof’s bin directory (from `dirs::data_dir()/poof/bin`) to your `$PATH`.
+
+You can safely re-run `poof enable`: it will detect the existing line and do nothing if it’s already present.
+
+Afterwards, reload your shell:
+
+```bash
+source ~/.bashrc   # or `source ~/.zshrc`, or just open a new terminal
+```
 
 ## Disable
 
