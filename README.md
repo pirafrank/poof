@@ -1,11 +1,19 @@
 <div align="center">
   <img src="./.assets/poof_logo_bg_tx_384.png" alt="poof logo" width="384"/>
+
+  [![GitHub Release](https://img.shields.io/github/v/release/pirafrank/poof)](https://github.com/pirafrank/poof/releases/latest)
+  [![Crates.io](https://img.shields.io/crates/v/poof)](https://crates.io/crates/poof)
+  [![Crates.io MSRV](https://img.shields.io/crates/msrv/poof)](https://github.com/pirafrank/poof/blob/main/Cargo.toml)
+
+  [![CI](https://github.com/pirafrank/poof/actions/workflows/ci.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/ci.yml)
+  [![Security audit](https://github.com/pirafrank/poof/actions/workflows/security.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/security.yml)
+  [![dependency status](https://deps.rs/repo/github/pirafrank/poof/status.svg)](https://deps.rs/repo/github/pirafrank/poof)
+
+  [![Licenses](https://github.com/pirafrank/poof/actions/workflows/licenses.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/licenses.yml)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 </div>
 
 # poof 🪄 - magic manager of pre-built software
-
-[![Release](https://github.com/pirafrank/poof/actions/workflows/release.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/release.yml)
-[![Security audit](https://github.com/pirafrank/poof/actions/workflows/security.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/security.yml)
 
 Easy-to-use all-in-one binary with zero-config, zero-install, and zero-dependencies.
 
@@ -110,11 +118,12 @@ Usage: poof [OPTIONS] <COMMAND>
 Commands:
   download  Only download binary for the platform in current directory. No install
   install   Download binary for the platform and install it
-  use       Make an installed version the one to be used by default
   list      List installed binaries and their versions
-  check     Check if poof's bin directory is in the PATH
-  version   Show version information
+  use       Make an installed version the one to be used by default
   enable    Persistently add poof’s bin directory to your shell PATH
+  check     Check if poof's bin directory is in the PATH
+  info      Show install and environment information
+  version   Show version information
   help      Print this message or the help of the given subcommand(s)
 
 Options:
@@ -146,21 +155,23 @@ Cache of downloaded releases:
 
 ## Enable
 
-To enable Poof in every new terminal session, run:
+Easily add poof's `bin` directory to your `$PATH` by running:
 
 ```bash
 poof enable
 ```
 
-This will append a line to your `~/.bashrc` or `~/.zshrc` that adds poof’s bin directory (from `dirs::data_dir()/poof/bin`) to your `$PATH`.
-
-You can safely re-run `poof enable`: it will detect the existing line and do nothing if it’s already present.
-
-Afterwards, reload your shell:
+It will append a line to your `~/.bashrc` or `~/.zshrc`. Afterwards, reload your shell with:
 
 ```bash
-source ~/.bashrc   # or `source ~/.zshrc`, or just open a new terminal
+source ~/.bashrc
+# or
+source ~/.zshrc
 ```
+
+or just open a new terminal.
+
+You can safely re-run `poof enable`: it will detect the existing line and do nothing if it’s already present.
 
 ## Disable
 
@@ -203,7 +214,7 @@ After you uninstall `poof`, you should remove its `bin` directory from your `$PA
 
 ## Roadmap
 
-A list of features implemented/to implement is available in the [ROADMAP](ROADMAP.md) file. The list is not final and may change over time.
+A list of features implemented/to implement is available [in the Wiki](https://github.com/pirafrank/poof/wiki/Features). The list is not final and may change over time.
 
 ## Contributing
 
