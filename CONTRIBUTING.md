@@ -126,6 +126,7 @@ We use labels to help manage issues and pull requests. Below is a list of labels
 | Label              | Category     | Description                                                       |
 | :----------------- | :----------- | :---------------------------------------------------------------- |
 | `bug`              | triage       | A confirmed bug report.                                           |
+| `security`.        | triage       | Potential vulnerability or security-related issue. |
 | `enhancement`      | triage       | Suggestion of an improvement of an existing feature or functionality. |
 | `feature request`  | triage       | Suggestion of a new feature or functionality.                     |
 | `documentation`    | triage       | Improvements or additions to documentation.                       |
