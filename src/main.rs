@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
+use rayon::iter::Update;
 use regex::Regex;
 
 mod archives;
@@ -53,6 +54,22 @@ struct CmdArgs {
     tag: Option<String>,
 }
 
+// Specific structure for the update command
+#[derive(Parser, Clone)]
+struct UpdateArgs {
+    /// Github slug
+    #[arg(value_parser = validate_repo_format, required_unless_present_any = ["all", "update_self"])]
+    repo: Option<String>,
+
+    /// Update all installed binaries
+    #[arg(long, conflicts_with = "repo")]
+    all: bool,
+
+    /// Update poof itself
+    #[arg(long = "self", conflicts_with = "repo")]
+    update_self: bool,
+}
+
 // Command line interface
 #[derive(Subcommand, Clone)]
 enum Cmd {
@@ -67,6 +84,9 @@ enum Cmd {
 
     /// Make an installed version the one to be used by default
     Use(CmdArgs),
+
+    /// Update installed binaries to their latest versions
+    Update(UpdateArgs),
 
     /// Persistently add poof’s bin directory to your shell PATH
     Enable,
@@ -193,6 +213,15 @@ fn main() {
                 }
                 writeln!(stdout).unwrap();
                 drop(stdout); // explicitly release the lock
+            }
+        }
+        Cmd::Update(args) => {
+            // clap should already enforce requirements rules defined in UpdateArgs
+            // we add an extra check for safety
+            // this error handling should be way better
+            if let Err(e) = commands::update::process_update(args) {
+                error!("update failed: {}", e);
+                std::process::exit(111);
             }
         }
         Cmd::Check => {
