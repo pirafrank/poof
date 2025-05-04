@@ -100,7 +100,6 @@ fn update_single_repo(repo: &str) -> Result<()> {
     Ok(())
 }
 
-// Placeholder for updating all repositories
 fn update_all_repos() -> Result<()> {
     info!("Checking for updates for all installed binaries...");
 
