@@ -59,7 +59,8 @@ fn update_single_repo(repo: &str) -> Result<()> {
 
     // 2. get the latest release tag from GitHub
     // TODO: refactor get_release to return Result
-    let latest_release = get_release(repo, None); // None fetches the latest release
+    let latest_release = get_release(repo, None) // None fetches the latest release
+        .with_context(|| format!("Failed to get latest release information for {}", repo))?; 
     let latest_version_str = latest_release.tag_name();
     let latest_version =
         Version::parse(latest_version_str.strip_v().as_str()).with_context(|| {

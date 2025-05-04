@@ -22,8 +22,10 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
 
     // download binary
     // TODO: refactor get_release and get_asset to return Result
-    let release = get_release(repo, tag);
-    let binary = get_asset(&release, is_env_compatible);
+    let release = get_release(repo, tag)
+        .with_context(|| format!("Failed to get release information for {}", repo))?; 
+    let binary = get_asset(&release, is_env_compatible) 
+        .with_context(|| format!("Failed to find compatible asset for release {}", release.tag_name()))?; 
     let version: String = release.tag_name().strip_v();
     let download_to = datadirs::get_binary_nest(&cache_dir, repo, &version);
 

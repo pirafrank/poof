@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
-use rayon::iter::Update;
+use anyhow::{Context, Result};
 use regex::Regex;
 
 mod archives;
@@ -133,7 +133,7 @@ fn is_supported_os() -> bool {
     cfg!(any(target_os = "linux", target_os = "macos"))
 }
 
-fn main() {
+fn run() -> anyhow::Result<()> {
     if !is_supported_os() {
         error!("Sorry, {} is currenly unsupported.", std::env::consts::OS);
         error!(
@@ -161,17 +161,19 @@ fn main() {
                 &args.repo,
                 args.tag.as_deref().unwrap_or("(latest)")
             );
-            let current_dir =
-                std::env::current_dir().expect("Failed to determine current directory");
+            let current_dir = std::env::current_dir()
+                .context("Failed to determine current directory")?;
             debug!("Working directory: {}", current_dir.display());
 
-            let release = get_release(&args.repo, args.tag.as_deref());
-            let binary = get_asset(&release, is_env_compatible);
+            let release = get_release(&args.repo, args.tag.as_deref())
+                .with_context(|| format!("Failed to get release info for {}", args.repo))?; 
+            let binary = get_asset(&release, is_env_compatible)
+                .with_context(|| format!("Failed to find compatible asset for release {}", release.tag_name()))?; 
             commands::download::download_binary(
                 binary.name(),
                 binary.browser_download_url(),
                 &current_dir,
-            );
+            )?;
         }
         Cmd::Install(args) => {
             info!(
@@ -179,7 +181,7 @@ fn main() {
                 &args.repo,
                 args.tag.as_deref().unwrap_or("(latest)")
             );
-            commands::install::process_install(&args.repo, args.tag.as_deref());
+            commands::install::process_install(&args.repo, args.tag.as_deref())?;
         }
         Cmd::Use(args) => {
             let version = args.tag.as_deref().unwrap_or("latest");
@@ -216,13 +218,7 @@ fn main() {
             }
         }
         Cmd::Update(args) => {
-            // clap should already enforce requirements rules defined in UpdateArgs
-            // we add an extra check for safety
-            // this error handling should be way better
-            if let Err(e) = commands::update::process_update(args) {
-                error!("update failed: {}", e);
-                std::process::exit(111);
-            }
+            commands::update::process_update(args)?; // we use ? here, it returns a Result
         }
         Cmd::Check => {
             commands::check::check_if_bin_in_path();
@@ -240,4 +236,15 @@ fn main() {
             commands::enable::run();
         }
     }
+    Ok(())
+}
+
+fn main() {
+    // call the main logic function and handle errors centrally
+    if let Err(e) = run() {
+        // log the error using anyhow's display chain format
+        error!("Error: {:?}", e);
+        std::process::exit(1); 
+    }
+    // implicit exit code 0 on success
 }
