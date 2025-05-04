@@ -1,10 +1,10 @@
 use std::io::Write;
 
+use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
-use anyhow::{Context, Result, bail};
 use regex::Regex;
 
 mod archives;
@@ -160,14 +160,18 @@ fn run() -> Result<()> {
                 &args.repo,
                 args.tag.as_deref().unwrap_or("(latest)")
             );
-            let current_dir = std::env::current_dir()
-                .context("Failed to determine current directory")?;
+            let current_dir =
+                std::env::current_dir().context("Failed to determine current directory")?;
             debug!("Working directory: {}", current_dir.display());
 
             let release = get_release(&args.repo, args.tag.as_deref())
-                .with_context(|| format!("Failed to get release info for {}", args.repo))?; 
-            let binary = get_asset(&release, is_env_compatible)
-                .with_context(|| format!("Failed to find compatible asset for release {}", release.tag_name()))?; 
+                .with_context(|| format!("Failed to get release info for {}", args.repo))?;
+            let binary = get_asset(&release, is_env_compatible).with_context(|| {
+                format!(
+                    "Failed to find compatible asset for release {}",
+                    release.tag_name()
+                )
+            })?;
             commands::download::download_binary(
                 binary.name(),
                 binary.browser_download_url(),
@@ -242,7 +246,7 @@ fn main() -> Result<()> {
     // call the main logic function
     let result = run();
 
-    // log the error explicitly 
+    // log the error explicitly
     if let Err(e) = &result {
         error!("Execution failed: {:?}", e);
     }

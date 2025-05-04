@@ -21,11 +21,14 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
     debug!("Cache directory: {}", cache_dir.display());
 
     // download binary
-    // TODO: refactor get_release and get_asset to return Result
     let release = get_release(repo, tag)
-        .with_context(|| format!("Failed to get release information for {}", repo))?; 
-    let binary = get_asset(&release, is_env_compatible) 
-        .with_context(|| format!("Failed to find compatible asset for release {}", release.tag_name()))?; 
+        .with_context(|| format!("Failed to get release information for {}", repo))?;
+    let binary = get_asset(&release, is_env_compatible).with_context(|| {
+        format!(
+            "Failed to find compatible asset for release {}",
+            release.tag_name()
+        )
+    })?;
     let version: String = release.tag_name().strip_v();
     let download_to = datadirs::get_binary_nest(&cache_dir, repo, &version);
 
@@ -157,19 +160,23 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, bin_dir: &Path) -> Result<
     let installed_exec = install_dir.join(file_name);
 
     // copy the executable files to the install directory
-    // TODO: filesys::copy_file should return anyhow::Result
-    filesys::copy_file(exec, &installed_exec);
+    // TODO: this Result may be an Err variant, which should be handled
+    // for now, we just use let _ = to ignore the resulting value
+    // but it is rrealy important to handle it
+    let _ = filesys::copy_file(exec, &installed_exec);
 
     // make them executable
     // Set executable permissions, platform-specific
     // Note: Windows does not require setting executable permissions
+    // TODO: below we have the same issue as in line 166, Result that should
+    // be handled. we use the same workaround to ignore the warning
     #[cfg(not(target_os = "windows"))]
     {
         // Make the file executable on Unix-like systems
         filesys::make_executable(&installed_exec);
         // Create a symlink in the bin directory, NOT overwriting existing
         let symlink_path = bin_dir.join(file_name);
-        filesys::create_symlink(&installed_exec, &symlink_path, false);
+        let _ = filesys::create_symlink(&installed_exec, &symlink_path, false);
     }
     Ok(())
 }
