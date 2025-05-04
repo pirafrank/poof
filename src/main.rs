@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use regex::Regex;
 
 mod archives;
@@ -133,14 +133,13 @@ fn is_supported_os() -> bool {
     cfg!(any(target_os = "linux", target_os = "macos"))
 }
 
-fn run() -> anyhow::Result<()> {
+fn run() -> Result<()> {
     if !is_supported_os() {
-        error!("Sorry, {} is currenly unsupported.", std::env::consts::OS);
-        error!(
-            "Please open an issue at {}/issues, to ask for support.",
+        bail!(
+            "Sorry, {} is currently unsupported. Please open an issue at {}/issues to ask for support.",
+            std::env::consts::OS,
             THIS_REPO_URL
         );
-        std::process::exit(100);
     }
 
     // Parse command-line arguments
@@ -239,12 +238,17 @@ fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn main() {
-    // call the main logic function and handle errors centrally
-    if let Err(e) = run() {
-        // log the error using anyhow's display chain format
-        error!("Error: {:?}", e);
-        std::process::exit(1); 
+fn main() -> Result<()> {
+    // call the main logic function
+    let result = run();
+
+    // log the error explicitly 
+    if let Err(e) = &result {
+        error!("Execution failed: {:?}", e);
     }
-    // implicit exit code 0 on success
+
+    // return the result
+    // if Ok(()) -> exit code 0
+    // if Err(e) -> anyhow's Termination impl prints the error and exits with code 1
+    result
 }
