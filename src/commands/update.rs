@@ -179,14 +179,11 @@ fn update_self() -> Result<()> {
     // directly attempt the update
     // the .update() method handles the version comparison internally.
     info!("Checking for and applying updates if available...");
-    match status.update() { 
+    match status.update() {
         Ok(update_status) => match update_status {
             // update() should return UpToDate if no update was needed/performed
             self_update::Status::UpToDate(v) => {
-                info!(
-                    "{} is already up-to-date (version {}).",
-                    APP_NAME, v
-                );
+                info!("{} is already up-to-date (version {}).", APP_NAME, v);
                 Ok(())
             }
             self_update::Status::Updated(v) => {

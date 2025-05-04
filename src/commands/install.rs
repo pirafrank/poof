@@ -7,8 +7,8 @@ use crate::{
     commands::{self, download::download_binary},
     datadirs, filesys,
     github::client::{get_asset, get_release},
+    selector::is_env_compatible,
     semver_utils::SemverStringPrefix,
-    selector::is_env_compatible
 };
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
