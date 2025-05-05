@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
@@ -53,6 +54,22 @@ struct CmdArgs {
     tag: Option<String>,
 }
 
+// Specific structure for the update command
+#[derive(Parser, Clone)]
+struct UpdateArgs {
+    /// Github slug
+    #[arg(value_parser = validate_repo_format, required_unless_present_any = ["all", "update_self"])]
+    repo: Option<String>,
+
+    /// Update all installed binaries
+    #[arg(long, conflicts_with = "repo")]
+    all: bool,
+
+    /// Update poof itself
+    #[arg(long = "self", conflicts_with = "repo")]
+    update_self: bool,
+}
+
 // Command line interface
 #[derive(Subcommand, Clone)]
 enum Cmd {
@@ -67,6 +84,9 @@ enum Cmd {
 
     /// Make an installed version the one to be used by default
     Use(CmdArgs),
+
+    /// Update installed binaries to their latest versions
+    Update(UpdateArgs),
 
     /// Persistently add poof’s bin directory to your shell PATH
     Enable,
@@ -113,14 +133,13 @@ fn is_supported_os() -> bool {
     cfg!(any(target_os = "linux", target_os = "macos"))
 }
 
-fn main() {
+fn run() -> Result<()> {
     if !is_supported_os() {
-        error!("Sorry, {} is currenly unsupported.", std::env::consts::OS);
-        error!(
-            "Please open an issue at {}/issues, to ask for support.",
+        bail!(
+            "Sorry, {} is currently unsupported. Please open an issue at {}/issues to ask for support.",
+            std::env::consts::OS,
             THIS_REPO_URL
         );
-        std::process::exit(100);
     }
 
     // Parse command-line arguments
@@ -142,16 +161,22 @@ fn main() {
                 args.tag.as_deref().unwrap_or("(latest)")
             );
             let current_dir =
-                std::env::current_dir().expect("Failed to determine current directory");
+                std::env::current_dir().context("Failed to determine current directory")?;
             debug!("Working directory: {}", current_dir.display());
 
-            let release = get_release(&args.repo, args.tag.as_deref());
-            let binary = get_asset(&release, is_env_compatible);
+            let release = get_release(&args.repo, args.tag.as_deref())
+                .with_context(|| format!("Failed to get release info for {}", args.repo))?;
+            let binary = get_asset(&release, is_env_compatible).with_context(|| {
+                format!(
+                    "Failed to find compatible asset for release {}",
+                    release.tag_name()
+                )
+            })?;
             commands::download::download_binary(
                 binary.name(),
                 binary.browser_download_url(),
                 &current_dir,
-            );
+            )?;
         }
         Cmd::Install(args) => {
             info!(
@@ -159,7 +184,7 @@ fn main() {
                 &args.repo,
                 args.tag.as_deref().unwrap_or("(latest)")
             );
-            commands::install::process_install(&args.repo, args.tag.as_deref());
+            commands::install::process_install(&args.repo, args.tag.as_deref())?;
         }
         Cmd::Use(args) => {
             let version = args.tag.as_deref().unwrap_or("latest");
@@ -195,6 +220,9 @@ fn main() {
                 drop(stdout); // explicitly release the lock
             }
         }
+        Cmd::Update(args) => {
+            commands::update::process_update(args)?; // we use ? here, it returns a Result
+        }
         Cmd::Check => {
             commands::check::check_if_bin_in_path();
         }
@@ -211,4 +239,20 @@ fn main() {
             commands::enable::run();
         }
     }
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    // call the main logic function
+    let result = run();
+
+    // log the error explicitly
+    if let Err(e) = &result {
+        error!("Execution failed: {:?}", e);
+    }
+
+    // return the result
+    // if Ok(()) -> exit code 0
+    // if Err(e) -> anyhow's Termination impl prints the error and exits with code 1
+    result
 }
