@@ -35,13 +35,13 @@ You just run `poof install someuser/somerepo` and... *poof!* it is installed and
 - **📦 Zero-install**: Simply download the binary for your platform and use it right away
 - **🔗 Zero-dependencies**: It runs standalone without requiring any additional software
 - **👤 User-space**: Designed to work in user-space, no root access needed
-- **🌍 Cross-platform**: Works on Linux and macOS (FreeBSD and Windows support is planned)
-- **🚀 Easy to use**: Just run `poof` and it will do the rest
+- **🌍 Cross-platform**: Works on Linux and macOS and runs on different architectures (FreeBSD and Windows support is planned)
+- **🚀 Easy to use**: Sensible commands that are easy to remember and to type. Just run `poof help` to know more.
 
 Bonus:
 
-- **⚙️ Written in Rust**: with linting and formatting applied at commit time
-- **0️⃣ Zero-versioned**: because major versions are [a thing of the past](https://0ver.org/) (and *poof*, albeit magic, is baby).
+- **⚙️ Written in Rust**: Safe and fast binaries built on reliable dependencies, with linting and formatting applied at commit time
+- **0️⃣ Zero-versioned**: Because major versions are [a thing of the past](https://0ver.org/) (and *poof*, albeit magic, is baby).
 
 ## Why
 
@@ -56,7 +56,7 @@ More and more often modern tools are built with languages like Rust and Go, and 
 ## Quick start
 
 1. Get `poof` using one of the methods below:
-    - **Pre-built binary**: Download the binary from [latest release](https://github.com/pirafrank/poof/releases), and move it to `$PATH`.
+    - **Pre-built binary**: Download the binary from [latest release](https://github.com/pirafrank/poof/releases), and move it to some directory in your `$PATH`.
     - **binstall**: If you have [binstall](https://github.com/cargo-bins/cargo-binstall), you can get the binary using `cargo` and skip compilation:
 
     ```sh
@@ -69,43 +69,21 @@ More and more often modern tools are built with languages like Rust and Go, and 
     cargo install --locked poof
     ```
 
-    - **From source**: Build and install from source code on GitHub:
+2. Add poof's `bin` directory to `$PATH` by running:
 
     ```sh
-    cargo install --locked --git https://github.com/pirafrank/poof --tag VERSION
+    poof enable
     ```
 
-    Note: Replace `VERSION` with the desired version to install. Not specifying a tag will install from `main` branch. `main` branch should be stable, but it's unreleased software and may contain bugs or breaking changes. It should considered beta quality software.
+    Then reload you shell.
 
-2. Add poof's `bin` directory to `$PATH`. Paste the following to your `~/.bashrc` or `~/.zshrc`:
-
-    On Linux:
-
-    ```sh
-    export PATH="${HOME}/.local/share/poof/bin:${PATH}"
-    ```
-
-    On macOS:
-
-    ```sh
-    export PATH="${HOME}/Library/Application Support/poof/bin:${PATH}"
-    ```
-
-3. Done! Now try to install something, for example:
+3. **Done!** Now try to install something, for example:
 
     ```sh
     poof install pirafrank/rust_exif_renamer
     ```
 
-## About poof's `bin` directory
-
-After installing `poof`, you need to add its `bin` directory to your `$PATH`. Be sure it is at the beginning of your `$PATH` so that it takes precedence over any other version of the same binary you may have installed other ways.
-
-Having a dedicated directory for `poof` binaries is a good practice, as it allows you to:
-
-- keep them separate from other software installed on your system,
-- keep them separate from paths you may manually edit (like `~/.local/bin`),
-- easily temporarily disable `poof` by removing the directory from your `$PATH` (see below).
+Additional information about [installation](https://github.com/pirafrank/poof/wiki/How-to-install) and [supported platforms](https://github.com/pirafrank/poof/wiki/Supported-platforms) is available in the Wiki.
 
 ## Usage
 
@@ -139,57 +117,21 @@ https://github.com/pirafrank/poof/issues
 
 ```
 
-## Where poof stores data
+## About poof's `bin` directory
 
-`poof` stores its data in standard directories via the [dirs](https://crates.io/crates/dirs) crate. Specifically, it uses the following directories:
+`poof` installs and symlinks binaries in its own data directory.
 
-Installed binaries and `bin` directory:
+Having a dedicated directory for `poof` binaries is a good practice, as it allows you to:
 
-- **Linux**: `~/.local/share/poof`
-- **macOS**: `~/Library/Application Support/poof`
-
-Cache of downloaded releases:
-
-- **Linux**: `~/.cache/poof`
-- **macOS**: `~/Library/Caches/poof`
-
-## Enable
-
-Easily add poof's `bin` directory to your `$PATH` by running:
-
-```bash
-poof enable
-```
-
-It will append a line to your `~/.bashrc` or `~/.zshrc`. Afterwards, reload your shell with:
-
-```bash
-source ~/.bashrc
-# or
-source ~/.zshrc
-```
-
-or just open a new terminal.
-
-You can safely re-run `poof enable`: it will detect the existing line and do nothing if it’s already present.
+- keep them separate from other software installed on your system,
+- keep them separate from paths you may manually edit (like `~/.local/bin`),
+- easily temporarily disable `poof` by removing the directory from your `$PATH` (read below).
 
 ## Disable
 
-If you want to disable `poof`, you can do so by removing its `bin` directory from your `$PATH`.
+poof's `bin` directory by default is added at the beginning of `$PATH` so that it takes precedence over any other version of same-named binary you may have installed other ways.
 
-You can do this by commenting out the line you added to your `~/.bashrc` or `~/.zshrc` file, or by removing the directory from `$PATH` variable in your shell session.
-
-## Uninstall
-
-To uninstall `poof`, just delete the binary from your `$PATH`.
-
-If you have installed it using `cargo`, you can uninstall it with:
-
-```sh
-cargo uninstall poof
-```
-
-After you uninstall `poof`, you should remove its `bin` directory from your `$PATH`, and delete its data and cache directories as well.
+If you want to halt this behavior, you can [disable it](https://github.com/pirafrank/poof/wiki/Disable) it temporarily or permanently.
 
 ## Project goals
 
@@ -212,14 +154,18 @@ After you uninstall `poof`, you should remove its `bin` directory from your `$PA
   - Handle language-specific package managers (pip, npm, cargo, etc.)
   - Interface with system package managers (apt, yum, brew, etc.)
 
+## Documentation
+
+Updated documentation for the latest release is available in the [Wiki](https://github.com/pirafrank/poof/wiki).
+
 ## Roadmap
 
 A list of features implemented/to implement is available [in the Wiki](https://github.com/pirafrank/poof/wiki/Features). The list is not final and may change over time.
 
 ## Contributing
 
-Contributions are welcome! Please read the [CONTRIBUTING](CONTRIBUTING.md) file for details on how to contribute to this project.
-Please make sure to follow the [code of conduct](CODE_OF_CONDUCT.md) when contributing.
+Contributions are welcome! Please read the [Development](https://github.com/pirafrank/poof/wiki/Development) page for information about how to build, and the [CONTRIBUTING](CONTRIBUTING.md) file for details on how to contribute to this project.
+Please make sure to follow the [code of conduct](CODE_OF_CONDUCT.md) when contributing. Thank you!
 
 ## License
 
