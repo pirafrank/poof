@@ -29,7 +29,6 @@ body:
       description: Where is the documentation issue located? Provide links or file paths if possible.
       placeholder: |
         URL, README.md, or other location...
-      render: markdown
     validations:
       required: true
 
@@ -40,7 +39,6 @@ body:
       description: Describe the issue with the current documentation
       placeholder: |
         The current documentation says... but it should be...
-      render: markdown
     validations:
       required: true
 
@@ -51,7 +49,6 @@ body:
       description: If you have a suggestion for how to fix the issue, please describe it here
       placeholder: |
         I suggest changing/adding...
-      render: markdown
     validations:
       required: false
 
@@ -62,7 +59,6 @@ body:
       description: Add any other context about the documentation issue here
       placeholder: |
         More information that might be helpful...
-      render: markdown
     validations:
       required: false
 

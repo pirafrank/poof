@@ -15,7 +15,6 @@ body:
       description: Which existing feature would you like to enhance?
       placeholder: |
         The current feature works like...
-      render: markdown
     validations:
       required: true
 
@@ -26,7 +25,6 @@ body:
       description: Describe the enhancement you're suggesting
       placeholder: |
         I would like this feature to...
-      render: markdown
     validations:
       required: true
 
@@ -37,7 +35,6 @@ body:
       description: How would this enhancement improve the project?
       placeholder: |
         This enhancement would make it easier to...
-      render: markdown
     validations:
       required: true
 
@@ -57,7 +54,6 @@ body:
       description: Any other information that might be helpful
       placeholder: |
         Screenshots, mockups, or additional context...
-      render: markdown
     validations:
       required: false
 

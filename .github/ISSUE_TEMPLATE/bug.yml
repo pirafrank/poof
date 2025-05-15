@@ -15,7 +15,6 @@ body:
       description: Also tell us, what did you expect to happen?
       placeholder: |
         I expected this to happen ... / I saw this error ...
-      render: markdown
     validations:
       required: true
 
@@ -26,7 +25,6 @@ body:
       description: How can we reproduce the issue?
       placeholder: |
         I typed 'poof ...' then ...
-      render: markdown
     validations:
       required: true
 
@@ -48,7 +46,6 @@ body:
         I have tried ...
         I have not tried ...
         I am using ...
-      render: markdown
     validations:
       required: false
 
