@@ -27,6 +27,11 @@ You just run `poof install someuser/somerepo` and... *poof!* it is installed and
 >
 > What poof thinks of itself
 
+For more information read below or check the documentation in the wiki. Got an idea? Let's talk in Discussions!
+
+[![GitHub Wiki](https://img.shields.io/badge/GitHub-Wiki-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://github.com/pirafrank/poof/wiki)
+[![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://github.com/pirafrank/poof/discussions)
+
 **Note: this project is actively being developed.** I'm making ongoing improvements to the code while trying to maintain stability and up-to-date documentation. However, things may break. If you encounter some issues during this development phase, please [report them](https://github.com/pirafrank/poof/issues). Thank you!
 
 ## Features
@@ -133,6 +138,10 @@ poof's `bin` directory by default is added at the beginning of `$PATH` so that i
 
 If you want to halt this behavior, you can [disable it](https://github.com/pirafrank/poof/wiki/Disable) it temporarily or permanently.
 
+## Documentation
+
+Updated documentation for the latest release is available in the [Wiki](https://github.com/pirafrank/poof/wiki).
+
 ## Project goals
 
 - Fetch and put in `$PATH` pre-built binaries available on Internet
@@ -153,10 +162,6 @@ If you want to halt this behavior, you can [disable it](https://github.com/piraf
   - Manage dependencies required by the software
   - Handle language-specific package managers (pip, npm, cargo, etc.)
   - Interface with system package managers (apt, yum, brew, etc.)
-
-## Documentation
-
-Updated documentation for the latest release is available in the [Wiki](https://github.com/pirafrank/poof/wiki).
 
 ## Roadmap
 
