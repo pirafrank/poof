@@ -115,12 +115,22 @@ jobs:
             7z a -tzip ../${FILENAMEBASE}.zip *
             echo "archive_name=${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
             echo "archive_path=_temp/${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
+            # Generate SHA256 checksum for the compressed archive
+            cd ..
+            ${{ matrix.shacmd }} ${FILENAMEBASE}.zip > ${FILENAMEBASE}.zip.sha256
+            echo "sha256_name=${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
+            echo "sha256_path=_temp/${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
           else
             cp target/${{ matrix.target }}/release/poof _temp/release/
             cd _temp/release
             tar -czvf ../${FILENAMEBASE}.tar.gz * > /dev/null
             echo "archive_name=${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
             echo "archive_path=_temp/${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
+            # Generate SHA256 checksum for the compressed archive
+            cd ..
+            ${{ matrix.shacmd }} ${FILENAMEBASE}.tar.gz > ${FILENAMEBASE}.tar.gz.sha256
+            echo "sha256_name=${FILENAMEBASE}.tar.gz.sha256" >> $GITHUB_OUTPUT
+            echo "sha256_path=_temp/${FILENAMEBASE}.tar.gz.sha256" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload artifact
@@ -129,6 +139,16 @@ jobs:
         with:
           name: ${{ steps.archive.outputs.archive_name }}
           path: ${{ steps.archive.outputs.archive_path }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0  # no compression
+
+      - name: Upload artifact checksum
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.archive.outputs.sha256_name }}
+          path: ${{ steps.archive.outputs.sha256_path }}
           if-no-files-found: error
           retention-days: 1
           compression-level: 0  # no compression
