@@ -10,6 +10,9 @@ on:
 permissions:
   contents: write
 
+env:
+  BIN_NAME: poof
+
 jobs:
   checks:
     name: Check version
@@ -110,7 +113,7 @@ jobs:
           FILENAMEBASE="${{ needs.checks.outputs.APP_NAME }}-${{ needs.checks.outputs.APP_VERSION }}-${{ matrix.target }}"
           cp LICENSE.md README.md CHANGELOG.md _temp/release/
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            cp target/${{ matrix.target }}/release/poof.exe _temp/release/
+            cp target/${{ matrix.target }}/release/${{ env.BIN_NAME }}.exe _temp/release/
             cd _temp/release
             7z a -tzip ../${FILENAMEBASE}.zip *
             echo "archive_name=${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
@@ -121,7 +124,7 @@ jobs:
             echo "sha256_name=${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
             echo "sha256_path=_temp/${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
           else
-            cp target/${{ matrix.target }}/release/poof _temp/release/
+            cp target/${{ matrix.target }}/release/${{ env.BIN_NAME }} _temp/release/
             cd _temp/release
             tar -czvf ../${FILENAMEBASE}.tar.gz * > /dev/null
             echo "archive_name=${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
@@ -171,7 +174,7 @@ jobs:
           name: ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           body: |
-            Release notes for `${{ github.ref_name }}` are available here: https://github.com/pirafrank/poof/blob/main/CHANGELOG.md
+            Release notes for `${{ github.ref_name }}` are available here: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md
           files: artifacts/**/*
           generate_release_notes: true
           draft: false
