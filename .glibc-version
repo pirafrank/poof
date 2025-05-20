@@ -1,1 +1,2 @@
-GLIBC_VERSION=2.35
+x86_64-unknown-linux-gnu;GLIBC_VERSION=2.34
+aarch64-unknown-linux-gnu;GLIBC_VERSION=2.39
