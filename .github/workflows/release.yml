@@ -99,11 +99,16 @@ jobs:
 
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
+        if: ${{ matrix.builder == 'cargo' }}
         with:
           target: ${{ matrix.target }}
 
-      - name: Build for release
-        run: cargo build --target ${{ matrix.target }} --release
+      - name: Install cross toolchain
+        if: ${{ matrix.builder == 'cross' }}
+        run: cargo install cross
+
+      - name: Build for release using ${{ matrix.builder }}
+        run: ${{ matrix.builder }} build --target ${{ matrix.target }} --release
 
       - name: Compress and archive
         id: archive
