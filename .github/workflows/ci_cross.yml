@@ -60,11 +60,16 @@ jobs:
 
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
+        if: ${{ matrix.builder != 'cross' }}
         with:
           target: ${{ matrix.target }}
 
-      - name: Build project
-        run: cargo build --target ${{ matrix.target }}
+      - name: Setup cross toolchain
+        if: ${{ matrix.builder == 'cross' }}
+        run: cargo install cross
+
+      - name: Build project using ${{ matrix.builder }}
+        run: ${{ matrix.builder }} build --target ${{ matrix.target }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
