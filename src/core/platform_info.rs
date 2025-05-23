@@ -1,4 +1,5 @@
 use crate::constants::*;
+use crate::core::selector::get_endianness;
 use crate::utils::string;
 
 #[cfg(not(target_os = "windows"))]
@@ -65,14 +66,13 @@ pub fn get_os_version() -> String {
 }
 
 pub fn get_platform_endianness() -> String {
-    (if cfg!(target_endian = "little") {
-        "Little Endian"
-    } else if cfg!(target_endian = "big") {
-        "Big Endian"
+    if get_endianness() == "le" {
+        "Little Endian".to_string()
+    } else if get_endianness() == "be" {
+        "Big Endian".to_string()
     } else {
-        "Unknown Endian"
-    })
-    .to_string()
+        "Unknown Endian".to_string()
+    }
 }
 
 pub fn get_shell_info() -> String {
