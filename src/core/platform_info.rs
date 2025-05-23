@@ -64,15 +64,19 @@ pub fn get_os_version() -> String {
     }
 }
 
+#[cfg(target_endian = "little")]
 pub fn get_platform_endianness() -> String {
-    (if cfg!(target_endian = "little") {
-        "Little Endian"
-    } else if cfg!(target_endian = "big") {
-        "Big Endian"
-    } else {
-        "Unknown Endian"
-    })
-    .to_string()
+    "Little Endian".to_string()
+}
+
+#[cfg(target_endian = "big")]
+pub fn get_platform_endianness() -> String {
+    "Big Endian".to_string()
+}
+
+#[cfg(all(not(target_endian = "little"), not(target_endian = "big")))]
+pub fn get_platform_endianness() -> String {
+    "Unknown Endian".to_string()
 }
 
 pub fn get_shell_info() -> String {
