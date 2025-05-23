@@ -20,28 +20,22 @@ lazy_static! {
 lazy_static! {
     static ref CPU_ARCH: HashMap<&'static str, Vec<&'static str>> = {
         let mut m = HashMap::new();
-        m.insert("x86", vec!["x86", "386", "686", "32-bit"]);
+        m.insert("x86", vec!["x86", "386", "586", "686", "32-bit"]);
         m.insert("x86_64", vec!["x86_64", "x64", "amd64"]);
-        m.insert("armv5", vec!["armv5"]);
-        m.insert("armv6", vec!["armv6"]);
-        m.insert("arm", vec!["arm", "armv7"]);
+        // order matters here, from more specific to less specific
+        // arm assets will run on any armv7 device the armv7 poof build target runs on.
+        m.insert("armv7", vec!["armv7l", "armhf", "armv7", "arm"]);
         m.insert("aarch64", vec!["aarch64", "arm64"]);
-
-        if cfg!(target_endian = "big") {
-            m.insert("mips", vec!["mips", "mips32"]);
-            m.insert("mips64", vec!["mips64"]);
-            m.insert("powerpc", vec!["ppc"]);
-            m.insert("powerpc64", vec!["ppc64"]);
-        } else {
-            m.insert("mips", vec!["mipsle", "mips32le"]);
-            m.insert("mips64", vec!["mips64le"]);
-            m.insert("powerpc", vec!["ppcle"]);
-            m.insert("powerpc64", vec!["ppc64le"]);
-        }
-
-        m.insert("riscv32", vec!["riscv32", "riscv"]);
-        m.insert("riscv64", vec!["riscv64"]);
+        // powerpc64le support
+        m.insert("powerpc", vec!["powerpcle", "ppcle"]);
+        m.insert("powerpc64", vec!["powerpc64le", "ppc64le"]);
+        // note: de-facto are all riscv64 are riscv64gc if they run can Linux,
+        // as linux needs the gc extensions.
+        m.insert("riscv64", vec!["riscv64gc", "riscv64"]);
+        // s390x 64bit support
         m.insert("s390x", vec!["s390x"]);
+        // loongarch64 support
+        m.insert("loongarch64", vec!["loongarch64"]);
         m
     };
 }
