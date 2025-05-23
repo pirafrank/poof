@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::env::consts::{ARCH, OS};
+use std::mem;
 
 pub const SUPPORTED_EXTENSIONS: [&str; 6] =
     [".tar.gz", ".tgz.", ".tar.xz", ".tar.bz2", "tbz", ".zip"];
@@ -21,30 +22,41 @@ lazy_static! {
 lazy_static! {
     static ref CPU_ARCH: HashMap<&'static str, Vec<&'static str>> = {
         let mut m = HashMap::new();
-        m.insert("x86", vec!["x86", "386", "686", "32-bit"]);
+        m.insert("x86", vec!["x86", "386", "586", "686", "32-bit"]);
         m.insert("x86_64", vec!["x86_64", "x64", "amd64"]);
         m.insert("armv5", vec!["armv5"]);
         m.insert("armv6", vec!["armv6"]);
-        m.insert("arm", vec!["arm", "armv7"]);
+        m.insert("arm", vec!["armv7", "armhf", "armv7l"]);
         m.insert("aarch64", vec!["aarch64", "arm64"]);
 
         if cfg!(target_endian = "big") {
-            m.insert("mips", vec!["mips", "mips32"]);
+            m.insert("mips", vec!["mips32"]);
             m.insert("mips64", vec!["mips64"]);
-            m.insert("powerpc", vec!["ppc"]);
+            m.insert("powerpc", vec!["powerpc", "ppc"]);
             m.insert("powerpc64", vec!["ppc64"]);
         } else {
             m.insert("mips", vec!["mipsle", "mips32le"]);
             m.insert("mips64", vec!["mips64le"]);
-            m.insert("powerpc", vec!["ppcle"]);
-            m.insert("powerpc64", vec!["ppc64le"]);
+            m.insert("powerpc", vec!["powerpcle", "ppcle"]);
+            m.insert("powerpc64", vec!["powerpc64le", "ppc64le"]);
         }
 
         m.insert("riscv32", vec!["riscv32", "riscv"]);
-        m.insert("riscv64", vec!["riscv64"]);
+        m.insert("riscv64", vec!["riscv64gc", "riscv64"]);  // de-facto are all riscv64gc
         m.insert("s390x", vec!["s390x"]);
         m
     };
+}
+
+#[cfg(target_endian = "little")]
+pub const ENDIANNESS: &str = "le";
+
+#[cfg(target_endian = "big")]
+pub const ENDIANNESS: &str = "be";
+
+/// Returns the endianness as a string: "le" or "be".
+pub fn get_endianness() -> &'static str {
+    ENDIANNESS
 }
 
 #[cfg(target_arch = "arm")]
