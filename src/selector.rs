@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::env::consts::{ARCH, OS};
-use std::mem;
 
+/// Supported file extensions for archived files.
 pub const SUPPORTED_EXTENSIONS: [&str; 6] =
     [".tar.gz", ".tgz.", ".tar.xz", ".tar.bz2", "tbz", ".zip"];
 
@@ -43,30 +43,6 @@ lazy_static! {
         m.insert("s390x", vec!["s390x"]);
         m
     };
-}
-
-#[cfg(target_endian = "little")]
-pub const ENDIANNESS: &str = "le";
-
-#[cfg(target_endian = "big")]
-pub const ENDIANNESS: &str = "be";
-
-/// Returns the endianness as a string: "le" or "be".
-pub fn get_endianness() -> &'static str {
-    ENDIANNESS
-}
-
-#[cfg(target_arch = "arm")]
-pub fn hf_supported() -> &'static bool {
-    #[cfg(target_feature = "vfp2")]
-    {
-        &true
-    }
-
-    #[cfg(not(target_feature = "vfp2"))]
-    {
-        &false
-    }
 }
 
 fn is_exec_name_only(arch: &&str, s: &str) -> bool {

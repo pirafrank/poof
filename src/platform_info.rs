@@ -60,15 +60,28 @@ pub fn get_os_version() -> String {
     }
 }
 
-pub fn get_platform_endianness() -> String {
-    (if cfg!(target_endian = "little") {
-        "Little Endian"
-    } else if cfg!(target_endian = "big") {
-        "Big Endian"
-    } else {
-        "Unknown Endian"
-    })
-    .to_string()
+#[cfg(target_endian = "little")]
+pub const ENDIANNESS_BE: bool = false;
+
+#[cfg(target_endian = "big")]
+pub const ENDIANNESS_BE: bool = true;
+
+pub fn get_endianness() -> bool {
+    ENDIANNESS_BE
+}
+
+/// Returns the endianness as a string: "le" or "be".
+pub fn get_endianness_short() -> &'static str {
+    ENDIANNESS_BE
+        .then_some("be")
+        .unwrap_or("le")
+}
+
+/// Returns the endianness as a string: "le" or "be".
+pub fn get_endianness_long() -> &'static str {
+    ENDIANNESS_BE
+        .then_some("Big Endian")
+        .unwrap_or("Little Endian")
 }
 
 #[cfg(target_arch = "arm")]
