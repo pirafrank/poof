@@ -24,7 +24,7 @@ pub fn show_info() {
     output.push_str(&format!("  OS type   : {}\n", std::env::consts::OS));
     output.push_str(&format!("  OS version: {}\n", get_os_version()));
     output.push_str(&format!("  Arch      : {}\n", std::env::consts::ARCH));
-    output.push_str(&format!("  Endianness: {}\n", get_platform_endianness()));
+    output.push_str(&format!("  Endianness: {}\n", get_endianness_long()));
 
     let kernel = std::process::Command::new("uname")
         .arg("-a")
