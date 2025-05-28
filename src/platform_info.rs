@@ -66,22 +66,28 @@ pub const ENDIANNESS_BE: bool = false;
 #[cfg(target_endian = "big")]
 pub const ENDIANNESS_BE: bool = true;
 
+#[allow(dead_code)]
 pub fn get_endianness() -> bool {
     ENDIANNESS_BE
 }
 
+#[allow(dead_code)]
 /// Returns the endianness as a string: "le" or "be".
 pub fn get_endianness_short() -> &'static str {
-    ENDIANNESS_BE
-        .then_some("be")
-        .unwrap_or("le")
+    if ENDIANNESS_BE {
+        "be"
+    } else {
+        "le"
+    }
 }
 
 /// Returns the endianness as a string: "le" or "be".
 pub fn get_endianness_long() -> &'static str {
-    ENDIANNESS_BE
-        .then_some("Big Endian")
-        .unwrap_or("Little Endian")
+    if ENDIANNESS_BE {
+        "Big Endian"
+    } else {
+        "Little Endian"
+    }
 }
 
 #[cfg(target_arch = "arm")]
