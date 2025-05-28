@@ -29,19 +29,16 @@ lazy_static! {
         m.insert("aarch64", vec!["aarch64", "arm64"]);
 
         if cfg!(target_endian = "big") {
-            m.insert("mips", vec!["mips32"]);
-            m.insert("mips64", vec!["mips64"]);
             m.insert("powerpc", vec!["powerpc", "ppc"]);
             m.insert("powerpc64", vec!["ppc64"]);
         } else {
-            m.insert("mips", vec!["mipsle", "mips32le"]);
-            m.insert("mips64", vec!["mips64le"]);
             m.insert("powerpc", vec!["powerpcle", "ppcle"]);
             m.insert("powerpc64", vec!["powerpc64le", "ppc64le"]);
         }
 
-        m.insert("riscv32", vec!["riscv32", "riscv"]);
-        m.insert("riscv64", vec!["riscv64gc", "riscv64"]);  // de-facto are all riscv64gc
+        // note: de-facto are all riscv64 are riscv64gc if they run can Linux,
+        // as linux needs the gc extensions.
+        m.insert("riscv64", vec!["riscv64gc", "riscv64"]);
         m.insert("s390x", vec!["s390x"]);
         m
     };

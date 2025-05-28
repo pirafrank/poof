@@ -75,6 +75,19 @@ pub fn get_platform_endianness() -> String {
     .to_string()
 }
 
+#[cfg(target_arch = "arm")]
+pub fn hf_supported() -> &'static bool {
+    #[cfg(target_feature = "vfp2")]
+    {
+        &true
+    }
+
+    #[cfg(not(target_feature = "vfp2"))]
+    {
+        &false
+    }
+}
+
 pub fn get_shell_info() -> String {
     let shell_name = get_env_var("SHELL");
     let shell_version = if shell_name != UNKNOWN {
