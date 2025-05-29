@@ -37,13 +37,7 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
 
     // extract binary
     let archive_path = download_to.join(binary.name());
-    // TODO: refactor archives::extract_to_dir_depending_on_content_type to return Result
-    archives::extract_to_dir_depending_on_content_type(
-        binary.content_type(),
-        &archive_path,
-        &download_to,
-    )
-    .unwrap();
+    archives::extract_to_dir(&archive_path, &download_to).unwrap();
 
     debug!("Extracted to: {}", download_to.display());
 
