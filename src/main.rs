@@ -91,6 +91,9 @@ enum Cmd {
     /// Check if poof's bin directory is in the PATH
     Check,
 
+    /// Empty cache directory
+    Clean,
+
     /// Show install and environment information
     Info,
 
@@ -234,6 +237,9 @@ fn run() -> Result<()> {
         }
         Cmd::Enable => {
             commands::enable::run();
+        }
+        Cmd::Clean => {
+            commands::clean::run_clean()?;
         }
     }
     Ok(())
