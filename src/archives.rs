@@ -1,11 +1,33 @@
+use crate::utils;
 use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
 use log::{debug, error};
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tar::Archive;
 use xz2::read::XzDecoder;
 use zip::ZipArchive;
+
+fn get_archive_type_from_extension(archive_path: &Path) -> &str {
+    let extension = utils::get_file_extension(archive_path);
+    match extension {
+        // multi-part extensions first
+        "tar.gz" => "application/gzip",
+        "tar.xz" => "application/x-xz",
+        "tar.bz2" => "application/x-bzip2",
+        // non multi-part extensions
+        "zip" => "application/zip",
+        "gz" => "application/gzip",
+        "xz" => "application/x-xz",
+        "bz2" => "application/x-bzip2",
+        "tgz" => "application/gzip",
+        "txz" => "application/x-xz",
+        "tbz" => "application/x-bzip2",
+        "tar" => "application/x-tar",
+        "7z" => "application/x-7z-compressed",
+        _ => extension,
+    }
+}
 
 /// Extracts an archive to a specified directory based on its content type.
 /// Currently supports zip, tar.gz, tar.xz, and tar.bz2 formats.
@@ -25,7 +47,12 @@ pub fn extract_to_dir_depending_on_content_type(
     extract_to: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Check the content type and extract accordingly
-    match content_type.as_str() {
+    let c_type = if content_type.as_str() == "application/octet-stream" {
+        get_archive_type_from_extension(archive_path)
+    } else {
+        content_type.as_str()
+    };
+    match c_type {
         "application/zip" => {
             debug!("Extracting zip archive: {}", archive_path.display());
             let zip_file = File::open(archive_path)?;
