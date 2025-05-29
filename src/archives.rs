@@ -42,15 +42,15 @@ fn get_archive_type_from_extension(archive_path: &Path) -> &str {
 /// * `Err` if there was an error during extraction.
 ///
 pub fn extract_to_dir_depending_on_content_type(
-    content_type: &String,
+    content_type: &str,
     archive_path: &PathBuf,
     extract_to: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Check the content type and extract accordingly
-    let c_type = if content_type.as_str() == "application/octet-stream" {
+    let c_type = if content_type == "application/octet-stream" {
         get_archive_type_from_extension(archive_path)
     } else {
-        content_type.as_str()
+        content_type
     };
     match c_type {
         "application/zip" => {
@@ -123,7 +123,7 @@ pub fn extract_to_dir_depending_on_content_type(
         _ => {
             // Consider returning an error instead of just printing
             // return Err(format!("Unsupported content type for extraction: {}", content_type).into());
-            error!("Unsupported content type for extraction: {}", content_type);
+            error!("Unsupported content type or extension: {}", c_type);
             std::process::exit(109);
         }
     }
