@@ -3,7 +3,7 @@ use crate::{
     constants::APP_NAME,
     github::client::get_release,
     models::asset::Asset,
-    semver_utils::SemverStringPrefix,
+    utils::semver::SemverStringPrefix,
     UpdateArgs,
 };
 use anyhow::{anyhow, bail, Context, Result};

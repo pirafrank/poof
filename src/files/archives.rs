@@ -2,7 +2,7 @@ use crate::files::magic::{
     BZIP2_MAGIC, GZIP_MAGIC, SEVENZ_MAGIC, TAR_MAGIC, TAR_MAGIC_OFFSET, XZ_MAGIC, ZIP_MAGIC,
 };
 use crate::models::binary_container::BinaryContainer;
-use crate::utils;
+use crate::utils::string;
 use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
 use log::{debug, error};
@@ -51,7 +51,7 @@ fn validate_magic_bytes(archive_path: &Path, expected_format: &BinaryContainer) 
 
 /// Determines archive format from file extension
 fn get_archive_format_from_extension(archive_path: &Path) -> BinaryContainer {
-    let extension = utils::get_file_extension(archive_path);
+    let extension = string::get_file_extension(archive_path);
     match extension {
         // Multi-part extensions first (tar.xxx)
         "tar.gz" | "tgz" => BinaryContainer::TarGz,

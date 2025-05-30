@@ -1,5 +1,5 @@
 use crate::constants::*;
-use crate::utils;
+use crate::utils::string;
 
 #[cfg(not(target_os = "windows"))]
 const ENV_PATH_SEPARATOR: &str = ":";
@@ -88,5 +88,5 @@ pub fn get_shell_info() -> String {
 pub fn check_dir_in_path(dir: &str) -> i16 {
     let path = get_env_var("PATH");
     let sep = env_path_separator();
-    utils::position_of_str_in_string(path, sep, dir)
+    string::position_of_str_in_string(path, sep, dir)
 }

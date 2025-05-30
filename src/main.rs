@@ -13,14 +13,13 @@ mod core;
 mod files;
 mod github;
 mod models;
-mod semver_utils;
 mod utils;
 
 use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
 use crate::core::selector::is_env_compatible;
 use github::client::{get_asset, get_release};
-use semver_utils::SemverStringConversion;
+use utils::semver::SemverStringConversion;
 
 // Constants
 

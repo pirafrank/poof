@@ -8,7 +8,7 @@ use crate::{
     files::datadirs,
     files::{archives, filesys},
     github::client::{get_asset, get_release},
-    semver_utils::SemverStringPrefix,
+    utils::semver::SemverStringPrefix,
 };
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};

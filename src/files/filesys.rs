@@ -12,7 +12,7 @@ use crate::files::magic::ELF_MAGIC;
 use crate::files::magic::MACHO_MAGIC_NUMBERS;
 #[cfg(target_os = "windows")]
 use crate::files::magic::PE_MAGIC;
-use crate::utils;
+use crate::utils::string;
 
 #[cfg(target_os = "linux")]
 fn is_exec_magic(buffer: &[u8; 4]) -> bool {
@@ -86,7 +86,7 @@ pub fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
 }
 
 fn strip_supported_extensions(path: &Path) -> &str {
-    let filename = utils::get_file_name(path);
+    let filename = string::get_file_name(path);
     SUPPORTED_EXTENSIONS
         .iter()
         .find_map(|ext| filename.strip_suffix(ext))
