@@ -25,7 +25,6 @@ body = """
         - {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
             {% if commit.breaking %}[**breaking**] {% endif %}\
             {{ commit.message | upper_first }}\
-            {% if commit.body %}\n{% endif %}{{ commit.body | default(value="") | indent(prefix="    ") | trim }}\
             {% if commit.issues %}\
                 {% for issue in commit.issues %}\
                     ([#{{ issue }}](<REPO>/issues/{{ issue }}))\
@@ -68,7 +67,9 @@ commit_preprocessors = [
 commit_parsers = [
   { message = "^feat", group = "<!-- 0 -->🚀 Features" },
   { message = "^fix\\:", group = "<!-- 1 -->🐛 Bug Fixes" },
+  { message = "^\\[bug\\]\\:", group = "<!-- 1 -->🐛 Bug Fixes" },
   { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
+  { message = "^\\[refactor\\]\\:", group = "<!-- 2 -->🚜 Refactor" },
   { message = "^doc", group = "<!-- 3 -->📚 Documentation" },
   { message = "^perf", group = "<!-- 4 -->⚡ Performance" },
   #{ message = "^style", group = "<!-- 5 -->🎨 Styling" },
