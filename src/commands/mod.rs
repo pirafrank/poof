@@ -1,4 +1,5 @@
 pub mod check;
+pub mod clean;
 pub mod download;
 pub mod enable;
 pub mod info;
