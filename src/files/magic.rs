@@ -1,4 +1,4 @@
-use std::{fs::File, io::Read, path::PathBuf};
+use std::{fs::File, io::Read, path::Path};
 
 // Magic number constants for file format detection
 
@@ -50,7 +50,7 @@ fn is_exec_magic(buffer: &[u8; 4]) -> bool {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn is_exec_by_magic_number(path: &PathBuf) -> bool {
+pub fn is_exec_by_magic_number(path: &Path) -> bool {
     if let Ok(mut file) = File::open(path) {
         let mut buffer = [0u8; 4];
         if file.read_exact(&mut buffer).is_ok() {
@@ -61,7 +61,7 @@ pub fn is_exec_by_magic_number(path: &PathBuf) -> bool {
 }
 
 #[cfg(target_os = "windows")]
-pub fn is_exec_by_magic_number(path: &PathBuf) -> bool {
+pub fn is_exec_by_magic_number(path: &Path) -> bool {
     // We need to first check the file extension for Windows binaries,
     // as it uses the PE format (MZ header) for file types other than
     // .exe (e.g. .dll, .sys, etc.).

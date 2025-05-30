@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::files::magic::is_exec_by_magic_number;
 use crate::files::utils::strip_supported_extensions;
 
-pub fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
+pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
