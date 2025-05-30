@@ -9,16 +9,16 @@ use regex::Regex;
 
 mod commands;
 mod constants;
+mod core;
 mod files;
 mod github;
 mod models;
-mod platform_info;
-mod selector;
 mod semver_utils;
 mod utils;
 
 use crate::constants::*;
-use crate::selector::is_env_compatible;
+use crate::core::platform_info::{long_version, short_description};
+use crate::core::selector::is_env_compatible;
 use github::client::{get_asset, get_release};
 use semver_utils::SemverStringConversion;
 
@@ -107,9 +107,9 @@ enum Cmd {
 #[command(
   name = APP_NAME,
   author = AUTHOR,
-  version = platform_info::long_version(),
-  about = platform_info::short_description(),
-  long_version = platform_info::long_version(),
+  version = long_version(),
+  about = short_description(),
+  long_version = long_version(),
   help_template = "\n\n{name} - {about}\n\n\
     {usage-heading} {usage}\n\n\
     {all-args}{after-help}",
@@ -225,7 +225,7 @@ fn run() -> Result<()> {
             commands::check::check_if_bin_in_path();
         }
         Cmd::Version => {
-            println!("{}", platform_info::long_version());
+            println!("{}", crate::core::platform_info::long_version());
         }
         Cmd::Info => {
             commands::info::show_info();

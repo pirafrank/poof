@@ -4,10 +4,10 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     commands::{self, download::download_binary},
+    core::selector::is_env_compatible,
     files::datadirs,
     files::{archives, filesys},
     github::client::{get_asset, get_release},
-    selector::is_env_compatible,
     semver_utils::SemverStringPrefix,
 };
 use anyhow::{anyhow, bail, Context, Result};
