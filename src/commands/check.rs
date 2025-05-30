@@ -3,8 +3,8 @@
 use log::{debug, warn};
 use std::path::PathBuf;
 
-use crate::datadirs;
-use crate::platform_info;
+use crate::core::platform_info;
+use crate::files::datadirs;
 
 pub fn check_if_bin_in_path() {
     let bin_dir: PathBuf = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();

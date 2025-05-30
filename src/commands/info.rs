@@ -1,6 +1,6 @@
 use crate::constants::*;
-use crate::datadirs;
-use crate::platform_info::*;
+use crate::core::platform_info::*;
+use crate::files::datadirs;
 use std::io::{self, Write};
 
 /// Print platform information useful for debug purposes.

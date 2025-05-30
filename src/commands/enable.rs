@@ -7,7 +7,7 @@ use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
 use log::{error, info};
 
-use crate::datadirs::get_bin_dir;
+use crate::files::datadirs::get_bin_dir;
 
 pub fn run() {
     /* 1 ─ get the directory that holds poof's executables */
@@ -72,7 +72,7 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::run;
-    use crate::datadirs::get_bin_dir;
+    use crate::files::datadirs::get_bin_dir;
     use serial_test::serial;
     use std::{env, fs};
     use tempfile::TempDir;

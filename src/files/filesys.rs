@@ -5,24 +5,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::selector::SUPPORTED_EXTENSIONS;
-use crate::utils;
-
-// Constants for magic numbers
+use crate::constants::SUPPORTED_EXTENSIONS;
+#[cfg(target_os = "linux")]
+use crate::files::magic::ELF_MAGIC;
 #[cfg(target_os = "macos")]
-const MACHO_MAGIC_NUMBERS: &[[u8; 4]] = &[
-    [0xFE, 0xED, 0xFA, 0xCE], // Mach-O 32-bit (little-endian)
-    [0xFE, 0xED, 0xFA, 0xCF], // Mach-O 64-bit (little-endian)
-    [0xCE, 0xFA, 0xED, 0xFE], // Mach-O 32-bit (big-endian)
-    [0xCF, 0xFA, 0xED, 0xFE], // Mach-O 64-bit (big-endian)
-    [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O universal ('fat') binary (little-endian)
-    [0xBE, 0xBA, 0xFE, 0xCA], // Mach-O universal ('fat') binary (big-endian)
-];
+use crate::files::magic::MACHO_MAGIC_NUMBERS;
+#[cfg(target_os = "windows")]
+use crate::files::magic::PE_MAGIC;
+use crate::files::utils::get_file_name;
 
 #[cfg(target_os = "linux")]
 fn is_exec_magic(buffer: &[u8; 4]) -> bool {
     // Linux expects ELF binaries
-    buffer == &[0x7F, 0x45, 0x4C, 0x46] // ELF
+    buffer == &ELF_MAGIC // ELF
 }
 
 #[cfg(target_os = "windows")]
@@ -30,7 +25,7 @@ fn is_exec_magic(buffer: &[u8; 4]) -> bool {
     // Windows expects PE binaries (MZ header).
     // Checking only the first two bytes because the other two may change,
     // as they depend on the DOS stub.
-    buffer[..2] == [0x4D, 0x5A]
+    buffer[..2] == core::magic::PE_MAGIC
 }
 
 #[cfg(target_os = "macos")]
@@ -91,7 +86,7 @@ pub fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
 }
 
 fn strip_supported_extensions(path: &Path) -> &str {
-    let filename = utils::get_file_name(path);
+    let filename = get_file_name(path);
     SUPPORTED_EXTENSIONS
         .iter()
         .find_map(|ext| filename.strip_suffix(ext))

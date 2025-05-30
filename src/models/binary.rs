@@ -1,7 +1,7 @@
 //! An installed binary having a repo name (in the format <USER>/<REPO>)
 //! and a version is a 'binary'.
 
-use crate::semver_utils::*;
+use crate::utils::semver::*;
 use semver::Version;
 
 use super::repostring::RepoString;

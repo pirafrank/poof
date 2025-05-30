@@ -1,7 +1,7 @@
 //! An installed binary having a repo name (in the format <USER>/<REPO>)
 //! and a list of versions is an 'asset'.
 
-use crate::semver_utils::*;
+use crate::utils::semver::*;
 use semver::Version;
 use std::cmp::Ordering;
 
