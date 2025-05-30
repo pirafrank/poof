@@ -7,11 +7,10 @@ use lazy_static::lazy_static;
 use log::{debug, error, info};
 use regex::Regex;
 
-mod archives;
 mod commands;
 mod constants;
+mod core;
 mod datadirs;
-mod filesys;
 mod github;
 mod models;
 mod platform_info;
@@ -88,7 +87,7 @@ enum Cmd {
     /// Update installed binaries to their latest versions
     Update(UpdateArgs),
 
-    /// Persistently add poof’s bin directory to your shell PATH
+    /// Persistently add poof's bin directory to your shell PATH
     Enable,
 
     /// Check if poof's bin directory is in the PATH

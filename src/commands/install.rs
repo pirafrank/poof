@@ -3,9 +3,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    archives,
     commands::{self, download::download_binary},
-    datadirs, filesys,
+    core::{archives, filesys},
+    datadirs,
     github::client::{get_asset, get_release},
     selector::is_env_compatible,
     semver_utils::SemverStringPrefix,

@@ -5,24 +5,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[cfg(target_os = "linux")]
+use crate::core::magic::ELF_MAGIC;
+#[cfg(target_os = "macos")]
+use crate::core::magic::MACHO_MAGIC_NUMBERS;
+#[cfg(target_os = "windows")]
+use crate::core::magic::PE_MAGIC;
 use crate::selector::SUPPORTED_EXTENSIONS;
 use crate::utils;
-
-// Constants for magic numbers
-#[cfg(target_os = "macos")]
-const MACHO_MAGIC_NUMBERS: &[[u8; 4]] = &[
-    [0xFE, 0xED, 0xFA, 0xCE], // Mach-O 32-bit (little-endian)
-    [0xFE, 0xED, 0xFA, 0xCF], // Mach-O 64-bit (little-endian)
-    [0xCE, 0xFA, 0xED, 0xFE], // Mach-O 32-bit (big-endian)
-    [0xCF, 0xFA, 0xED, 0xFE], // Mach-O 64-bit (big-endian)
-    [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O universal ('fat') binary (little-endian)
-    [0xBE, 0xBA, 0xFE, 0xCA], // Mach-O universal ('fat') binary (big-endian)
-];
 
 #[cfg(target_os = "linux")]
 fn is_exec_magic(buffer: &[u8; 4]) -> bool {
     // Linux expects ELF binaries
-    buffer == &[0x7F, 0x45, 0x4C, 0x46] // ELF
+    buffer == &ELF_MAGIC // ELF
 }
 
 #[cfg(target_os = "windows")]
@@ -30,7 +25,7 @@ fn is_exec_magic(buffer: &[u8; 4]) -> bool {
     // Windows expects PE binaries (MZ header).
     // Checking only the first two bytes because the other two may change,
     // as they depend on the DOS stub.
-    buffer[..2] == [0x4D, 0x5A]
+    buffer[..2] == core::magic::PE_MAGIC
 }
 
 #[cfg(target_os = "macos")]

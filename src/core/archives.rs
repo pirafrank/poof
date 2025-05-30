@@ -1,3 +1,6 @@
+use crate::core::magic::{
+    BZIP2_MAGIC, GZIP_MAGIC, SEVENZ_MAGIC, TAR_MAGIC, TAR_MAGIC_OFFSET, XZ_MAGIC, ZIP_MAGIC,
+};
 use crate::models::binary_container::BinaryContainer;
 use crate::utils;
 use bzip2::read::BzDecoder;
@@ -9,18 +12,6 @@ use std::path::{Path, PathBuf};
 use tar::Archive;
 use xz2::read::XzDecoder;
 use zip::ZipArchive;
-
-// Magic byte signatures for archive format validation
-//
-// note: no need to support other zip magic bytes as this is more than enough
-// for zip files used in software distribution.
-const ZIP_MAGIC: &[u8] = &[0x50, 0x4B, 0x03, 0x04]; // "PK\x03\x04"
-const GZIP_MAGIC: &[u8] = &[0x1F, 0x8B]; // gzip
-const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00]; // "\xfd7zXZ\x00"
-const BZIP2_MAGIC: &[u8] = &[0x42, 0x5A, 0x68]; // "BZh"
-const TAR_MAGIC_OFFSET: usize = 257;
-const TAR_MAGIC: &[u8] = b"ustar";
-const SEVENZ_MAGIC: &[u8] = &[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]; // 7z signature
 
 // Fallback directory name for extracted files
 const OUTPUT_DIR: &str = "output";
