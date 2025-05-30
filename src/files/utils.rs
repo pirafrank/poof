@@ -1,3 +1,4 @@
+use crate::constants::SUPPORTED_EXTENSIONS;
 use std::path::Path;
 
 pub fn get_file_extension(archive_path: &Path) -> &str {
@@ -27,4 +28,16 @@ pub fn get_file_name(archive_path: &Path) -> &str {
         .file_name()
         .and_then(|f| f.to_str())
         .unwrap_or_default()
+}
+
+pub fn strip_supported_extensions(path: &Path) -> &str {
+    let filename = get_file_name(path);
+    SUPPORTED_EXTENSIONS
+        .iter()
+        .find_map(|ext| filename.strip_suffix(ext))
+        .unwrap_or_else(|| {
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(filename)
+        })
 }

@@ -5,14 +5,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::constants::SUPPORTED_EXTENSIONS;
 #[cfg(target_os = "linux")]
 use crate::files::magic::ELF_MAGIC;
 #[cfg(target_os = "macos")]
 use crate::files::magic::MACHO_MAGIC_NUMBERS;
 #[cfg(target_os = "windows")]
 use crate::files::magic::PE_MAGIC;
-use crate::files::utils::get_file_name;
+
+use crate::files::utils::strip_supported_extensions;
 
 #[cfg(target_os = "linux")]
 fn is_exec_magic(buffer: &[u8; 4]) -> bool {
@@ -83,18 +83,6 @@ pub fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
         }
     }
     result
-}
-
-fn strip_supported_extensions(path: &Path) -> &str {
-    let filename = get_file_name(path);
-    SUPPORTED_EXTENSIONS
-        .iter()
-        .find_map(|ext| filename.strip_suffix(ext))
-        .unwrap_or_else(|| {
-            path.file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or(filename)
-        })
 }
 
 pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBuf> {
