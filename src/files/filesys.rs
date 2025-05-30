@@ -7,11 +7,11 @@ use std::{
 
 use crate::constants::SUPPORTED_EXTENSIONS;
 #[cfg(target_os = "linux")]
-use crate::core::magic::ELF_MAGIC;
+use crate::files::magic::ELF_MAGIC;
 #[cfg(target_os = "macos")]
-use crate::core::magic::MACHO_MAGIC_NUMBERS;
+use crate::files::magic::MACHO_MAGIC_NUMBERS;
 #[cfg(target_os = "windows")]
-use crate::core::magic::PE_MAGIC;
+use crate::files::magic::PE_MAGIC;
 use crate::utils;
 
 #[cfg(target_os = "linux")]

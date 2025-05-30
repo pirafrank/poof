@@ -9,8 +9,8 @@ use regex::Regex;
 
 mod commands;
 mod constants;
-mod core;
 mod datadirs;
+mod files;
 mod github;
 mod models;
 mod platform_info;

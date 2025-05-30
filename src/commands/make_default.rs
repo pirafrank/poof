@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use log::error;
 
-use crate::core::filesys;
 use crate::datadirs;
+use crate::files::filesys;
 
 pub fn set_default(repo: &str, version: &str) -> Result<(), Box<dyn std::error::Error>> {
     let data_dir: PathBuf = datadirs::get_data_dir().ok_or(libc::ENOENT).unwrap();

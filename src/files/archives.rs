@@ -1,4 +1,4 @@
-use crate::core::magic::{
+use crate::files::magic::{
     BZIP2_MAGIC, GZIP_MAGIC, SEVENZ_MAGIC, TAR_MAGIC, TAR_MAGIC_OFFSET, XZ_MAGIC, ZIP_MAGIC,
 };
 use crate::models::binary_container::BinaryContainer;
