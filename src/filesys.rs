@@ -6,6 +6,7 @@ use std::{
 };
 
 use crate::selector::SUPPORTED_EXTENSIONS;
+use crate::utils;
 
 // Constants for magic numbers
 #[cfg(target_os = "macos")]
@@ -90,19 +91,15 @@ pub fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
 }
 
 fn strip_supported_extensions(path: &Path) -> &str {
-    let filename = path
-        .file_name()
-        .and_then(|f| f.to_str())
-        .unwrap_or_default();
-    for ext in &(SUPPORTED_EXTENSIONS) {
-        if let Some(stripped) = filename.strip_suffix(ext) {
-            return stripped;
-        }
-    }
-    // fallback
-    path.file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or(filename)
+    let filename = utils::get_file_name(path);
+    SUPPORTED_EXTENSIONS
+        .iter()
+        .find_map(|ext| filename.strip_suffix(ext))
+        .unwrap_or_else(|| {
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(filename)
+        })
 }
 
 pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBuf> {
