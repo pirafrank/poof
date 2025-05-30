@@ -6,7 +6,7 @@ use crate::{
     commands::{self, download::download_binary},
     core::selector::is_env_compatible,
     files::datadirs,
-    files::{archives, filesys},
+    files::{archives, filesys, magic::is_exec_by_magic_number},
     github::client::{get_asset, get_release},
     utils::semver::SemverStringPrefix,
 };
@@ -35,14 +35,25 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
     download_binary(binary.name(), binary.browser_download_url(), &download_to)
         .with_context(|| format!("Failed to download binary {} version {}", repo, version))?;
 
-    // extract binary
+    // extract binary only if it's not already an executable (i.e., it's an archive)
     let archive_path = download_to.join(binary.name());
-    archives::extract_to_dir(&archive_path, &download_to).unwrap();
 
-    debug!("Extracted to: {}", download_to.display());
+    let install_source: &PathBuf = if is_exec_by_magic_number(&archive_path) {
+        &download_to
+    } else {
+        &download_to
+    };
+
+    if is_exec_by_magic_number(&archive_path) {
+        debug!("Downloaded file is already an executable, skipping extraction: {}", archive_path.display());
+    } else {
+        debug!("Downloaded file appears to be an archive, extracting: {}", archive_path.display());
+        archives::extract_to_dir(&archive_path, &download_to).unwrap();
+        debug!("Extracted to: {}", download_to.display());
+    }
 
     // install binary
-    install_binaries(&archive_path, repo, &version).with_context(|| {
+    install_binaries(install_source, repo, &version).with_context(|| {
         format!(
             "Failed to install binaries for {} version {}",
             repo, version
@@ -126,17 +137,19 @@ fn install_binaries(archive_path: &Path, repo: &str, version: &str) -> Result<()
 
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
-    let execs_to_install: Vec<PathBuf> =
-        filesys::find_exec_files_from_extracted_archive(archive_path);
+    let execs_to_install: Vec<PathBuf> = if is_exec_by_magic_number(archive_path) {
+        debug!("Archive is an executable, finding executables in dir: {}", archive_path.display());
+        filesys::find_exec_files_in_dir(archive_path)
+    } else {
+        filesys::find_exec_files_from_extracted_archive(archive_path)
+    };
+
+    debug!("archive_path: {}", archive_path.display());
 
     if execs_to_install.is_empty() {
         // we interpret this as an error
         bail!(
-            "No executable found in the extracted archive at {}",
-            archive_path
-                .parent()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|| "unknown location".to_string()) // fallback message
+            "No executables found to install. Please check the archive contents."
         );
     }
 
