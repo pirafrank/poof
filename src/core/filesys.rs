@@ -5,13 +5,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::constants::SUPPORTED_EXTENSIONS;
 #[cfg(target_os = "linux")]
 use crate::core::magic::ELF_MAGIC;
 #[cfg(target_os = "macos")]
 use crate::core::magic::MACHO_MAGIC_NUMBERS;
 #[cfg(target_os = "windows")]
 use crate::core::magic::PE_MAGIC;
-use crate::selector::SUPPORTED_EXTENSIONS;
 use crate::utils;
 
 #[cfg(target_os = "linux")]

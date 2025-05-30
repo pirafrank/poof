@@ -2,12 +2,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::env::consts::{ARCH, OS};
 
-// SUPPORTED_EXTENSIONS is a list of file extensions that are supported by the selector.
-// NOTE: multi-part extensions MUST come before single extension counterparts.
-pub const SUPPORTED_EXTENSIONS: [&str; 12] = [
-    ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz", ".tbz2", ".zip", ".tar", ".gz",
-    ".xz", ".bz2",
-];
+use crate::constants::SUPPORTED_EXTENSIONS;
 
 lazy_static! {
     static ref OPERATING_SYSTEM: HashMap<&'static str, Vec<&'static str>> = {
