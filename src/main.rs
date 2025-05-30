@@ -9,7 +9,6 @@ use regex::Regex;
 
 mod commands;
 mod constants;
-mod datadirs;
 mod files;
 mod github;
 mod models;

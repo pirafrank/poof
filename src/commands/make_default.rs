@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use log::error;
 
-use crate::datadirs;
+use crate::files::datadirs;
 use crate::files::filesys;
 
 pub fn set_default(repo: &str, version: &str) -> Result<(), Box<dyn std::error::Error>> {

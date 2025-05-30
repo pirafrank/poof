@@ -3,7 +3,7 @@
 use log::{debug, warn};
 use std::path::PathBuf;
 
-use crate::datadirs;
+use crate::files::datadirs;
 use crate::platform_info;
 
 pub fn check_if_bin_in_path() {

@@ -1,5 +1,5 @@
 use crate::constants::*;
-use crate::datadirs;
+use crate::files::datadirs;
 use crate::platform_info::*;
 use std::io::{self, Write};
 
