@@ -54,21 +54,26 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-// Result<bool>: true = proceed, false = skip/already done
+// Result<Option<PathBuf>>: Some(install_dir) = proceed, None = skip/already done
 // in this way we eliminate the std::process::exit(0)
-fn prepare_install_dir(install_dir: &PathBuf) -> Result<bool> {
+fn prepare_install_dir(repo: &str, version: &str) -> Result<Option<PathBuf>> {
+    let data_dir: PathBuf =
+        datadirs::get_data_dir().context("Failed to determine data directory.")?;
+    debug!("Data directory: {}", data_dir.display());
+    let install_dir: PathBuf = datadirs::get_binary_nest(&data_dir, repo, version);
+
     debug!("Installing to: {}", install_dir.display());
     // Create the installation directory if it doesn't exist
     if !install_dir.exists() {
         // directory does not exist, create it
-        std::fs::create_dir_all(install_dir).with_context(|| {
+        std::fs::create_dir_all(&install_dir).with_context(|| {
             format!(
                 "Failed to create installation directory {}",
                 install_dir.display()
             )
         })?;
         debug!("Created install directory: {}", install_dir.display());
-        Ok(true)
+        Ok(Some(install_dir))
     } else {
         // path exists, check if it's a directory
         if install_dir.is_dir() {
@@ -82,15 +87,15 @@ fn prepare_install_dir(install_dir: &PathBuf) -> Result<bool> {
             if is_empty {
                 // directory exists but is empty, proceed (overwrite)
                 debug!("Install directory exists but is empty, proceeding.");
-                Ok(true) // installation should proceed
+                Ok(Some(install_dir)) // installation should proceed
             } else {
                 // directory exists and is not empty: we assume it's already installed
                 warn!(
                     "Version already installed. Check content in {}. Skipping installation.",
                     install_dir.display()
                 );
-                // we return false to indicate skipping
-                Ok(false)
+                // we return None to indicate skipping
+                Ok(None)
             }
         } else {
             // exists but is not a directory (like a file)
@@ -104,23 +109,15 @@ fn prepare_install_dir(install_dir: &PathBuf) -> Result<bool> {
 }
 
 fn install_binaries(archive_path: &Path, repo: &str, version: &str) -> Result<()> {
-    let data_dir: PathBuf =
-        datadirs::get_data_dir().context("Failed to determine data directory.")?;
-    debug!("Data directory: {}", data_dir.display());
-    let install_dir: PathBuf = datadirs::get_binary_nest(&data_dir, repo, version);
-
-    // prepare install dir, check the boolean result
-    let should_proceed = prepare_install_dir(&install_dir)
-        .with_context(|| format!("Failed to prepare install directory for {}", repo))?;
-
-    if !should_proceed {
-        // prepare_install_dir already warned, just return Ok
-        info!(
-            "Skipping installation as version {} for {} seems already installed.",
-            version, repo
-        );
-        return Ok(());
-    }
+    // prepare install dir, skip if already installed
+    let install_dir = match prepare_install_dir(repo, version)
+        .with_context(|| format!("Failed to prepare install directory for {}", repo))? {
+        Some(dir) => dir,
+        None => {
+            info!("Skipping installation as version {} for {} seems already installed.", version, repo);
+            return Ok(());
+        }
+    };
 
     let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
 
@@ -132,11 +129,7 @@ fn install_binaries(archive_path: &Path, repo: &str, version: &str) -> Result<()
     if execs_to_install.is_empty() {
         // we interpret this as an error
         bail!(
-            "No executable found in the extracted archive at {}",
-            archive_path
-                .parent()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|| "unknown location".to_string()) // fallback message
+            "No executables found to install. Please check the archive contents."
         );
     }
 
