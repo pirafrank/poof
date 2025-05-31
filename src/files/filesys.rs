@@ -1,74 +1,10 @@
 use log::{debug, warn};
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
-use crate::constants::SUPPORTED_EXTENSIONS;
-#[cfg(target_os = "linux")]
-use crate::files::magic::ELF_MAGIC;
-#[cfg(target_os = "macos")]
-use crate::files::magic::MACHO_MAGIC_NUMBERS;
-#[cfg(target_os = "windows")]
-use crate::files::magic::PE_MAGIC;
-use crate::files::utils::get_file_name;
+use crate::files::magic::is_exec_by_magic_number;
+use crate::files::utils::strip_supported_extensions;
 
-#[cfg(target_os = "linux")]
-fn is_exec_magic(buffer: &[u8; 4]) -> bool {
-    // Linux expects ELF binaries
-    buffer == &ELF_MAGIC // ELF
-}
-
-#[cfg(target_os = "windows")]
-fn is_exec_magic(buffer: &[u8; 4]) -> bool {
-    // Windows expects PE binaries (MZ header).
-    // Checking only the first two bytes because the other two may change,
-    // as they depend on the DOS stub.
-    buffer[..2] == core::magic::PE_MAGIC
-}
-
-#[cfg(target_os = "macos")]
-fn is_exec_magic(buffer: &[u8; 4]) -> bool {
-    // macOS expects Mach-O formats
-    MACHO_MAGIC_NUMBERS.contains(buffer)
-}
-
-#[cfg(not(target_os = "windows"))]
-fn is_exec_by_magic_number(path: &PathBuf) -> bool {
-    if let Ok(mut file) = File::open(path) {
-        let mut buffer = [0u8; 4];
-        if file.read_exact(&mut buffer).is_ok() {
-            return is_exec_magic(&buffer);
-        }
-    }
-    false
-}
-
-#[cfg(target_os = "windows")]
-fn is_exec_by_magic_number(path: &PathBuf) -> bool {
-    // We need to first check the file extension for Windows binaries,
-    // as it uses the PE format (MZ header) for file types other than
-    // .exe (e.g. .dll, .sys, etc.).
-    // Then we check the first two bytes of the .exe file because the
-    // other two may change (they depend on the DOS stub).
-    let extension = path
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or_default();
-    if extension != "exe" {
-        return false;
-    }
-    if let Ok(mut file) = File::open(path) {
-        let mut buffer = [0u8; 4];
-        if file.read_exact(&mut buffer).is_ok() {
-            return is_exec_magic(&buffer);
-        }
-    }
-    false
-}
-
-pub fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
+pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -83,18 +19,6 @@ pub fn find_exec_files_in_dir(dir: &PathBuf) -> Vec<PathBuf> {
         }
     }
     result
-}
-
-fn strip_supported_extensions(path: &Path) -> &str {
-    let filename = get_file_name(path);
-    SUPPORTED_EXTENSIONS
-        .iter()
-        .find_map(|ext| filename.strip_suffix(ext))
-        .unwrap_or_else(|| {
-            path.file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or(filename)
-        })
 }
 
 pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBuf> {
