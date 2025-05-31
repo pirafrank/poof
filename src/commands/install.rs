@@ -1,11 +1,17 @@
 //! Main file handling 'install' command
 
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsString,
+    path::{Path, PathBuf},
+};
 
 use crate::{
     commands::{self, download::download_binary},
     core::selector::is_env_compatible,
-    files::{archives, datadirs, filesys, magic::is_exec_by_magic_number},
+    files::{
+        archives, datadirs, filesys, magic::is_exec_by_magic_number,
+        utils::get_stem_name_trimmed_at_first_separator,
+    },
     github::client::{get_asset, get_release},
     utils::semver::SemverStringPrefix,
 };
@@ -54,7 +60,14 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
     // and proceed accordingly.
     if is_exec_by_magic_number(&downloaded_file) {
         debug!("Downloaded file {} is an executable binary.", binary.name());
-        install_binary(&downloaded_file, &install_dir)
+        let file_name = &downloaded_file
+            .file_name()
+            .ok_or_else(|| anyhow!("Failed to get filename from {}", downloaded_file.display()))?;
+        // Get the stem name trimmed at the first separator for non-archived executable files.
+        // This is useful to avoid installing files with names like "mytool-1.0.0" or "mytool-linux-x86_64"
+        // and instead use just "mytool", which is how the binary will be used when in PATH.
+        let exec_name = get_stem_name_trimmed_at_first_separator(file_name);
+        install_binary(&downloaded_file, &install_dir, &exec_name)
             .with_context(|| format!("Failed to install executable {}", binary.name()))?;
     } else {
         // extract binary
@@ -141,24 +154,27 @@ fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
     }
 
     for exec in execs_to_install {
-        install_binary(&exec, install_dir)
+        // if we have multiple executables, we install each one.
+        // we assume that to have multiple executables, those were in an archive.
+        let exec_name = exec
+            .file_name()
+            .ok_or_else(|| anyhow!("Failed to get filename from {}", exec.display()))?;
+        install_binary(&exec, install_dir, &OsString::from(exec_name))
             .with_context(|| format!("Failed to install executable {}", exec.display()))?;
     }
     Ok(())
 }
 
-fn install_binary(exec: &PathBuf, install_dir: &Path) -> Result<()> {
-    let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
-    let file_name = exec
-        .file_name()
-        .ok_or_else(|| anyhow!("Failed to get filename from {}", exec.display()))?;
-    let installed_exec = install_dir.join(file_name);
+fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> Result<()> {
+    let installed_exec = install_dir.join(exec_stem);
 
     // copy the executable files to the install directory
     // TODO: this Result may be an Err variant, which should be handled
     // for now, we just use let _ = to ignore the resulting value
     // but it is rrealy important to handle it
     let _ = filesys::copy_file(exec, &installed_exec);
+
+    let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
 
     // make them executable
     // Set executable permissions, platform-specific
@@ -170,7 +186,7 @@ fn install_binary(exec: &PathBuf, install_dir: &Path) -> Result<()> {
         // Make the file executable on Unix-like systems
         filesys::make_executable(&installed_exec);
         // Create a symlink in the bin directory, NOT overwriting existing
-        let symlink_path = bin_dir.join(file_name);
+        let symlink_path = bin_dir.join(exec_stem);
         let _ = filesys::create_symlink(&installed_exec, &symlink_path, false);
     }
     Ok(())

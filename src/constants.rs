@@ -23,3 +23,6 @@ pub const SUPPORTED_EXTENSIONS: [&str; 12] = [
 
 // other constants
 pub const UNKNOWN: &str = "Unknown";
+
+// separators
+pub const FILENAME_SEPARATORS: [&str; 3] = ["_", "-", "."];
