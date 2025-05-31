@@ -5,8 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::{
     commands::{self, download::download_binary},
     core::selector::is_env_compatible,
-    files::datadirs,
-    files::{archives, filesys},
+    files::{archives, datadirs, filesys, magic::is_exec_by_magic_number},
     github::client::{get_asset, get_release},
     utils::semver::SemverStringPrefix,
 };
@@ -32,22 +31,44 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
     let version: String = release.tag_name().strip_v();
     let download_to = datadirs::get_binary_nest(&cache_dir, repo, &version);
 
+    // prepare install dir, skip if already installed
+    let install_dir = match prepare_install_dir(repo, &version)
+        .with_context(|| format!("Failed to prepare install directory for {}", repo))?
+    {
+        Some(dir) => dir,
+        None => {
+            info!(
+                "Skipping installation as version {} for {} seems already installed.",
+                version, repo
+            );
+            return Ok(());
+        }
+    };
+
+    // if not installed, download release asset
     download_binary(binary.name(), binary.browser_download_url(), &download_to)
         .with_context(|| format!("Failed to download binary {} version {}", repo, version))?;
+    let downloaded_file = download_to.join(binary.name());
 
-    // extract binary
-    let archive_path = download_to.join(binary.name());
-    archives::extract_to_dir(&archive_path, &download_to).unwrap();
+    // check if downloaded binary is an archive or an executable
+    // and proceed accordingly.
+    if is_exec_by_magic_number(&downloaded_file) {
+        debug!("Downloaded file {} is an executable binary.", binary.name());
+        install_binary(&downloaded_file, &install_dir)
+            .with_context(|| format!("Failed to install executable {}", binary.name()))?;
+    } else {
+        // extract binary
+        archives::extract_to_dir(&downloaded_file, &download_to).unwrap();
+        debug!("Extracted to: {}", download_to.display());
 
-    debug!("Extracted to: {}", download_to.display());
-
-    // install binary
-    install_binaries(&archive_path, repo, &version).with_context(|| {
-        format!(
-            "Failed to install binaries for {} version {}",
-            repo, version
-        )
-    })?;
+        // install binary
+        install_binaries(&downloaded_file, &install_dir).with_context(|| {
+            format!(
+                "Failed to install binaries for {} version {}",
+                repo, version
+            )
+        })?;
+    }
 
     info!("{} installed successfully.", binary.name());
     commands::check::check_if_bin_in_path();
@@ -108,19 +129,7 @@ fn prepare_install_dir(repo: &str, version: &str) -> Result<Option<PathBuf>> {
     }
 }
 
-fn install_binaries(archive_path: &Path, repo: &str, version: &str) -> Result<()> {
-    // prepare install dir, skip if already installed
-    let install_dir = match prepare_install_dir(repo, version)
-        .with_context(|| format!("Failed to prepare install directory for {}", repo))? {
-        Some(dir) => dir,
-        None => {
-            info!("Skipping installation as version {} for {} seems already installed.", version, repo);
-            return Ok(());
-        }
-    };
-
-    let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
-
+fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
     let execs_to_install: Vec<PathBuf> =
@@ -128,19 +137,18 @@ fn install_binaries(archive_path: &Path, repo: &str, version: &str) -> Result<()
 
     if execs_to_install.is_empty() {
         // we interpret this as an error
-        bail!(
-            "No executables found to install. Please check the archive contents."
-        );
+        bail!("No executables found to install. Please check the archive contents.");
     }
 
     for exec in execs_to_install {
-        install_binary(&exec, &install_dir, &bin_dir)
+        install_binary(&exec, install_dir)
             .with_context(|| format!("Failed to install executable {}", exec.display()))?;
     }
     Ok(())
 }
 
-fn install_binary(exec: &PathBuf, install_dir: &Path, bin_dir: &Path) -> Result<()> {
+fn install_binary(exec: &PathBuf, install_dir: &Path) -> Result<()> {
+    let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
     let file_name = exec
         .file_name()
         .ok_or_else(|| anyhow!("Failed to get filename from {}", exec.display()))?;
