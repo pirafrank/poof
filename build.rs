@@ -1,8 +1,24 @@
 use chrono::Utc;
-use std::process::Command;
+use std::{env, process::Command};
 
 #[macro_use]
 extern crate build_cfg;
+
+fn linking_detection() {
+    let target = env::var("TARGET").unwrap();
+    let is_musl = target.contains("musl");
+
+    // Optional: detect if -static is passed for glibc targets
+    let rustflags_static = env::var("RUSTFLAGS")
+        .map(|f| f.contains("-static"))
+        .unwrap_or(false);
+
+    if is_musl || rustflags_static {
+        println!("cargo:rustc-cfg=static_linking");
+    } else {
+        println!("cargo:rustc-cfg=dynamic_linking");
+    }
+}
 
 #[build_cfg_main]
 fn main() {
@@ -30,4 +46,9 @@ fn main() {
     } else {
         println!("cargo:rustc-env=GLIBC_VERSION=");
     }
+
+    linking_detection();
+
+    println!("cargo::rustc-check-cfg=cfg(static_linking)");
+    println!("cargo::rustc-check-cfg=cfg(dynamic_linking)");
 }
