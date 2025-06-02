@@ -192,10 +192,11 @@ fn run() -> Result<()> {
                 "Setting version '{}' as default for {}",
                 version, &args.repo
             );
-            if let Err(e) = commands::make_default::set_default(&args.repo, version) {
-                error!("Failed to set default version: {}", e);
-                std::process::exit(110);
-            }
+            commands::make_default::set_default(&args.repo, version)
+                .with_context(|| format!(
+                    "Failed to set version '{}' as default for {}",
+                    version, &args.repo
+                ))?;
             info!("Version '{}' set as default.", version);
         }
         Cmd::List => {
@@ -204,19 +205,23 @@ fn run() -> Result<()> {
                 info!("No installed binaries found.");
             } else {
                 let mut stdout = std::io::stdout().lock();
-                writeln!(stdout).unwrap();
-                writeln!(stdout, "{:<40} {:<15}", "Repository", "Versions").unwrap();
-                writeln!(stdout, "{:<40} {:<15}", "----------", "--------").unwrap();
+                writeln!(stdout).context("Failed to write to stdout")?;
+                writeln!(stdout, "{:<40} {:<15}", "Repository", "Versions")
+                    .context("Failed to write header to stdout")?;
+                writeln!(stdout, "{:<40} {:<15}", "----------", "--------")
+                    .context("Failed to write header separator to stdout")?;
                 for asset in list {
                     writeln!(
                         stdout,
                         "{:<40} {:?}",
                         asset.get_name(),
                         asset.get_versions().to_string_vec()
-                    )
-                    .unwrap();
+                    ).with_context(|| format!(
+                        "Failed to write asset information for {} to stdout",
+                        asset.get_name()
+                    ))?;
                 }
-                writeln!(stdout).unwrap();
+                writeln!(stdout).context("Failed to write final newline to stdout")?;
                 drop(stdout); // explicitly release the lock
             }
         }
