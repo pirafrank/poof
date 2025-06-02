@@ -55,5 +55,6 @@ tempfile = "3"
 serial_test = "3"
 
 [build-dependencies]
+build_cfg = "1.1.0"
 chrono = "0.4"
 glibc_version = "0.1.2"

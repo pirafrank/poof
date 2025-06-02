@@ -15,10 +15,17 @@ pub fn env_path_separator() -> &'static str {
 /// It uses Box::leak to convert a String into a &'static str.
 /// This is a workaround to avoid using a global static variable.
 pub fn long_version() -> &'static str {
+    #[cfg(target_env = "gnu")]
+    let glibc_version = format!(
+        "\nGlibc     : {} or above (dynamically linked)",
+        GLIBC_VERSION
+    );
+    #[cfg(not(target_env = "gnu"))]
+    let glibc_version = String.from("");
     Box::leak(
         format!(
             "\nVersion   : {}\nCommit    : {}\nBuild Date: {}{}",
-            VERSION, COMMIT, BUILD_DATE, GLIBC_V
+            VERSION, COMMIT, BUILD_DATE, glibc_version
         )
         .into_boxed_str(),
     )
