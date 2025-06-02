@@ -8,6 +8,7 @@ pub const THIS_REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const COMMIT: &str = env!("GIT_COMMIT_HASH");
 pub const BUILD_DATE: &str = env!("BUILD_DATE");
+pub const GLIBC_V: &str = env!("GLIBC_VERSION");
 
 // data directory constants
 pub const DATA_SUBDIR: &str = "data";

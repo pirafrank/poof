@@ -17,8 +17,8 @@ pub fn env_path_separator() -> &'static str {
 pub fn long_version() -> &'static str {
     Box::leak(
         format!(
-            "\nVersion   : {}\nCommit    : {}\nBuild Date: {}",
-            VERSION, COMMIT, BUILD_DATE
+            "\nVersion   : {}\nCommit    : {}\nBuild Date: {}{}",
+            VERSION, COMMIT, BUILD_DATE, GLIBC_V
         )
         .into_boxed_str(),
     )
