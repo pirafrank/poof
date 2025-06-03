@@ -5,7 +5,7 @@ use log::error;
 
 use crate::files::datadirs;
 use crate::files::filesys;
-use crate::utils::string;
+use crate::files::utils::find_similar_repos;
 
 fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
     let data_dir = datadirs::get_data_dir().context("Failed to get data directory")?;
@@ -13,7 +13,7 @@ fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
     let installed_repo_dir = datadirs::get_versions_nest(&data_dir, repo);
     if !installed_repo_dir.exists() {
         // Try fuzzy finding a similar named installed repository
-        let similar_repo = string::find_similar_repos(&data_dir, repo);
+        let similar_repo = find_similar_repos(&data_dir, repo);
 
         if !similar_repo.is_empty() {
             error!(
