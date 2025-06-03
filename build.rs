@@ -22,6 +22,7 @@ fn c_library_detection() {
     let is_musl = target.contains("musl");
     let is_gnu = target.contains("gnu");
     let is_darwin = target.contains("darwin");
+    let is_freebsd = target.contains("freebsd");
 
     // set the c_lib environment variable
     // note: by default, Rust GNU builds target and link against glibc.
@@ -32,6 +33,8 @@ fn c_library_detection() {
         println!("cargo:rustc-env=C_LIB=musl");
     } else if is_darwin {
         println!("cargo:rustc-env=C_LIB=libSystem");
+    } else if is_freebsd {
+        println!("cargo:rustc-env=C_LIB=libc");
     }
 
     // detect if '-static' is passed for glibc targets
@@ -42,9 +45,11 @@ fn c_library_detection() {
     if is_musl || rustflags_static {
         println!("cargo:rustc-cfg=static_linking");
     } else {
-        // gnu is dynamically linked by default
+        // gnu is dynamically linked by default.
         // libSystem on macOS can only be linked statically as Apple
         // does not provide a static version of system libraries.
+        // On x86_64-unknown-freebsd, dynamic linking is the default,
+        // but you can use '-static' to link statically.
         println!("cargo:rustc-cfg=dynamic_linking");
     }
 
