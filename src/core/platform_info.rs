@@ -19,17 +19,10 @@ pub fn long_version() -> &'static str {
     let linking_type = "statically linked";
     #[cfg(dynamic_linking)]
     let linking_type = "dynamically linked";
-    #[cfg(target_env = "gnu")]
-    let glibc_version = format!(
-        "\nGlibc     : {} or above ({})",
-        GLIBC_VERSION, linking_type
-    );
-    #[cfg(not(target_env = "gnu"))]
-    let glibc_version = String.from("");
     Box::leak(
         format!(
-            "\nVersion   : {}\nCommit    : {}\nBuild Date: {}{}",
-            VERSION, COMMIT, BUILD_DATE, glibc_version
+            "\nVersion   : {}\nCommit    : {}\nBuild Date: {}\nC library : {} ({})",
+            VERSION, COMMIT, BUILD_DATE, COMPILE_C_LIB, linking_type
         )
         .into_boxed_str(),
     )
