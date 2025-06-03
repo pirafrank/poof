@@ -36,11 +36,11 @@ pub fn levenshtein_distance(s1: &str, s2: &str) -> usize {
     let mut matrix = vec![vec![0; len2 + 1]; len1 + 1];
 
     // Initialize first row and column
-    for i in 0..=len1 {
-        matrix[i][0] = i;
+    for (i, row) in matrix.iter_mut().enumerate().take(len1 + 1) {
+        row[0] = i;
     }
-    for j in 0..=len2 {
-        matrix[0][j] = j;
+    for (j, cell) in matrix[0].iter_mut().enumerate().take(len2 + 1) {
+        *cell = j;
     }
 
     let s1_chars: Vec<char> = s1.chars().collect();
@@ -48,13 +48,17 @@ pub fn levenshtein_distance(s1: &str, s2: &str) -> usize {
 
     for i in 1..=len1 {
         for j in 1..=len2 {
-            let cost = if s1_chars[i - 1] == s2_chars[j - 1] { 0 } else { 1 };
+            let cost = if s1_chars[i - 1] == s2_chars[j - 1] {
+                0
+            } else {
+                1
+            };
             matrix[i][j] = std::cmp::min(
                 std::cmp::min(
-                    matrix[i - 1][j] + 1,        // deletion
-                    matrix[i][j - 1] + 1         // insertion
+                    matrix[i - 1][j] + 1, // deletion
+                    matrix[i][j - 1] + 1, // insertion
                 ),
-                matrix[i - 1][j - 1] + cost      // substitution
+                matrix[i - 1][j - 1] + cost, // substitution
             );
         }
     }
@@ -81,11 +85,16 @@ pub fn find_similar_repos(data_dir: &Path, target_repo: &str) -> String {
                                             let full_repo = format!("{}/{}", username, repo_name);
 
                                             // Calculate similarity
-                                            let distance = levenshtein_distance(target_repo, &full_repo);
-                                            let max_len = std::cmp::max(target_repo.len(), full_repo.len());
+                                            let distance =
+                                                levenshtein_distance(target_repo, &full_repo);
+                                            let max_len =
+                                                std::cmp::max(target_repo.len(), full_repo.len());
 
                                             // Consider repos with distance <= 3 or similarity >= 70%
-                                            if distance <= 3 || (max_len > 0 && distance as f32 / max_len as f32 <= 0.3) {
+                                            if distance <= 3
+                                                || (max_len > 0
+                                                    && distance as f32 / max_len as f32 <= 0.3)
+                                            {
                                                 similar_repos.push(full_repo);
                                             }
                                         }
@@ -119,7 +128,13 @@ mod tests {
         assert_eq!(levenshtein_distance("", ""), 0);
         assert_eq!(levenshtein_distance("abc", ""), 3);
         assert_eq!(levenshtein_distance("", "abc"), 3);
-        assert_eq!(levenshtein_distance("pirafrank/rust_exif_renamer", "pirafrank/rust_exit_renamere"), 2);
+        assert_eq!(
+            levenshtein_distance(
+                "pirafrank/rust_exif_renamer",
+                "pirafrank/rust_exit_renamere"
+            ),
+            2
+        );
         assert_eq!(levenshtein_distance("abc", "def"), 3);
         assert_eq!(levenshtein_distance("kitten", "sitting"), 3);
         assert_eq!(levenshtein_distance("saturday", "sunday"), 3);
