@@ -71,7 +71,12 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
             .with_context(|| format!("Failed to install executable {}", binary.name()))?;
     } else {
         // extract binary
-        archives::extract_to_dir(&downloaded_file, &download_to).unwrap();
+        archives::extract_to_dir(&downloaded_file, &download_to)
+            .with_context(|| format!(
+                "Failed to extract archive {} to {}",
+                downloaded_file.display(),
+                download_to.display()
+            ))?;
         debug!("Extracted to: {}", download_to.display());
 
         // install binary

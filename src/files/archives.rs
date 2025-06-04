@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use tar::Archive;
 use xz2::read::XzDecoder;
 use zip::ZipArchive;
+use anyhow::Context;
 
 // Fallback directory name for extracted files
 const OUTPUT_DIR: &str = "output";
@@ -111,15 +112,18 @@ fn determine_validated_archive_format(archive_path: &Path) -> BinaryContainer {
 pub fn extract_to_dir(
     archive_path: &PathBuf,
     extract_to: &PathBuf,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> anyhow::Result<()> {
     let archive_format: BinaryContainer = determine_validated_archive_format(archive_path);
 
     match archive_format {
         BinaryContainer::Zip => {
             debug!("Extracting zip archive: {}", archive_path.display());
-            let zip_file = File::open(archive_path)?;
-            let mut archive = ZipArchive::new(zip_file)?;
-            archive.extract(extract_to)?;
+            let zip_file = File::open(archive_path)
+                .with_context(|| format!("Failed to open zip file: {}", archive_path.display()))?;
+            let mut archive = ZipArchive::new(zip_file)
+                .with_context(|| format!("Failed to read zip archive: {}", archive_path.display()))?;
+            archive.extract(extract_to)
+                .with_context(|| format!("Failed to extract zip archive to: {}", extract_to.display()))?;
             debug!(
                 "Successfully extracted zip archive to {}",
                 extract_to.display()
@@ -127,10 +131,12 @@ pub fn extract_to_dir(
         }
         BinaryContainer::TarGz => {
             debug!("Extracting tar.gz archive: {}", archive_path.display());
-            let tar_gz_file = File::open(archive_path)?;
+            let tar_gz_file = File::open(archive_path)
+                .with_context(|| format!("Failed to open tar.gz file: {}", archive_path.display()))?;
             let tar = GzDecoder::new(tar_gz_file);
             let mut archive = Archive::new(tar);
-            archive.unpack(extract_to)?;
+            archive.unpack(extract_to)
+                .with_context(|| format!("Failed to extract tar.gz archive to: {}", extract_to.display()))?;
             debug!(
                 "Successfully extracted tar.gz archive to {}",
                 extract_to.display()
@@ -138,10 +144,12 @@ pub fn extract_to_dir(
         }
         BinaryContainer::TarXz => {
             debug!("Extracting tar.xz archive: {}", archive_path.display());
-            let tar_xz_file = File::open(archive_path)?;
+            let tar_xz_file = File::open(archive_path)
+                .with_context(|| format!("Failed to open tar.xz file: {}", archive_path.display()))?;
             let tar = XzDecoder::new(tar_xz_file);
             let mut archive = Archive::new(tar);
-            archive.unpack(extract_to)?;
+            archive.unpack(extract_to)
+                .with_context(|| format!("Failed to extract tar.xz archive to: {}", extract_to.display()))?;
             debug!(
                 "Successfully extracted tar.xz archive to {}",
                 extract_to.display()
@@ -149,10 +157,12 @@ pub fn extract_to_dir(
         }
         BinaryContainer::TarBz2 => {
             debug!("Extracting tar.bz2 archive: {}", archive_path.display());
-            let tar_bz2_file = File::open(archive_path)?;
+            let tar_bz2_file = File::open(archive_path)
+                .with_context(|| format!("Failed to open tar.bz2 file: {}", archive_path.display()))?;
             let tar = BzDecoder::new(tar_bz2_file);
             let mut archive = Archive::new(tar);
-            archive.unpack(extract_to)?;
+            archive.unpack(extract_to)
+                .with_context(|| format!("Failed to extract tar.bz2 archive to: {}", extract_to.display()))?;
             debug!(
                 "Successfully extracted tar.bz2 archive to {}",
                 extract_to.display()
@@ -160,9 +170,11 @@ pub fn extract_to_dir(
         }
         BinaryContainer::Tar => {
             debug!("Extracting tar archive: {}", archive_path.display());
-            let tar_file = File::open(archive_path)?;
+            let tar_file = File::open(archive_path)
+                .with_context(|| format!("Failed to open tar file: {}", archive_path.display()))?;
             let mut archive = Archive::new(tar_file);
-            archive.unpack(extract_to)?;
+            archive.unpack(extract_to)
+                .with_context(|| format!("Failed to extract tar archive to: {}", extract_to.display()))?;
             debug!(
                 "Successfully extracted tar archive to {}",
                 extract_to.display()
@@ -171,7 +183,8 @@ pub fn extract_to_dir(
         BinaryContainer::Gz => {
             // Plain gzip file (not tar.gz) - not really used for software distribution
             debug!("Extracting gz archive: {}", archive_path.display());
-            let gz_file = File::open(archive_path)?;
+            let gz_file = File::open(archive_path)
+                .with_context(|| format!("Failed to open gz file: {}", archive_path.display()))?;
             let mut decoder = GzDecoder::new(gz_file);
             let output_path = extract_to.join(
                 archive_path
@@ -179,9 +192,12 @@ pub fn extract_to_dir(
                     .and_then(|s| s.to_str())
                     .unwrap_or(OUTPUT_DIR),
             );
-            std::fs::create_dir_all(extract_to)?;
-            let mut output_file = File::create(&output_path)?;
-            std::io::copy(&mut decoder, &mut output_file)?;
+            std::fs::create_dir_all(extract_to)
+                .with_context(|| format!("Failed to create extraction directory: {}", extract_to.display()))?;
+            let mut output_file = File::create(&output_path)
+                .with_context(|| format!("Failed to create output file: {}", output_path.display()))?;
+            std::io::copy(&mut decoder, &mut output_file)
+                .with_context(|| format!("Failed to decompress gz file to: {}", output_path.display()))?;
             debug!(
                 "Successfully extracted gz archive to {}",
                 output_path.display()
@@ -190,7 +206,8 @@ pub fn extract_to_dir(
         BinaryContainer::Xz => {
             // Plain xz file (not tar.xz) - not really used for software distribution
             debug!("Extracting xz archive: {}", archive_path.display());
-            let xz_file = File::open(archive_path)?;
+            let xz_file = File::open(archive_path)
+                .with_context(|| format!("Failed to open xz file: {}", archive_path.display()))?;
             let mut decoder = XzDecoder::new(xz_file);
             let output_path = extract_to.join(
                 archive_path
@@ -198,9 +215,12 @@ pub fn extract_to_dir(
                     .and_then(|s| s.to_str())
                     .unwrap_or(OUTPUT_DIR),
             );
-            std::fs::create_dir_all(extract_to)?;
-            let mut output_file = File::create(&output_path)?;
-            std::io::copy(&mut decoder, &mut output_file)?;
+            std::fs::create_dir_all(extract_to)
+                .with_context(|| format!("Failed to create extraction directory: {}", extract_to.display()))?;
+            let mut output_file = File::create(&output_path)
+                .with_context(|| format!("Failed to create output file: {}", output_path.display()))?;
+            std::io::copy(&mut decoder, &mut output_file)
+                .with_context(|| format!("Failed to decompress xz file to: {}", output_path.display()))?;
             debug!(
                 "Successfully extracted xz archive to {}",
                 output_path.display()
@@ -209,7 +229,8 @@ pub fn extract_to_dir(
         BinaryContainer::Bz2 => {
             // Plain bzip2 file (not tar.bz2) - not really used for software distribution
             debug!("Extracting bz2 archive: {}", archive_path.display());
-            let bz2_file = File::open(archive_path)?;
+            let bz2_file = File::open(archive_path)
+                .with_context(|| format!("Failed to open bz2 file: {}", archive_path.display()))?;
             let mut decoder = BzDecoder::new(bz2_file);
             let output_path = extract_to.join(
                 archive_path
@@ -217,9 +238,12 @@ pub fn extract_to_dir(
                     .and_then(|s| s.to_str())
                     .unwrap_or(OUTPUT_DIR),
             );
-            std::fs::create_dir_all(extract_to)?;
-            let mut output_file = File::create(&output_path)?;
-            std::io::copy(&mut decoder, &mut output_file)?;
+            std::fs::create_dir_all(extract_to)
+                .with_context(|| format!("Failed to create extraction directory: {}", extract_to.display()))?;
+            let mut output_file = File::create(&output_path)
+                .with_context(|| format!("Failed to create output file: {}", output_path.display()))?;
+            std::io::copy(&mut decoder, &mut output_file)
+                .with_context(|| format!("Failed to decompress bz2 file to: {}", output_path.display()))?;
             debug!(
                 "Successfully extracted bz2 archive to {}",
                 output_path.display()
@@ -227,14 +251,19 @@ pub fn extract_to_dir(
         }
         BinaryContainer::SevenZ => {
             debug!("Extracting 7z archive: {}", archive_path.display());
-            sevenz_rust2::decompress_file(archive_path, extract_to).expect("complete");
+            sevenz_rust2::decompress_file(archive_path, extract_to)
+                .with_context(|| format!("Failed to extract 7z archive from {} to {}", 
+                    archive_path.display(), extract_to.display()))?;
             debug!(
                 "Successfully extracted 7z archive to {}",
                 extract_to.display()
             );
         }
         BinaryContainer::Unknown => {
-            std::process::exit(109);
+            anyhow::bail!(
+                "Unsupported or corrupted archive format for file: {}. Supported formats: zip, tar.gz, tar.xz, tar.bz2, tar, gz, xz, bz2, 7z",
+                archive_path.display()
+            );
         }
     }
     Ok(())
