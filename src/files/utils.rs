@@ -63,7 +63,7 @@ pub fn get_stem_name_trimmed_at_first_separator(file_name: &OsStr) -> OsString {
 }
 
 /// Find similar repo names in the data directory based on fuzzy matching
-pub fn find_similar_repos(data_dir: &Path, target_repo: &str) -> String {
+pub fn find_similar_repos(data_dir: &Path, target_repo: &str) -> Vec<String> {
     let mut similar_repos = Vec::new();
 
     if let Ok(entries) = std::fs::read_dir(data_dir) {
@@ -110,9 +110,13 @@ pub fn find_similar_repos(data_dir: &Path, target_repo: &str) -> String {
         let dist_b = levenshtein_distance(target_repo, b);
         dist_a.cmp(&dist_b)
     });
+    similar_repos
+}
 
+pub fn find_similar_repo(data_dir: &Path, target_repo: &str) -> Option<String> {
+    let similar_repos: Vec<String> = find_similar_repos(data_dir, target_repo);
     // Return only the top entry as a string
-    similar_repos.into_iter().next().unwrap_or_default()
+    similar_repos.into_iter().next()
 }
 
 #[cfg(test)]
