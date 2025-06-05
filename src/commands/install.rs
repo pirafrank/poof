@@ -83,7 +83,7 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
         })?;
     }
 
-    info!("{} installed successfully.", binary.name());
+    info!("{} {} installed successfully.", repo, &version);
     commands::check::check_if_bin_in_path();
     Ok(())
 }
