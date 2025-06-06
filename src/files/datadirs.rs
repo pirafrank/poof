@@ -74,9 +74,16 @@ pub fn get_cache_dir() -> Option<PathBuf> {
 
 // Function to get a path for a binary file with the directory
 // structure for a specific repository and version.
-pub fn get_binary_nest(base: &Path, repo: &str, version: &str) -> PathBuf {
+pub fn get_versions_nest(base: &Path, repo: &str) -> PathBuf {
     // Convert repo path to filesystem-friendly format by replacing '/' with OS separator
+    // Creating path as: base_dir/username/reponame
     let repo_path = repo.replace('/', std::path::MAIN_SEPARATOR_STR);
+    base.join(&repo_path)
+}
+
+// Function to get a path for a binary file with the directory
+// structure for a specific repository and version.
+pub fn get_binary_nest(base: &Path, repo: &str, version: &str) -> PathBuf {
     // Creating path as: base_dir/username/reponame/version
-    base.join(&repo_path).join(version)
+    base.join(get_versions_nest(base, repo)).join(version)
 }

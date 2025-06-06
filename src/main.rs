@@ -38,6 +38,18 @@ fn validate_repo_format(s: &str) -> Result<String, String> {
     }
 }
 
+#[derive(Parser, Clone)]
+struct UseArgs {
+    /// GitHub user and repository in the format USERNAME/REPO
+    /// e.g. pirafrank/rust_exif_renamer
+    #[arg(required = true, value_parser = validate_repo_format)]
+    repo: String,
+
+    /// version to set as default
+    #[arg(required = true)]
+    version: String,
+}
+
 // Common arguments for repository operations
 #[derive(Parser, Clone)]
 struct CmdArgs {
@@ -80,7 +92,7 @@ enum Cmd {
     List,
 
     /// Make an installed version the one to be used by default
-    Use(CmdArgs),
+    Use(UseArgs),
 
     /// Update installed binaries to their latest versions
     Update(UpdateArgs),
@@ -187,7 +199,7 @@ fn run() -> Result<()> {
             commands::install::process_install(&args.repo, args.tag.as_deref())?;
         }
         Cmd::Use(args) => {
-            let version = args.tag.as_deref().unwrap_or("latest");
+            let version = &args.version;
             info!(
                 "Setting version '{}' as default for {}",
                 version, &args.repo
