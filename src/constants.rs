@@ -13,6 +13,7 @@ pub const COMPILE_C_LIB: &str = env!("C_LIB");
 // data directory constants
 pub const DATA_SUBDIR: &str = "data";
 pub const BIN_SUBDIR: &str = "bin";
+pub const GITHUB_SUBDIR: &str = "github.com";
 
 // file extension constants
 // SUPPORTED_EXTENSIONS is a list of file extensions that are supported by the selector.

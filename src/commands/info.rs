@@ -60,7 +60,11 @@ pub fn show_info() {
     output.push_str(&format!("  Cache dir: {}\n", cache_dir.display()));
 
     let data_dir = datadirs::get_data_dir().unwrap_or_default();
-    output.push_str(&format!("  Data dir : {}\n", data_dir.display()));
+    //TODO: remove .parent() when poof will be updated to support different services apart from GitHub.
+    output.push_str(&format!(
+        "  Data dir : {}\n",
+        data_dir.parent().unwrap().display()
+    ));
 
     output.push_str(&format!("  Bin dir  : {}\n", bin_dir.display()));
 
