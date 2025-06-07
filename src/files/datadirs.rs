@@ -29,7 +29,11 @@ pub fn _get_config_dir() -> Option<PathBuf> {
 /// Windows: %LOCALAPPDATA%/APPNAME/data
 ///
 pub fn get_data_dir() -> Option<PathBuf> {
-    let data_dir = dirs::data_dir()?.join(APP_NAME).join(DATA_SUBDIR);
+    //TODO: remove .join(GITHUB_SUBDIR) when poof will be updated to support different services apart from GitHub.
+    let data_dir = dirs::data_dir()?
+        .join(APP_NAME)
+        .join(DATA_SUBDIR)
+        .join(GITHUB_SUBDIR);
     if !data_dir.exists() {
         std::fs::create_dir_all(&data_dir).ok()?;
     }
