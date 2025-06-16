@@ -1,7 +1,7 @@
 [package]
 name = "poof"
 authors = ["Francesco Pira (pirafrank)"]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 repository = "https://github.com/pirafrank/poof"
 documentation = "https://github.com/pirafrank/poof/blob/main/README.md"
