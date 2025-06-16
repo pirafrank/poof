@@ -103,8 +103,10 @@ Commands:
   install   Download binary for the platform and install it
   list      List installed binaries and their versions
   use       Make an installed version the one to be used by default
-  enable    Persistently add poof’s bin directory to your shell PATH
+  update    Update installed binaries to their latest versions
+  enable    Persistently add poof's bin directory to your shell PATH
   check     Check if poof's bin directory is in the PATH
+  clean     Empty cache directory
   info      Show install and environment information
   version   Show version information
   help      Print this message or the help of the given subcommand(s)
