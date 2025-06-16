@@ -2,13 +2,45 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.5.0] - 2025-06-16
+
+### 🚀 Features
+
+- `poof update` command, introduced anyhow + refactor to return Result (#5)
+- Clean command to empty cache dir (#57)
+- Support install of unarchived/uncompressed assets (#58)
+- Add info about glibc and musl used at build time in 'version' subcommand (#62)
+- *(UX)* Clearer info about successfully installed repo and version
+- *(commands)* [**breaking**] Change to `use` subcommand args to be more sensible, now `poof use <REPO> <VERSION>` (#63)
+
+### 🐛 Bug Fixes
+
+- Application/octet-stream is not a supported mime type (#55)
+
+### 🚜 Refactor
+
+- Move core functions and files to own modules (#56)
+- *(data dirs)* [**breaking**] Prepare data dir structure for a future update. Run migrate_poof_data.sh before updating to 0.5.0
+
+### 🔧 Setup & Quality
+
+- Issue template updates
+- Publish sha256 of artifacts in release pipeline (#36)
+- Use variables for binary filename in workflows
+- Added dependabot configuration
+- Gh codespaces env
+- Git-cliff config update
+
+### ⚙️ Miscellaneous Tasks
+
+- Added Security Issue template and updated issue links
+
 ## [0.4.0] - 2025-05-02
 
 ### 🚀 Features
 
 - `info` command to show install and env information
 - *(enable)* Add `enable` command with tests (#3)
-the PR implements the poof enable command to persistently add poof’s bin directory to the user’s shell PATH by appending to ~/.bashrc or ~/.zshrc.
 
 ### 🚜 Refactor
 
@@ -30,6 +62,7 @@ the PR implements the poof enable command to persistently add poof’s bin direc
 
 - Dependencies update
 - Moved roadmap to repository wiki
+- Cargo deny settings update
 
 ## [0.3.1] - 2025-04-30
 
@@ -77,7 +110,6 @@ the PR implements the poof enable command to persistently add poof’s bin direc
 - Support archive extraction
 - Download, extract, and install to bin dir
 - Debug command to show sysinfo
-useful for debug purposes
 - Logging
 
 ### 🐛 Bug Fixes
