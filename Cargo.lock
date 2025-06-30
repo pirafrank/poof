@@ -239,6 +239,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bzip2"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bea8dcd42434048e4f7a304411d9273a411f647446c1234a65ce0554923f4cff"
+dependencies = [
+ "libbz2-rs-sys",
+]
+
+[[package]]
 name = "bzip2-sys"
 version = "0.1.13+1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1150,6 +1159,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
+name = "libbz2-rs-sys"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "775bf80d5878ab7c2b1080b5351a48b2f737d9f6f8b383574eebcc22be0dfccb"
+
+[[package]]
 name = "libc"
 version = "0.2.174"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1382,7 +1397,7 @@ version = "0.5.0"
 dependencies = [
  "anyhow",
  "build_cfg",
- "bzip2",
+ "bzip2 0.5.2",
  "chrono",
  "clap",
  "clap-verbosity-flag",
@@ -1437,6 +1452,12 @@ name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
+
+[[package]]
+name = "ppmd-rust"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c39de2199a0d892194c6327a7bafdc4bd1466f20cd3ee9a21049d1a45a598f3"
 
 [[package]]
 name = "ppv-lite86"
@@ -1897,17 +1918,19 @@ dependencies = [
 
 [[package]]
 name = "sevenz-rust2"
-version = "0.14.1"
+version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7205dc0402e8abfbb9bea7474dfa5551bca8dc81196077c9045228d6656e576"
+checksum = "0613c8bcc0d74f26e4c90c94125703dc87bcb3a95abce3fa606c585cd9cbaa5f"
 dependencies = [
  "bit-set",
  "byteorder",
+ "bzip2 0.6.0",
  "crc32fast",
  "filetime_creation",
  "js-sys",
  "lzma-rust2",
  "nt-time",
+ "ppmd-rust",
  "wasm-bindgen",
 ]
 
@@ -2719,7 +2742,7 @@ checksum = "12598812502ed0105f607f941c386f43d441e00148fce9dec3ca5ffb0bde9308"
 dependencies = [
  "aes",
  "arbitrary",
- "bzip2",
+ "bzip2 0.5.2",
  "constant_time_eq",
  "crc32fast",
  "deflate64",
