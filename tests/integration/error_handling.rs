@@ -113,12 +113,6 @@ fn test_list_with_corrupted_directory_structure() -> Result<(), Box<dyn std::err
 #[test]
 fn test_enable_without_bin_dir() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
-    let original_home = std::env::var("HOME").ok();
-    let original_shell = std::env::var("SHELL").ok();
-    
-    std::env::set_var("HOME", temp_home.path());
-    std::env::set_var("SHELL", "/bin/bash");
-    std::env::set_var("XDG_DATA_HOME", temp_home.path().join(".local").join("share"));
     
     // Don't create bin directory
     
@@ -126,16 +120,9 @@ fn test_enable_without_bin_dir() -> Result<(), Box<dyn std::error::Error>> {
     let output = cmd
         .arg("enable")
         .env("HOME", temp_home.path())
+        .env("SHELL", "/bin/bash")
         .env("XDG_DATA_HOME", temp_home.path().join(".local").join("share"))
         .output()?;
-    
-    // Restore environment
-    if let Some(home) = original_home {
-        std::env::set_var("HOME", home);
-    }
-    if let Some(shell) = original_shell {
-        std::env::set_var("SHELL", shell);
-    }
     
     // Enable might fail or succeed depending on implementation
     // The bin dir might be created automatically

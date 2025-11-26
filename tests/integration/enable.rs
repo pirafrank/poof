@@ -10,12 +10,6 @@ use tempfile::TempDir;
 #[test]
 fn test_enable_creates_bashrc_entry() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
-    let original_home = std::env::var("HOME").ok();
-    let original_shell = std::env::var("SHELL").ok();
-    
-    std::env::set_var("HOME", temp_home.path());
-    std::env::set_var("SHELL", "/bin/bash");
-    std::env::set_var("XDG_DATA_HOME", temp_home.path().join(".local").join("share"));
     
     // Create bin directory structure
     let bin_dir = temp_home
@@ -30,16 +24,9 @@ fn test_enable_creates_bashrc_entry() -> Result<(), Box<dyn std::error::Error>> 
     let output = cmd
         .arg("enable")
         .env("HOME", temp_home.path())
+        .env("SHELL", "/bin/bash")
         .env("XDG_DATA_HOME", temp_home.path().join(".local").join("share"))
         .output()?;
-    
-    // Restore environment
-    if let Some(home) = original_home {
-        std::env::set_var("HOME", home);
-    }
-    if let Some(shell) = original_shell {
-        std::env::set_var("SHELL", shell);
-    }
     
     assert!(output.status.success(), "Enable command should succeed");
     
@@ -68,12 +55,6 @@ fn test_enable_creates_bashrc_entry() -> Result<(), Box<dyn std::error::Error>> 
 #[test]
 fn test_enable_creates_zshrc_entry() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
-    let original_home = std::env::var("HOME").ok();
-    let original_shell = std::env::var("SHELL").ok();
-    
-    std::env::set_var("HOME", temp_home.path());
-    std::env::set_var("SHELL", "/usr/bin/zsh");
-    std::env::set_var("XDG_DATA_HOME", temp_home.path().join(".local").join("share"));
     
     // Create bin directory structure
     let bin_dir = temp_home
@@ -88,16 +69,9 @@ fn test_enable_creates_zshrc_entry() -> Result<(), Box<dyn std::error::Error>> {
     let output = cmd
         .arg("enable")
         .env("HOME", temp_home.path())
+        .env("SHELL", "/usr/bin/zsh")
         .env("XDG_DATA_HOME", temp_home.path().join(".local").join("share"))
         .output()?;
-    
-    // Restore environment
-    if let Some(home) = original_home {
-        std::env::set_var("HOME", home);
-    }
-    if let Some(shell) = original_shell {
-        std::env::set_var("SHELL", shell);
-    }
     
     assert!(output.status.success(), "Enable command should succeed");
     
@@ -122,12 +96,6 @@ fn test_enable_creates_zshrc_entry() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
-    let original_home = std::env::var("HOME").ok();
-    let original_shell = std::env::var("SHELL").ok();
-    
-    std::env::set_var("HOME", temp_home.path());
-    std::env::set_var("SHELL", "/bin/bash");
-    std::env::set_var("XDG_DATA_HOME", temp_home.path().join(".local").join("share"));
     
     // Create bin directory structure
     let bin_dir = temp_home
@@ -142,22 +110,16 @@ fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd1 = Command::cargo_bin("poof")?;
     cmd1.arg("enable")
         .env("HOME", temp_home.path())
+        .env("SHELL", "/bin/bash")
         .env("XDG_DATA_HOME", temp_home.path().join(".local").join("share"))
         .output()?;
     
     let mut cmd2 = Command::cargo_bin("poof")?;
     cmd2.arg("enable")
         .env("HOME", temp_home.path())
+        .env("SHELL", "/bin/bash")
         .env("XDG_DATA_HOME", temp_home.path().join(".local").join("share"))
         .output()?;
-    
-    // Restore environment
-    if let Some(home) = original_home {
-        std::env::set_var("HOME", home);
-    }
-    if let Some(shell) = original_shell {
-        std::env::set_var("SHELL", shell);
-    }
     
     // Check that export line appears only once
     let bashrc_path = temp_home.path().join(".bashrc");
@@ -180,12 +142,6 @@ fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_enable_preserves_existing_content() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
-    let original_home = std::env::var("HOME").ok();
-    let original_shell = std::env::var("SHELL").ok();
-    
-    std::env::set_var("HOME", temp_home.path());
-    std::env::set_var("SHELL", "/bin/bash");
-    std::env::set_var("XDG_DATA_HOME", temp_home.path().join(".local").join("share"));
     
     // Create bin directory structure
     let bin_dir = temp_home
@@ -204,16 +160,9 @@ fn test_enable_preserves_existing_content() -> Result<(), Box<dyn std::error::Er
     let output = cmd
         .arg("enable")
         .env("HOME", temp_home.path())
+        .env("SHELL", "/bin/bash")
         .env("XDG_DATA_HOME", temp_home.path().join(".local").join("share"))
         .output()?;
-    
-    // Restore environment
-    if let Some(home) = original_home {
-        std::env::set_var("HOME", home);
-    }
-    if let Some(shell) = original_shell {
-        std::env::set_var("SHELL", shell);
-    }
     
     assert!(output.status.success(), "Enable command should succeed");
     

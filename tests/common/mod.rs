@@ -6,15 +6,23 @@ use tempfile::TempDir;
 
 /// Test fixture that sets up a temporary environment for testing
 /// This ensures tests never touch the actual file system
+/// 
+/// **Important**: To avoid race conditions in parallel test execution,
+/// use `.env()` on `Command` instances instead of `std::env::set_var()`.
+/// The fixture provides paths that should be passed to `.env()` calls.
 pub struct TestFixture {
     pub temp_dir: TempDir,
     pub home_dir: PathBuf,
     pub data_dir: PathBuf,
     pub cache_dir: PathBuf,
     pub bin_dir: PathBuf,
-    pub original_home: Option<String>,
-    pub original_xdg_data_home: Option<String>,
-    pub original_xdg_cache_home: Option<String>,
+    // Removed: original env vars no longer needed since we don't set them globally
+    #[allow(dead_code)]
+    original_home: Option<String>,
+    #[allow(dead_code)]
+    original_xdg_data_home: Option<String>,
+    #[allow(dead_code)]
+    original_xdg_cache_home: Option<String>,
 }
 
 impl TestFixture {
@@ -32,15 +40,8 @@ impl TestFixture {
         std::fs::create_dir_all(&cache_dir)?;
         std::fs::create_dir_all(&bin_dir)?;
         
-        // Save original environment variables
-        let original_home = env::var("HOME").ok();
-        let original_xdg_data_home = env::var("XDG_DATA_HOME").ok();
-        let original_xdg_cache_home = env::var("XDG_CACHE_HOME").ok();
-        
-        // Set environment variables to point to temp directory
-        env::set_var("HOME", &home_dir);
-        env::set_var("XDG_DATA_HOME", &home_dir.join(".local").join("share"));
-        env::set_var("XDG_CACHE_HOME", &home_dir.join(".cache"));
+        // Note: Environment variables should be set using .env() on Command instances
+        // to avoid race conditions when tests run in parallel. We don't set them here.
         
         Ok(Self {
             temp_dir,
@@ -48,9 +49,9 @@ impl TestFixture {
             data_dir,
             cache_dir,
             bin_dir,
-            original_home,
-            original_xdg_data_home,
-            original_xdg_cache_home,
+            original_home: None,
+            original_xdg_data_home: None,
+            original_xdg_cache_home: None,
         })
     }
     
@@ -158,24 +159,8 @@ impl TestFixture {
 
 impl Drop for TestFixture {
     fn drop(&mut self) {
-        // Restore original environment variables
-        if let Some(ref home) = self.original_home {
-            env::set_var("HOME", home);
-        } else {
-            env::remove_var("HOME");
-        }
-        
-        if let Some(ref xdg_data) = self.original_xdg_data_home {
-            env::set_var("XDG_DATA_HOME", xdg_data);
-        } else {
-            env::remove_var("XDG_DATA_HOME");
-        }
-        
-        if let Some(ref xdg_cache) = self.original_xdg_cache_home {
-            env::set_var("XDG_CACHE_HOME", xdg_cache);
-        } else {
-            env::remove_var("XDG_CACHE_HOME");
-        }
+        // No environment variable cleanup needed since we don't set them globally
+        // Tests should use .env() on Command instances for proper isolation
     }
 }
 

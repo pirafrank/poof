@@ -18,23 +18,17 @@ fn test_check_command_exists() -> Result<(), Box<dyn std::error::Error>> {
 fn test_check_warns_when_not_in_path() -> Result<(), Box<dyn std::error::Error>> {
     // Set up a temporary environment where bin dir is not in PATH
     let temp_dir = TempDir::new()?;
-    let original_home = std::env::var("HOME").ok();
-    let original_path = std::env::var("PATH").ok();
-    
-    std::env::set_var("HOME", temp_dir.path());
-    std::env::set_var("XDG_DATA_HOME", temp_dir.path().join(".local").join("share"));
-    std::env::set_var("PATH", "/usr/bin:/bin"); // PATH without poof's bin dir
+    let home = temp_dir.path();
+    let xdg_data_home = temp_dir.path().join(".local").join("share");
+    let path = "/usr/bin:/bin"; // PATH without poof's bin dir
     
     let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd.arg("check").output()?;
-    
-    // Restore environment
-    if let Some(home) = original_home {
-        std::env::set_var("HOME", home);
-    }
-    if let Some(path) = original_path {
-        std::env::set_var("PATH", path);
-    }
+    let output = cmd
+        .arg("check")
+        .env("HOME", home)
+        .env("XDG_DATA_HOME", &xdg_data_home)
+        .env("PATH", path)
+        .output()?;
     
     let stderr = String::from_utf8_lossy(&output.stderr);
     
