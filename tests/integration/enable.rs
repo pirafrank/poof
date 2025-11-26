@@ -164,7 +164,7 @@ fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     if bashrc_path.exists() {
         let contents = fs::read_to_string(&bashrc_path)?;
         let bin_str = bin_dir.to_string_lossy();
-        let export_line = format!("export PATH=\"{}$PATH\"", bin_str);
+        let export_line = format!("export PATH=\"{}:$PATH\"", bin_str);
         let count = contents.matches(&export_line).count();
         assert_eq!(
             count, 1,
