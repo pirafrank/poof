@@ -11,6 +11,7 @@ use tempfile::TempDir;
 /// use `.env()` on `Command` instances instead of `std::env::set_var()`.
 /// The fixture provides paths that should be passed to `.env()` calls.
 pub struct TestFixture {
+    #[allow(dead_code)]
     pub temp_dir: TempDir,
     pub home_dir: PathBuf,
     pub data_dir: PathBuf,
@@ -78,7 +79,7 @@ impl TestFixture {
         std::fs::create_dir_all(&install_dir)?;
 
         // Create a fake executable
-        let binary_name = repo.split('/').last().unwrap_or("binary");
+        let binary_name = repo.split('/').next_back().unwrap_or("binary");
         let binary_path = install_dir.join(binary_name);
         std::fs::write(&binary_path, b"#!/bin/sh\necho 'fake binary'")?;
 
@@ -133,6 +134,7 @@ impl TestFixture {
     }
 
     /// List all installed binaries
+    #[allow(dead_code)]
     pub fn list_installed(&self) -> Vec<(String, String)> {
         let mut result = Vec::new();
 
@@ -183,6 +185,7 @@ impl Drop for TestFixture {
 }
 
 /// Helper function to run a command and capture output
+#[allow(dead_code)]
 pub fn run_command(args: &[&str]) -> Result<(bool, String, String), Box<dyn std::error::Error>> {
     use std::process::Command;
 
@@ -198,6 +201,7 @@ pub fn run_command(args: &[&str]) -> Result<(bool, String, String), Box<dyn std:
 }
 
 /// Helper to check if a string contains all required substrings
+#[allow(dead_code)]
 pub fn assert_contains_all(text: &str, substrings: &[&str]) {
     for substring in substrings {
         assert!(
@@ -210,6 +214,7 @@ pub fn assert_contains_all(text: &str, substrings: &[&str]) {
 }
 
 /// Helper to create a mock release archive structure
+#[allow(dead_code)]
 pub fn create_mock_archive_structure(
     base_dir: &Path,
     binary_name: &str,

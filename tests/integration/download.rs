@@ -1,8 +1,8 @@
 //! Integration tests for the 'download' command
 
 use assert_cmd::prelude::*;
+use predicates::prelude::*;
 use serial_test::serial;
-use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
 
@@ -13,7 +13,7 @@ fn test_download_requires_repo() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("download")
         .assert()
         .failure()
-        .stderr(predicates::str::contains("required"));
+        .stderr(predicate::str::contains("required"));
     Ok(())
 }
 
@@ -25,9 +25,7 @@ fn test_download_invalid_repo_format() -> Result<(), Box<dyn std::error::Error>>
         .arg("invalid-format")
         .assert()
         .failure()
-        .stderr(predicates::str::contains(
-            "Repository must be in the format",
-        ));
+        .stderr(predicate::str::contains("Repository must be in the format"));
     Ok(())
 }
 

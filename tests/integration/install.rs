@@ -2,9 +2,7 @@
 
 use assert_cmd::prelude::*;
 use serial_test::serial;
-use std::fs;
 use std::process::Command;
-use tempfile::TempDir;
 
 // Common module is included from the parent integration.rs file
 use super::common::*;
@@ -127,7 +125,7 @@ fn test_install_state_after_success() -> Result<(), Box<dyn std::error::Error>> 
     );
 
     // Verify binary exists in install directory
-    let binary_name = repo.split('/').last().unwrap_or("testrepo");
+    let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
     let binary_path = install_dir.join(binary_name);
     assert!(
         binary_path.exists(),

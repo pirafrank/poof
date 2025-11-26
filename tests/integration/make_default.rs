@@ -62,7 +62,7 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
     fixture.create_fake_installation(repo, version2)?;
 
     // Get binary name
-    let binary_name = repo.split('/').last().unwrap_or("testrepo");
+    let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
 
     // Create symlinks for both versions initially
     let install_dir1 = fixture.get_install_path(repo, version1);
