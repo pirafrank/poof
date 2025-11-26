@@ -95,6 +95,7 @@ impl TestFixture {
     }
 
     /// Create a symlink in bin_dir pointing to the installed binary
+    #[allow(dead_code)]
     pub fn create_bin_symlink(
         &self,
         binary_name: &str,
