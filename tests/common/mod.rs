@@ -1,0 +1,227 @@
+//! Shared test utilities and fixtures for poof tests
+
+use std::env;
+use std::path::{Path, PathBuf};
+use tempfile::TempDir;
+
+/// Test fixture that sets up a temporary environment for testing
+/// This ensures tests never touch the actual file system
+pub struct TestFixture {
+    pub temp_dir: TempDir,
+    pub home_dir: PathBuf,
+    pub data_dir: PathBuf,
+    pub cache_dir: PathBuf,
+    pub bin_dir: PathBuf,
+    pub original_home: Option<String>,
+    pub original_xdg_data_home: Option<String>,
+    pub original_xdg_cache_home: Option<String>,
+}
+
+impl TestFixture {
+    /// Create a new test fixture with temporary directories
+    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let temp_dir = TempDir::new()?;
+        let home_dir = temp_dir.path().to_path_buf();
+        
+        // Create directory structure
+        let data_dir = home_dir.join(".local").join("share").join("poof").join("data");
+        let cache_dir = home_dir.join(".cache").join("poof");
+        let bin_dir = home_dir.join(".local").join("share").join("poof").join("bin");
+        
+        std::fs::create_dir_all(&data_dir)?;
+        std::fs::create_dir_all(&cache_dir)?;
+        std::fs::create_dir_all(&bin_dir)?;
+        
+        // Save original environment variables
+        let original_home = env::var("HOME").ok();
+        let original_xdg_data_home = env::var("XDG_DATA_HOME").ok();
+        let original_xdg_cache_home = env::var("XDG_CACHE_HOME").ok();
+        
+        // Set environment variables to point to temp directory
+        env::set_var("HOME", &home_dir);
+        env::set_var("XDG_DATA_HOME", &home_dir.join(".local").join("share"));
+        env::set_var("XDG_CACHE_HOME", &home_dir.join(".cache"));
+        
+        Ok(Self {
+            temp_dir,
+            home_dir,
+            data_dir,
+            cache_dir,
+            bin_dir,
+            original_home,
+            original_xdg_data_home,
+            original_xdg_cache_home,
+        })
+    }
+    
+    /// Create a fake binary installation for testing
+    pub fn create_fake_installation(&self, repo: &str, version: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let install_dir = self.data_dir
+            .join(repo.replace('/', std::path::MAIN_SEPARATOR_STR))
+            .join(version);
+        
+        std::fs::create_dir_all(&install_dir)?;
+        
+        // Create a fake executable
+        let binary_name = repo.split('/').last().unwrap_or("binary");
+        let binary_path = install_dir.join(binary_name);
+        std::fs::write(&binary_path, b"#!/bin/sh\necho 'fake binary'")?;
+        
+        #[cfg(not(target_os = "windows"))]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&binary_path)?.permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&binary_path, perms)?;
+        }
+        
+        Ok(install_dir)
+    }
+    
+    /// Create a symlink in bin_dir pointing to the installed binary
+    pub fn create_bin_symlink(&self, binary_name: &str, target: &Path) -> Result<(), Box<dyn std::error::Error>> {
+        let symlink_path = self.bin_dir.join(binary_name);
+        
+        #[cfg(not(target_os = "windows"))]
+        {
+            if symlink_path.exists() {
+                std::fs::remove_file(&symlink_path)?;
+            }
+            std::os::unix::fs::symlink(target, &symlink_path)?;
+        }
+        
+        #[cfg(target_os = "windows")]
+        {
+            // On Windows, we'd use junctions or copy, but for tests we'll skip
+            // since the codebase targets Unix-like systems
+        }
+        
+        Ok(())
+    }
+    
+    /// Get the path to a specific binary installation
+    pub fn get_install_path(&self, repo: &str, version: &str) -> PathBuf {
+        self.data_dir
+            .join(repo.replace('/', std::path::MAIN_SEPARATOR_STR))
+            .join(version)
+    }
+    
+    /// Check if a binary is installed
+    pub fn is_binary_installed(&self, repo: &str, version: &str) -> bool {
+        let install_dir = self.get_install_path(repo, version);
+        install_dir.exists() && install_dir.is_dir()
+    }
+    
+    /// List all installed binaries
+    pub fn list_installed(&self) -> Vec<(String, String)> {
+        let mut result = Vec::new();
+        
+        if !self.data_dir.exists() {
+            return result;
+        }
+        
+        if let Ok(entries) = std::fs::read_dir(&self.data_dir) {
+            for user_entry in entries.flatten() {
+                if !user_entry.path().is_dir() {
+                    continue;
+                }
+                
+                let username = user_entry.file_name().to_string_lossy().to_string();
+                
+                if let Ok(repo_entries) = std::fs::read_dir(user_entry.path()) {
+                    for repo_entry in repo_entries.flatten() {
+                        if !repo_entry.path().is_dir() {
+                            continue;
+                        }
+                        
+                        let repo_name = repo_entry.file_name().to_string_lossy().to_string();
+                        let slug = format!("{}/{}", username, repo_name);
+                        
+                        if let Ok(version_entries) = std::fs::read_dir(repo_entry.path()) {
+                            for version_entry in version_entries.flatten() {
+                                if version_entry.path().is_dir() {
+                                    let version = version_entry.file_name().to_string_lossy().to_string();
+                                    result.push((slug.clone(), version));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        result
+    }
+}
+
+impl Drop for TestFixture {
+    fn drop(&mut self) {
+        // Restore original environment variables
+        if let Some(ref home) = self.original_home {
+            env::set_var("HOME", home);
+        } else {
+            env::remove_var("HOME");
+        }
+        
+        if let Some(ref xdg_data) = self.original_xdg_data_home {
+            env::set_var("XDG_DATA_HOME", xdg_data);
+        } else {
+            env::remove_var("XDG_DATA_HOME");
+        }
+        
+        if let Some(ref xdg_cache) = self.original_xdg_cache_home {
+            env::set_var("XDG_CACHE_HOME", xdg_cache);
+        } else {
+            env::remove_var("XDG_CACHE_HOME");
+        }
+    }
+}
+
+/// Helper function to run a command and capture output
+pub fn run_command(args: &[&str]) -> Result<(bool, String, String), Box<dyn std::error::Error>> {
+    use std::process::Command;
+    
+    let output = Command::new(env!("CARGO_BIN_EXE_poof"))
+        .args(args)
+        .output()?;
+    
+    let success = output.status.success();
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    
+    Ok((success, stdout, stderr))
+}
+
+/// Helper to check if a string contains all required substrings
+pub fn assert_contains_all(text: &str, substrings: &[&str]) {
+    for substring in substrings {
+        assert!(
+            text.contains(substring),
+            "Expected text to contain '{}', but it didn't. Text was: {}",
+            substring,
+            text
+        );
+    }
+}
+
+/// Helper to create a mock release archive structure
+pub fn create_mock_archive_structure(
+    base_dir: &Path,
+    binary_name: &str,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let archive_dir = base_dir.join("archive");
+    std::fs::create_dir_all(&archive_dir)?;
+    
+    let binary_path = archive_dir.join(binary_name);
+    std::fs::write(&binary_path, b"#!/bin/sh\necho 'mock binary'")?;
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&binary_path)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path, perms)?;
+    }
+    
+    Ok(archive_dir)
+}
