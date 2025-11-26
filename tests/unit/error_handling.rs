@@ -38,9 +38,7 @@ fn test_install_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_update_missing_args() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("update")
-        .assert()
-        .failure();
+    cmd.arg("update").assert().failure();
     Ok(())
 }
 
@@ -66,7 +64,7 @@ fn test_repo_format_with_special_characters() -> Result<(), Box<dyn std::error::
         "user@repo",
         "user#repo",
     ];
-    
+
     for invalid in invalid_formats {
         let mut cmd = Command::cargo_bin("poof")?;
         let output = cmd.arg("install").arg(invalid).output()?;
@@ -76,7 +74,7 @@ fn test_repo_format_with_special_characters() -> Result<(), Box<dyn std::error::
             invalid
         );
     }
-    
+
     Ok(())
 }
 
@@ -90,7 +88,7 @@ fn test_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
         "user123/repo123",
         "user/repo-name",
     ];
-    
+
     for valid in valid_formats {
         let mut cmd = Command::cargo_bin("poof")?;
         // We don't check success here since it will fail on network/actual install
@@ -105,7 +103,7 @@ fn test_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
             stderr
         );
     }
-    
+
     Ok(())
 }
 

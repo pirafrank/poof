@@ -50,10 +50,7 @@ fn test_version_flag() -> Result<(), Box<dyn std::error::Error>> {
 fn test_verbose_flag() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("poof")?;
     // Verbose flag should be accepted
-    cmd.arg("-v")
-        .arg("version")
-        .assert()
-        .success();
+    cmd.arg("-v").arg("version").assert().success();
     Ok(())
 }
 
@@ -61,9 +58,6 @@ fn test_verbose_flag() -> Result<(), Box<dyn std::error::Error>> {
 fn test_multiple_verbose_flags() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("poof")?;
     // Multiple verbose flags should increase verbosity
-    cmd.arg("-vv")
-        .arg("version")
-        .assert()
-        .success();
+    cmd.arg("-vv").arg("version").assert().success();
     Ok(())
 }

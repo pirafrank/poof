@@ -28,7 +28,9 @@ fn test_install_invalid_repo_format() -> Result<(), Box<dyn std::error::Error>> 
         .arg("invalid-format")
         .assert()
         .failure()
-        .stderr(predicates::str::contains("Repository must be in the format"));
+        .stderr(predicates::str::contains(
+            "Repository must be in the format",
+        ));
     Ok(())
 }
 
@@ -37,11 +39,8 @@ fn test_install_invalid_repo_format() -> Result<(), Box<dyn std::error::Error>> 
 fn test_install_valid_repo_format() -> Result<(), Box<dyn std::error::Error>> {
     // This will fail on network/actual install, but should pass format validation
     let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd
-        .arg("install")
-        .arg("user/repo")
-        .output()?;
-    
+    let output = cmd.arg("install").arg("user/repo").output()?;
+
     // Should not fail on format validation
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -49,7 +48,7 @@ fn test_install_valid_repo_format() -> Result<(), Box<dyn std::error::Error>> {
         "Valid repo format should not be rejected: {}",
         stderr
     );
-    
+
     Ok(())
 }
 
@@ -64,7 +63,7 @@ fn test_install_with_tag() -> Result<(), Box<dyn std::error::Error>> {
         .arg("--tag")
         .arg("v1.0.0")
         .output()?;
-    
+
     // Should not fail on argument parsing
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -72,7 +71,7 @@ fn test_install_with_tag() -> Result<(), Box<dyn std::error::Error>> {
         "Tag flag should be accepted: {}",
         stderr
     );
-    
+
     Ok(())
 }
 
@@ -80,22 +79,33 @@ fn test_install_with_tag() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_install_creates_directories() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
-    
+
     // Even if install fails (network, etc.), it should attempt to create cache/data dirs
     let mut cmd = Command::cargo_bin("poof")?;
     let _output = cmd
         .arg("install")
         .arg("nonexistent/repo")
         .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env("XDG_DATA_HOME", fixture.home_dir.join(".local").join("share").to_str().unwrap())
-        .env("XDG_CACHE_HOME", fixture.home_dir.join(".cache").to_str().unwrap())
+        .env(
+            "XDG_DATA_HOME",
+            fixture
+                .home_dir
+                .join(".local")
+                .join("share")
+                .to_str()
+                .unwrap(),
+        )
+        .env(
+            "XDG_CACHE_HOME",
+            fixture.home_dir.join(".cache").to_str().unwrap(),
+        )
         .output()?;
-    
+
     // Cache and data directories should exist (created by datadirs functions)
     // Note: They may be created even if install fails
     let _ = fixture.cache_dir;
     let _ = fixture.data_dir;
-    
+
     Ok(())
 }
 
@@ -103,21 +113,27 @@ fn test_install_creates_directories() -> Result<(), Box<dyn std::error::Error>> 
 #[test]
 fn test_install_state_after_success() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
-    
+
     // Create a fake installation to test state verification
     let repo = "testuser/testrepo";
     let version = "1.0.0";
     let install_dir = fixture.create_fake_installation(repo, version)?;
-    
+
     // Verify installation directory exists
     assert!(install_dir.exists(), "Install directory should exist");
-    assert!(install_dir.is_dir(), "Install directory should be a directory");
-    
+    assert!(
+        install_dir.is_dir(),
+        "Install directory should be a directory"
+    );
+
     // Verify binary exists in install directory
     let binary_name = repo.split('/').last().unwrap_or("testrepo");
     let binary_path = install_dir.join(binary_name);
-    assert!(binary_path.exists(), "Binary should exist in install directory");
-    
+    assert!(
+        binary_path.exists(),
+        "Binary should exist in install directory"
+    );
+
     Ok(())
 }
 
@@ -125,24 +141,24 @@ fn test_install_state_after_success() -> Result<(), Box<dyn std::error::Error>> 
 #[test]
 fn test_install_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
-    
+
     // Create an existing installation
     let repo = "testuser/testrepo";
     let version = "1.0.0";
     fixture.create_fake_installation(repo, version)?;
-    
+
     // Verify the installation exists
     assert!(
         fixture.is_binary_installed(repo, version),
         "Binary should be installed"
     );
-    
+
     // Attempting to install again should be handled gracefully
     // (In real scenario, it would skip or warn, but for test we just verify state)
     assert!(
         fixture.is_binary_installed(repo, version),
         "Binary should still be installed after second attempt"
     );
-    
+
     Ok(())
 }
