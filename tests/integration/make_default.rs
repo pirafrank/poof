@@ -5,10 +5,8 @@ use assert_cmd::prelude::*;
 use serial_test::serial;
 use std::process::Command;
 
-#[path = "../common/mod.rs"]
-mod common;
-
-use common::*;
+// Common module is included from the parent integration.rs file
+use super::common::*;
 
 #[serial]
 #[test]
@@ -49,13 +47,14 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
     let version2 = "2.0.0";
     
     // Create two versions
-    let install_dir1 = fixture.create_fake_installation(repo, version1)?;
-    let install_dir2 = fixture.create_fake_installation(repo, version2)?;
+    fixture.create_fake_installation(repo, version1)?;
+    fixture.create_fake_installation(repo, version2)?;
     
     // Get binary name
     let binary_name = repo.split('/').last().unwrap_or("testrepo");
     
     // Create symlinks for both versions initially
+    let install_dir1 = fixture.get_install_path(repo, version1);
     fixture.create_bin_symlink(binary_name, &install_dir1.join(binary_name))?;
     
     // Use version 2.0.0 as default

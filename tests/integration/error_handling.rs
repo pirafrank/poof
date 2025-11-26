@@ -5,10 +5,8 @@ use serial_test::serial;
 use std::process::Command;
 use tempfile::TempDir;
 
-#[path = "../common/mod.rs"]
-mod common;
-
-use common::*;
+// Common module is included from the parent integration.rs file
+use super::common::*;
 
 #[serial]
 #[test]

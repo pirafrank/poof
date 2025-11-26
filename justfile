@@ -20,6 +20,14 @@ build:
 test:
   cargo test -- --nocapture
 
+# Run only unit tests
+test-unit:
+  cargo test --test unit -- --nocapture
+
+# Run only integration tests
+test-integration:
+  cargo test --test integration -- --nocapture
+
 # Run the formatter
 fmt:
   cargo fmt

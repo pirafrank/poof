@@ -39,7 +39,7 @@ fn test_enable_creates_bashrc_entry() -> Result<(), Box<dyn std::error::Error>> 
             ".bashrc should contain export PATH line"
         );
         assert!(
-            contents.contains(&bin_dir.to_string_lossy()),
+            contents.contains(bin_dir.to_string_lossy().as_ref()),
             ".bashrc should contain bin directory path"
         );
         assert!(
@@ -84,7 +84,7 @@ fn test_enable_creates_zshrc_entry() -> Result<(), Box<dyn std::error::Error>> {
             ".zshrc should contain export PATH line"
         );
         assert!(
-            contents.contains(&bin_dir.to_string_lossy()),
+            contents.contains(bin_dir.to_string_lossy().as_ref()),
             ".zshrc should contain bin directory path"
         );
     }
