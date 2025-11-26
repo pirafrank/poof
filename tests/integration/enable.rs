@@ -138,15 +138,15 @@ fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
         .join("bin");
     fs::create_dir_all(&bin_dir)?;
     
-    let mut cmd = Command::cargo_bin("poof")?;
-    
     // Run enable twice
-    cmd.arg("enable")
+    let mut cmd1 = Command::cargo_bin("poof")?;
+    cmd1.arg("enable")
         .env("HOME", temp_home.path())
         .env("XDG_DATA_HOME", temp_home.path().join(".local").join("share"))
         .output()?;
     
-    cmd.arg("enable")
+    let mut cmd2 = Command::cargo_bin("poof")?;
+    cmd2.arg("enable")
         .env("HOME", temp_home.path())
         .env("XDG_DATA_HOME", temp_home.path().join(".local").join("share"))
         .output()?;

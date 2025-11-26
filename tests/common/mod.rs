@@ -56,8 +56,9 @@ impl TestFixture {
     
     /// Create a fake binary installation for testing
     pub fn create_fake_installation(&self, repo: &str, version: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let separator = std::path::MAIN_SEPARATOR.to_string();
         let install_dir = self.data_dir
-            .join(repo.replace('/', std::path::MAIN_SEPARATOR_STR))
+            .join(repo.replace('/', &separator))
             .join(version);
         
         std::fs::create_dir_all(&install_dir)?;
@@ -101,8 +102,9 @@ impl TestFixture {
     
     /// Get the path to a specific binary installation
     pub fn get_install_path(&self, repo: &str, version: &str) -> PathBuf {
+        let separator = std::path::MAIN_SEPARATOR.to_string();
         self.data_dir
-            .join(repo.replace('/', std::path::MAIN_SEPARATOR_STR))
+            .join(repo.replace('/', &separator))
             .join(version)
     }
     
