@@ -5,11 +5,10 @@ use serial_test::serial;
 use std::process::Command;
 use tempfile::TempDir;
 
-mod common {
-    pub mod test_common;
-}
+#[path = "../common/mod.rs"]
+mod common;
 
-use common::test_common::*;
+use common::*;
 
 #[serial]
 #[test]
