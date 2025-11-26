@@ -22,9 +22,10 @@ tests/
 │   ├── list.rs       # Tests for 'list' command
 │   ├── make_default.rs  # Tests for 'use' command (make_default)
 │   ├── enable.rs     # Tests for 'enable' command
-│   ├── error_handling.rs  # Error handling in stateful commands
-│   └── common/       # Common utilities for integration tests
-│       └── test_common.rs
+│   ├── download.rs   # Tests for 'download' command
+│   ├── install.rs    # Tests for 'install' command
+│   ├── update.rs     # Tests for 'update' command
+│   └── error_handling.rs  # Error handling in stateful commands
 ├── clap.rs           # Legacy test (kept for compatibility)
 ├── info.rs           # Legacy test (kept for compatibility)
 └── version.rs        # Legacy test (kept for compatibility)
@@ -43,6 +44,7 @@ These commands don't depend on prior state:
 ### Stateful Commands (Integration Tests)
 
 These commands depend on prior command execution:
+- **download**: Downloads binaries to current directory (requires network for real tests)
 - **install**: Downloads and installs binaries (requires network for real tests)
 - **list**: Lists installed binaries (requires install)
 - **use**: Sets default version (requires install)
@@ -76,6 +78,9 @@ cargo test --test check
 cargo test --test list
 cargo test --test make_default
 cargo test --test enable
+cargo test --test download
+cargo test --test install
+cargo test --test update
 
 # Run with output
 cargo test -- --nocapture
