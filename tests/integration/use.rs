@@ -65,8 +65,14 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
     let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
 
     // Verify both binaries exist
-    assert!(install_dir1.join(binary_name).exists(), "Version 1 binary should exist");
-    assert!(install_dir2.join(binary_name).exists(), "Version 2 binary should exist");
+    assert!(
+        install_dir1.join(binary_name).exists(),
+        "Version 1 binary should exist"
+    );
+    assert!(
+        install_dir2.join(binary_name).exists(),
+        "Version 2 binary should exist"
+    );
 
     // Use version 2.0.0 as default
     let mut cmd = Command::cargo_bin("poof")?;
@@ -90,7 +96,7 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
     // Check if command succeeded or if it failed with expected error
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);
-    
+
     // The "use" command should succeed if the version exists
     // If it fails, it might be because the binary isn't detected as executable
     // In that case, we'll just verify the command ran without crashing
@@ -98,7 +104,9 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
         // Command failed - check if it's because binary wasn't found or not executable
         // This is acceptable for a test - we're just verifying the command structure
         assert!(
-            stderr.contains("not installed") || stderr.contains("not found") || stderr.contains("executable"),
+            stderr.contains("not installed")
+                || stderr.contains("not found")
+                || stderr.contains("executable"),
             "Command should fail gracefully. stderr: {}, stdout: {}",
             stderr,
             stdout
@@ -114,7 +122,7 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
                 // The symlink should point to the install directory for version2
                 let install_dir2 = fixture.get_install_path(repo, version2);
                 let expected_binary_path = install_dir2.join(binary_name);
-                
+
                 assert!(
                     target_str.contains(version2) || target == expected_binary_path,
                     "Symlink should point to version 2. Target: {}, Expected to contain: {} or be: {}",

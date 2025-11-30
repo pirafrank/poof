@@ -23,7 +23,7 @@ mod error_handling;
 mod install;
 #[path = "integration/list.rs"]
 mod list;
-#[path = "integration/make_default.rs"]
-mod make_default;
 #[path = "integration/update.rs"]
 mod update;
+#[path = "integration/use.rs"]
+mod r#use;
