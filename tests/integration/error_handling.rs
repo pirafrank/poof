@@ -6,7 +6,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 // Common module is included from the parent integration.rs file
-use super::common::*;
+use super::common::fixtures::test_env::TestFixture;
 
 #[serial]
 #[test]

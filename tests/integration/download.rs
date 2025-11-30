@@ -3,7 +3,6 @@
 use assert_cmd::prelude::*;
 use serial_test::serial;
 use std::process::Command;
-use tempfile::TempDir;
 
 // Common module is included from the parent integration.rs file
 use super::common::repo_format_validation::*;

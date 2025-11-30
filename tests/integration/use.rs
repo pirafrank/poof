@@ -7,7 +7,7 @@ use serial_test::serial;
 use std::process::Command;
 
 // Common module is included from the parent integration.rs file
-use super::common::*;
+use super::common::fixtures::test_env::TestFixture;
 
 #[test]
 fn test_use_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
