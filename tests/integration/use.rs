@@ -29,7 +29,6 @@ fn test_use_requires_installation() -> Result<(), Box<dyn std::error::Error>> {
     let output = cmd
         .arg("use")
         .arg("nonexistent/repo")
-        .arg("--tag")
         .arg("1.0.0")
         .env("HOME", fixture.home_dir.to_str().unwrap())
         .env(
@@ -90,7 +89,6 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
     let output = cmd
         .arg("use")
         .arg(repo)
-        .arg("--tag")
         .arg(version2)
         .env("HOME", fixture.home_dir.to_str().unwrap())
         .env(
