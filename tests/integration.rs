@@ -17,17 +17,15 @@ mod info;
 #[path = "integration/commands/version.rs"]
 mod version;
 
-#[path = "integration/download.rs"]
+#[path = "integration/commands/download.rs"]
 mod download;
-#[path = "integration/enable.rs"]
+#[path = "integration/commands/enable.rs"]
 mod enable;
-#[path = "integration/error_handling.rs"]
-mod error_handling;
-#[path = "integration/install.rs"]
+#[path = "integration/commands/install.rs"]
 mod install;
-#[path = "integration/list.rs"]
+#[path = "integration/commands/list.rs"]
 mod list;
-#[path = "integration/update.rs"]
+#[path = "integration/commands/update.rs"]
 mod update;
-#[path = "integration/use.rs"]
+#[path = "integration/commands/use.rs"]
 mod r#use;
