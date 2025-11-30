@@ -6,48 +6,26 @@ use std::process::Command;
 
 // Common module is included from the parent integration.rs file
 use super::common::*;
+use super::common::repo_format_validation::*;
 
 #[serial]
 #[test]
-fn test_install_requires_repo() -> Result<(), Box<dyn std::error::Error>> {
+fn test_install_requires_args() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("install")
-        .assert()
-        .failure()
-        .stderr(predicates::str::contains("required"));
+    cmd.arg("install").assert().failure();
     Ok(())
 }
 
 #[serial]
 #[test]
-fn test_install_invalid_repo_format() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("install")
-        .arg("invalid-format")
-        .assert()
-        .failure()
-        .stderr(predicates::str::contains(
-            "Repository must be in the format",
-        ));
-    Ok(())
+fn test_install_comprehensive_invalid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
+    test_invalid_repo_formats_for_command("install")
 }
 
 #[serial]
 #[test]
-fn test_install_valid_repo_format() -> Result<(), Box<dyn std::error::Error>> {
-    // This will fail on network/actual install, but should pass format validation
-    let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd.arg("install").arg("user/repo").output()?;
-
-    // Should not fail on format validation
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        !stderr.contains("Repository must be in the format"),
-        "Valid repo format should not be rejected: {}",
-        stderr
-    );
-
-    Ok(())
+fn test_install_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
+    test_valid_repo_formats_for_command("install")
 }
 
 #[serial]

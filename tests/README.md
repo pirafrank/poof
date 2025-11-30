@@ -9,14 +9,14 @@ Tests are organized into the following structure:
 ```
 tests/
 ├── common/           # Shared test utilities and fixtures
-│   └── mod.rs        # TestFixture and helper functions
+│   ├── mod.rs        # TestFixture and helper functions
+│   └── repo_format_validation.rs  # Repository format validation utilities
 ├── unit/             # Unit tests for standalone commands
 │   ├── mod.rs
 │   ├── version.rs    # Tests for 'version' command
 │   ├── info.rs       # Tests for 'info' command
 │   ├── check.rs      # Tests for 'check' command
-│   ├── clap.rs       # Tests for command-line parsing
-│   └── error_handling.rs  # Error handling tests
+│   └── github_client.rs  # Tests for GitHub client functionality
 ├── integration/      # Integration tests for stateful commands
 │   ├── mod.rs
 │   ├── list.rs       # Tests for 'list' command
@@ -62,6 +62,30 @@ The `TestFixture` struct in `tests/common/mod.rs` provides:
 - Automatic cleanup
 
 All tests use temporary file systems and never touch the actual file system.
+
+### Repository Format Validation
+
+The `tests/common/repo_format_validation.rs` module provides reusable functions for testing
+repository format validation across different commands:
+
+- `test_invalid_repo_formats_for_command(command: &str)` - Tests that various invalid formats are rejected
+- `test_valid_repo_formats_for_command(command: &str)` - Tests that valid formats are accepted
+
+These functions can be used in integration tests for any command that accepts repository arguments:
+
+```rust
+use super::common::repo_format_validation::*;
+
+#[test]
+fn test_install_comprehensive_invalid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
+    test_invalid_repo_formats_for_command("install")
+}
+
+#[test]
+fn test_install_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
+    test_valid_repo_formats_for_command("install")
+}
+```
 
 ## Running Tests
 

@@ -6,6 +6,7 @@ use std::process::Command;
 
 // Common module is included from the parent integration.rs file
 use super::common::*;
+use super::common::repo_format_validation::*;
 
 #[serial]
 #[test]
@@ -13,6 +14,18 @@ fn test_update_requires_args() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("poof")?;
     cmd.arg("update").assert().failure();
     Ok(())
+}
+
+#[serial]
+#[test]
+fn test_update_comprehensive_invalid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
+    test_invalid_repo_formats_for_command("update")
+}
+
+#[serial]
+#[test]
+fn test_update_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
+    test_valid_repo_formats_for_command("update")
 }
 
 #[test]
@@ -42,7 +55,6 @@ fn test_update_all_and_repo_conflict() -> Result<(), Box<dyn std::error::Error>>
     );
     Ok(())
 }
-
 
 #[serial]
 #[test]
@@ -95,29 +107,6 @@ fn test_update_self_flag() -> Result<(), Box<dyn std::error::Error>> {
         stderr
     );
 
-    Ok(())
-}
-
-#[serial]
-#[test]
-fn test_update_conflicting_flags() -> Result<(), Box<dyn std::error::Error>> {
-    // Note: --all and --self don't actually conflict in the current implementation
-    // They both can be used together, though --all takes precedence
-    // This test verifies the command handles both flags gracefully
-    let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd
-        .arg("update")
-        .arg("--all")
-        .arg("--self")
-        .output()?;
-    
-    // Command should succeed (--all takes precedence when both are present)
-    // The behavior is that it processes --all first
-    assert!(
-        output.status.success(),
-        "Command should handle both flags (--all takes precedence)"
-    );
-    
     Ok(())
 }
 

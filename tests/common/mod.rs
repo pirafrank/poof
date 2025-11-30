@@ -4,6 +4,8 @@ use std::env;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
+pub mod repo_format_validation;
+
 /// Test fixture that sets up a temporary environment for testing
 /// This ensures tests never touch the actual file system
 ///
