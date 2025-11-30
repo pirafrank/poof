@@ -34,11 +34,15 @@ impl TestFixture {
         let home_dir = temp_dir.path().to_path_buf();
 
         // Create directory structure
+        // Note: data_dir includes "github.com" subdir. Let's pretend all
+        // fake binaries come from GitHub because original source doesn't really matter
+        // in fake environment tests.
         let data_dir = home_dir
             .join(".local")
             .join("share")
             .join("poof")
-            .join("data");
+            .join("data")
+            .join("github.com");
         let cache_dir = home_dir.join(".cache").join("poof");
         let bin_dir = home_dir
             .join(".local")
@@ -144,6 +148,7 @@ impl TestFixture {
             return result;
         }
 
+        // data_dir already points to github.com subdir, so we scan user/repo/version directly
         if let Ok(entries) = std::fs::read_dir(&self.data_dir) {
             for user_entry in entries.flatten() {
                 if !user_entry.path().is_dir() {
