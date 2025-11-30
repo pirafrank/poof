@@ -4,4 +4,5 @@ mod version;
 mod info;
 mod check;
 mod error_handling;
-mod clap;
+mod command_handling;
+mod help;

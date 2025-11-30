@@ -3,11 +3,13 @@
 
 #[path = "unit/check.rs"]
 mod check;
-#[path = "unit/clap.rs"]
-mod clap;
 #[path = "unit/error_handling.rs"]
 mod error_handling;
+#[path = "unit/help.rs"]
+mod help;
 #[path = "unit/info.rs"]
 mod info;
+#[path = "unit/verbose_flags.rs"]
+mod verbose_flags;
 #[path = "unit/version.rs"]
 mod version;

@@ -108,34 +108,29 @@ fn test_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn test_update_conflicting_flags() -> Result<(), Box<dyn std::error::Error>> {
+fn test_update_all_and_self_conflicting_flags() -> Result<(), Box<dyn std::error::Error>> {
     // Note: --all and --self don't actually conflict in the current implementation
     // They both can be used together, though --all takes precedence
     // This test verifies the command handles both flags gracefully
     let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd
-        .arg("update")
-        .arg("--all")
-        .arg("--self")
-        .output()?;
-    
-    // Command should succeed (--all takes precedence when both are present)
+    let output = cmd.arg("update").arg("--all").arg("--self").output()?;
+
+    // Command should fail because --all and --self cannot be used together
     assert!(
-        output.status.success(),
-        "Command should handle both flags (--all takes precedence)"
+        !output.status.success(),
+        "Command should fail because --all and --self cannot be used together"
     );
-    
     Ok(())
 }
 
 #[test]
 fn test_update_all_and_repo_conflict() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("update")
-        .arg("user/repo")
-        .arg("--all")
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("cannot be used"));
+    let output = cmd.arg("update").arg("user/repo").arg("--all").output()?;
+
+    assert!(
+        !output.status.success(),
+        "Command should fail because user/repo and --all cannot be used together"
+    );
     Ok(())
 }

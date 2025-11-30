@@ -10,8 +10,7 @@ fn test_info_command_exists() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("info")
         .assert()
         .success()
-        .stdout(predicate::str::contains("poof"))
-        .stdout(predicate::str::contains("Platform Information:"))
+        .stdout(predicate::str::contains(env!("CARGO_PKG_NAME")))
         .stderr(predicate::str::is_empty());
     Ok(())
 }

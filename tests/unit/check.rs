@@ -5,13 +5,6 @@ use std::process::Command;
 use tempfile::TempDir;
 
 #[test]
-fn test_check_command_exists() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("check").assert().success();
-    Ok(())
-}
-
-#[test]
 fn test_check_warns_when_not_in_path() -> Result<(), Box<dyn std::error::Error>> {
     // Set up a temporary environment where bin dir is not in PATH
     let temp_dir = TempDir::new()?;
