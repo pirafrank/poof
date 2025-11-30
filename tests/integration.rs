@@ -4,13 +4,13 @@
 #[path = "common/mod.rs"]
 mod common;
 
-#[path = "integration/check.rs"]
+#[path = "integration/commands/check.rs"]
 mod check;
-#[path = "integration/help.rs"]
+#[path = "integration/commands/help.rs"]
 mod help;
-#[path = "integration/info.rs"]
+#[path = "integration/commands/info.rs"]
 mod info;
-#[path = "integration/version.rs"]
+#[path = "integration/commands/version.rs"]
 mod version;
 
 #[path = "integration/download.rs"]
