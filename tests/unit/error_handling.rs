@@ -1,61 +1,13 @@
 //! Unit tests for error handling and edge cases
 
 use assert_cmd::prelude::*;
-use predicates::prelude::*;
 use std::process::Command;
 
 #[test]
-fn test_invalid_command() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("nonexistent")
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("unrecognized subcommand"));
-    Ok(())
-}
-
-#[test]
-fn test_invalid_repo_format() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("install")
-        .arg("invalid-repo-format")
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("Repository must be in the format"));
-    Ok(())
-}
-
-#[test]
-fn test_install_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("install")
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("required"));
-    Ok(())
-}
-
-#[test]
-fn test_update_missing_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("update").assert().failure();
-    Ok(())
-}
-
-#[test]
-fn test_use_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
-    cmd.arg("use")
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("required"));
-    Ok(())
-}
-
-#[test]
-fn test_repo_format_with_special_characters() -> Result<(), Box<dyn std::error::Error>> {
+fn test_invalid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
     // Test various invalid formats
     let invalid_formats = vec![
+        "invalid-repo-format",
         "user/repo/extra",
         "user",
         "/repo",
@@ -104,33 +56,5 @@ fn test_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    Ok(())
-}
-
-#[test]
-fn test_update_all_and_self_conflicting_flags() -> Result<(), Box<dyn std::error::Error>> {
-    // Note: --all and --self don't actually conflict in the current implementation
-    // They both can be used together, though --all takes precedence
-    // This test verifies the command handles both flags gracefully
-    let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd.arg("update").arg("--all").arg("--self").output()?;
-
-    // Command should fail because --all and --self cannot be used together
-    assert!(
-        !output.status.success(),
-        "Command should fail because --all and --self cannot be used together"
-    );
-    Ok(())
-}
-
-#[test]
-fn test_update_all_and_repo_conflict() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd.arg("update").arg("user/repo").arg("--all").output()?;
-
-    assert!(
-        !output.status.success(),
-        "Command should fail because user/repo and --all cannot be used together"
-    );
     Ok(())
 }

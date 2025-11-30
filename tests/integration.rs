@@ -4,6 +4,10 @@
 #[path = "common/mod.rs"]
 mod common;
 
+#[path = "integration/command_handling/claps.rs"]
+mod claps;
+#[path = "integration/command_handling/verbose_flags.rs"]
+mod verbose_flags;
 #[path = "integration/commands/check.rs"]
 mod check;
 #[path = "integration/commands/help.rs"]

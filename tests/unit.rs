@@ -3,5 +3,3 @@
 
 #[path = "unit/error_handling.rs"]
 mod error_handling;
-#[path = "unit/verbose_flags.rs"]
-mod verbose_flags;
