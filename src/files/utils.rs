@@ -113,6 +113,9 @@ pub fn find_similar_repos(data_dir: &Path, target_repo: &str) -> Vec<String> {
     similar_repos
 }
 
+/// Find a similar repo name in the data directory based on fuzzy matching.
+/// Returns the most similar repo name if found, otherwise None.
+/// Never returns an empty string.
 pub fn find_similar_repo(data_dir: &Path, target_repo: &str) -> Option<String> {
     let similar_repos: Vec<String> = find_similar_repos(data_dir, target_repo);
     // Return only the top entry as a string

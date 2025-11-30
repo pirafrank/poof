@@ -13,15 +13,13 @@ fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
     let installed_repo_dir = datadirs::get_versions_nest(&data_dir, repo);
     if !installed_repo_dir.exists() {
         // Try fuzzy finding a similar named installed repository
-        let similar_repo = find_similar_repo(&data_dir, repo).unwrap();
-
-        if !similar_repo.is_empty() {
+        if let Some(similar_repo) = find_similar_repo(&data_dir, repo) {
             error!(
-                "Repository '{}' is not installed. Did you mean: {}",
+                "It looks like '{}' is not installed. Did you mean: {}",
                 repo, similar_repo
             );
         } else {
-            error!("Repository '{}' is not installed. Typo?", repo);
+            error!("It looks like '{}' is not installed. Typo?", repo);
         }
         error!("Check installed binaries using 'list' command.");
         std::process::exit(110);
