@@ -1456,6 +1456,7 @@ dependencies = [
  "self_update",
  "semver",
  "serde",
+ "serde_json",
  "serial_test",
  "sevenz-rust2",
  "tar",

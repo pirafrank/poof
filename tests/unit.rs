@@ -3,3 +3,5 @@
 
 #[path = "unit/error_handling.rs"]
 mod error_handling;
+#[path = "unit/github_client.rs"]
+mod github_client;
