@@ -2,11 +2,22 @@
 //! Note: module named make_default because 'use' is a Rust keyword
 
 use assert_cmd::prelude::*;
+use predicates::prelude::*;
 use serial_test::serial;
 use std::process::Command;
 
 // Common module is included from the parent integration.rs file
 use super::common::*;
+
+#[test]
+fn test_use_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::cargo_bin("poof")?;
+    cmd.arg("use")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("required"));
+    Ok(())
+}
 
 #[serial]
 #[test]
