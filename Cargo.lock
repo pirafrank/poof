@@ -1325,18 +1325,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61807f77802ff30975e01f4f071c8ba10c022052f98b3294119f3e615d13e5be"
 
 [[package]]
-name = "nt-time"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5e71108c089b161344bacb1227dd2124fee63ed1792fdd8308e6689197c2754"
-dependencies = [
- "chrono",
- "jiff",
- "rand",
- "time",
-]
-
-[[package]]
 name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2000,7 +1988,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7048af9cb3f23ee3315bccaeeef1da33c1b2cad63b8a26ac5b5498b6ef472902"
 dependencies = [
  "aes",
- "bzip2 0.6.0",
+ "bzip2 0.6.1",
  "cbc",
  "crc32fast",
  "getrandom 0.3.3",
