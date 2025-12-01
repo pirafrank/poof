@@ -1,0 +1,19 @@
+# ignore all
+*
+# but gitgnore
+!.gitignore
+# multi-part extensions
+!*.tar.gz
+!*.tgz
+!*.tar.xz
+!*.txz
+!*.tar.bz2
+!*.tbz
+!*.tbz2
+# single extensions
+!*.zip
+!*.gz
+!*.xz
+!*.bz2
+!*.tar
+!*.7z

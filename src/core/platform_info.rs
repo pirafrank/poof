@@ -94,3 +94,176 @@ pub fn check_dir_in_path(dir: &str) -> i16 {
     let sep = env_path_separator();
     string::position_of_str_in_string(path, sep, dir)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_env_path_separator_unix() {
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert_eq!(env_path_separator(), ":");
+        }
+    }
+
+    #[test]
+    fn test_env_path_separator_windows() {
+        #[cfg(target_os = "windows")]
+        {
+            assert_eq!(env_path_separator(), ";");
+        }
+    }
+
+    #[test]
+    fn test_long_version_format() {
+        let version = long_version();
+        // Check that the version string contains expected keywords
+        assert!(version.contains("Version"));
+        assert!(version.contains("Commit"));
+        assert!(version.contains("Build Date"));
+        assert!(version.contains("C library"));
+        // Check for linking type
+        assert!(
+            version.contains("statically linked") || version.contains("dynamically linked"),
+            "Version string should contain linking type"
+        );
+    }
+
+    #[test]
+    fn test_short_description() {
+        let desc = short_description();
+        assert_eq!(desc, DESCRIPTION);
+        assert!(!desc.is_empty(), "Description should not be empty");
+    }
+
+    #[test]
+    fn test_get_env_var_existing() {
+        // Test with PATH which should always exist
+        let path = get_env_var("PATH");
+        assert_ne!(path, UNKNOWN, "PATH environment variable should exist");
+        assert!(!path.is_empty(), "PATH should not be empty");
+    }
+
+    #[test]
+    fn test_get_env_var_nonexistent() {
+        // Test with a variable that definitely doesn't exist
+        let result = get_env_var("NONEXISTENT_VAR_THAT_SHOULD_NOT_EXIST_12345");
+        assert_eq!(result, UNKNOWN);
+    }
+
+    #[test]
+    fn test_get_os_version_not_empty() {
+        let os_version = get_os_version();
+        // Should return something, not empty
+        assert!(!os_version.is_empty(), "OS version should not be empty");
+    }
+
+    #[test]
+    fn test_get_platform_endianness() {
+        let endianness = get_platform_endianness();
+        // Should be one of the known values
+        assert!(
+            endianness == "Little Endian"
+                || endianness == "Big Endian"
+                || endianness == "Unknown Endian",
+            "Endianness should be Little, Big, or Unknown"
+        );
+        // Most modern systems are little endian
+        #[cfg(target_endian = "little")]
+        {
+            assert_eq!(endianness, "Little Endian");
+        }
+        #[cfg(target_endian = "big")]
+        {
+            assert_eq!(endianness, "Big Endian");
+        }
+    }
+
+    #[test]
+    fn test_get_shell_info_format() {
+        let shell_info = get_shell_info();
+        // Should contain "version:" keyword
+        assert!(
+            shell_info.contains("version:"),
+            "Shell info should contain 'version:'"
+        );
+        assert!(!shell_info.is_empty(), "Shell info should not be empty");
+    }
+
+    #[test]
+    fn test_check_dir_in_path_first_entry() {
+        // Get the PATH and check for its first entry
+        let path = get_env_var("PATH");
+        if path != UNKNOWN {
+            let sep = env_path_separator();
+            let parts: Vec<&str> = path.split(sep).collect();
+            if !parts.is_empty() {
+                let first_dir = parts[0];
+                let position = check_dir_in_path(first_dir);
+                assert_eq!(position, 0, "First directory should be at position 0");
+            }
+        }
+    }
+
+    #[test]
+    fn test_check_dir_in_path_not_found() {
+        let position = check_dir_in_path("/nonexistent/directory/that/should/not/be/in/path/12345");
+        assert_eq!(position, -1, "Nonexistent directory should return -1");
+    }
+
+    #[test]
+    fn test_check_dir_in_path_existing() {
+        // Most Unix-like systems have /usr/bin in PATH
+        #[cfg(not(target_os = "windows"))]
+        {
+            let position = check_dir_in_path("/usr/bin");
+            // Should either be found (>= 0) or not found (-1)
+            // We can't guarantee it's in PATH, but we can test the function works
+            assert!(
+                position >= -1,
+                "Position should be valid (>= -1), got {}",
+                position
+            );
+        }
+    }
+
+    #[test]
+    fn test_check_dir_in_path_multiple_entries() {
+        // Build a fake PATH-like string and test
+        let temp_path = format!(
+            "/first/path{}/second/path{}/third/path",
+            env_path_separator(),
+            env_path_separator()
+        );
+        std::env::set_var("TEST_PATH_VAR", &temp_path);
+
+        // Restore original PATH after test
+        let original_path = std::env::var("PATH").ok();
+
+        // Set our test PATH
+        std::env::set_var("PATH", &temp_path);
+
+        assert_eq!(check_dir_in_path("/first/path"), 0);
+        assert_eq!(check_dir_in_path("/second/path"), 1);
+        assert_eq!(check_dir_in_path("/third/path"), 2);
+        assert_eq!(check_dir_in_path("/nonexistent"), -1);
+
+        // Restore original PATH
+        if let Some(orig) = original_path {
+            std::env::set_var("PATH", orig);
+        }
+    }
+
+    #[test]
+    fn test_env_path_separator_consistency() {
+        // Ensure the separator matches the platform
+        let sep = env_path_separator();
+        assert!(!sep.is_empty(), "Separator should not be empty");
+        assert!(
+            sep == ":" || sep == ";",
+            "Separator should be ':' or ';', got '{}'",
+            sep
+        );
+    }
+}

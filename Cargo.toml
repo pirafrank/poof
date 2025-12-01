@@ -53,6 +53,9 @@ self_update = { version = "0.42.0", default-features = false, features = ["rustl
 [dev-dependencies]
 tempfile = "3"
 serial_test = "3"
+predicates = "3.1.3"
+assert_cmd = "2.0.17"
+serde_json = "1.0"
 
 [build-dependencies]
 build_cfg = "1.1.0"
