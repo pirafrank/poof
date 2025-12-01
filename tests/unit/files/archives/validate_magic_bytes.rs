@@ -23,7 +23,7 @@ fn test_valid_zip_archive() {
     let file_path = temp_dir.path().join("test.zip");
     create_file_with_magic(&file_path, ZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Zip);
 }
 
@@ -33,7 +33,7 @@ fn test_valid_gzip_archive() {
     let file_path = temp_dir.path().join("test.gz");
     create_file_with_magic(&file_path, GZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Gz);
 }
 
@@ -43,7 +43,7 @@ fn test_valid_tar_gz_archive() {
     let file_path = temp_dir.path().join("test.tar.gz");
     create_file_with_magic(&file_path, GZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarGz);
 }
 
@@ -53,7 +53,7 @@ fn test_valid_tgz_archive() {
     let file_path = temp_dir.path().join("test.tgz");
     create_file_with_magic(&file_path, GZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarGz);
 }
 
@@ -63,7 +63,7 @@ fn test_valid_xz_archive() {
     let file_path = temp_dir.path().join("test.xz");
     create_file_with_magic(&file_path, XZ_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Xz);
 }
 
@@ -73,7 +73,7 @@ fn test_valid_tar_xz_archive() {
     let file_path = temp_dir.path().join("test.tar.xz");
     create_file_with_magic(&file_path, XZ_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarXz);
 }
 
@@ -83,7 +83,7 @@ fn test_valid_txz_archive() {
     let file_path = temp_dir.path().join("test.txz");
     create_file_with_magic(&file_path, XZ_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarXz);
 }
 
@@ -93,7 +93,7 @@ fn test_valid_bzip2_archive() {
     let file_path = temp_dir.path().join("test.bz2");
     create_file_with_magic(&file_path, BZIP2_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Bz2);
 }
 
@@ -103,7 +103,7 @@ fn test_valid_tar_bz2_archive() {
     let file_path = temp_dir.path().join("test.tar.bz2");
     create_file_with_magic(&file_path, BZIP2_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarBz2);
 }
 
@@ -113,7 +113,7 @@ fn test_valid_tbz_archive() {
     let file_path = temp_dir.path().join("test.tbz");
     create_file_with_magic(&file_path, BZIP2_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarBz2);
 }
 
@@ -123,7 +123,7 @@ fn test_valid_tbz2_archive() {
     let file_path = temp_dir.path().join("test.tbz2");
     create_file_with_magic(&file_path, BZIP2_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarBz2);
 }
 
@@ -133,7 +133,7 @@ fn test_valid_tar_archive() {
     let file_path = temp_dir.path().join("test.tar");
     create_tar_file_with_magic(&file_path).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Tar);
 }
 
@@ -143,7 +143,7 @@ fn test_valid_7z_archive() {
     let file_path = temp_dir.path().join("test.7z");
     create_file_with_magic(&file_path, SEVENZ_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::SevenZ);
 }
 
@@ -158,7 +158,7 @@ fn test_zip_extension_with_gzip_magic() {
     create_file_with_magic(&file_path, GZIP_MAGIC).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -168,7 +168,7 @@ fn test_tar_gz_extension_with_zip_magic() {
     create_file_with_magic(&file_path, ZIP_MAGIC).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -178,7 +178,7 @@ fn test_tar_xz_extension_with_bzip2_magic() {
     create_file_with_magic(&file_path, BZIP2_MAGIC).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -188,7 +188,7 @@ fn test_7z_extension_with_xz_magic() {
     create_file_with_magic(&file_path, XZ_MAGIC).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -198,7 +198,7 @@ fn test_bz2_extension_with_7z_magic() {
     create_file_with_magic(&file_path, SEVENZ_MAGIC).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 // ============================================================================
@@ -212,7 +212,7 @@ fn test_unsupported_extension_txt() {
     create_file_with_magic(&file_path, ZIP_MAGIC).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -222,7 +222,7 @@ fn test_unsupported_extension_rar() {
     create_file_with_magic(&file_path, ZIP_MAGIC).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -232,7 +232,7 @@ fn test_no_extension() {
     create_file_with_magic(&file_path, ZIP_MAGIC).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 // ============================================================================
@@ -246,7 +246,7 @@ fn test_empty_file_with_valid_extension() {
     File::create(&file_path).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -257,7 +257,7 @@ fn test_file_too_small_for_magic_bytes() {
     file.write_all(&[0x50]).unwrap(); // Only 1 byte
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -268,7 +268,7 @@ fn test_zip_file_too_small_for_magic_bytes() {
     file.write_all(&[0x50, 0x4B, 0x03]).unwrap(); // Only 3 bytes (zip needs 4)
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -280,7 +280,7 @@ fn test_tar_file_too_small_for_offset_magic() {
     file.write_all(&vec![0u8; 100]).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -294,7 +294,7 @@ fn test_tar_file_with_wrong_magic_at_offset() {
     file.write_all(&vec![0u8; 256]).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -304,7 +304,7 @@ fn test_file_with_random_bytes() {
     create_invalid_file(&file_path).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 // ============================================================================
@@ -316,7 +316,7 @@ fn test_nonexistent_file() {
     let file_path = PathBuf::from("/nonexistent/path/file.zip");
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -325,7 +325,7 @@ fn test_nonexistent_file_in_temp_dir() {
     let file_path = temp_dir.path().join("doesnotexist.tar.gz");
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 // ============================================================================
@@ -338,7 +338,7 @@ fn test_uppercase_extension_zip() {
     let file_path = temp_dir.path().join("test.ZIP");
     create_file_with_magic(&file_path, ZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Zip);
 }
 
@@ -348,7 +348,7 @@ fn test_mixed_case_extension_tar_gz() {
     let file_path = temp_dir.path().join("test.TAR.GZ");
     create_file_with_magic(&file_path, GZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarGz);
 }
 
@@ -358,7 +358,7 @@ fn test_mixed_case_tgz() {
     let file_path = temp_dir.path().join("test.TgZ");
     create_file_with_magic(&file_path, GZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarGz);
 }
 
@@ -372,7 +372,7 @@ fn test_filename_with_spaces() {
     let file_path = temp_dir.path().join("my archive file.zip");
     create_file_with_magic(&file_path, ZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Zip);
 }
 
@@ -382,7 +382,7 @@ fn test_filename_with_special_characters() {
     let file_path = temp_dir.path().join("test-file_v1.0.tar.gz");
     create_file_with_magic(&file_path, GZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarGz);
 }
 
@@ -392,7 +392,7 @@ fn test_filename_with_multiple_dots() {
     let file_path = temp_dir.path().join("test.backup.v1.0.zip");
     create_file_with_magic(&file_path, ZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Zip);
 }
 
@@ -402,7 +402,7 @@ fn test_very_short_filename() {
     let file_path = temp_dir.path().join("a.gz");
     create_file_with_magic(&file_path, GZIP_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Gz);
 }
 
@@ -413,7 +413,7 @@ fn test_very_long_filename() {
     let file_path = temp_dir.path().join(format!("{}.tar.xz", long_name));
     create_file_with_magic(&file_path, XZ_MAGIC).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarXz);
 }
 
@@ -431,7 +431,7 @@ fn test_partial_zip_magic_bytes() {
     file.write_all(&vec![0u8; 512]).unwrap();
 
     let format = get_validated_archive_format(&file_path);
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
 
 #[test]
@@ -446,7 +446,7 @@ fn test_gzip_magic_with_extra_bytes() {
         .unwrap();
     file.write_all(&vec![0u8; 512]).unwrap();
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Gz);
 }
 
@@ -459,7 +459,7 @@ fn test_xz_magic_full_sequence() {
     // Verify XZ magic is 6 bytes
     assert_eq!(XZ_MAGIC.len(), 6);
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Xz);
 }
 
@@ -472,7 +472,7 @@ fn test_sevenz_magic_full_sequence() {
     // Verify 7z magic is 6 bytes
     assert_eq!(SEVENZ_MAGIC.len(), 6);
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::SevenZ);
 }
 
@@ -492,7 +492,7 @@ fn test_tar_format_requires_special_handling() {
     // Tar magic should be at offset 257
     assert_eq!(&buffer[TAR_MAGIC_OFFSET..TAR_MAGIC_OFFSET + 5], TAR_MAGIC);
 
-    let format = get_validated_archive_format(&file_path);
+    let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::Tar);
 }
 
@@ -510,5 +510,5 @@ fn test_executable_with_archive_extension() {
 
     let format = get_validated_archive_format(&file_path);
     // Should detect this is not a zip and return Unknown
-    assert_eq!(format, BinaryContainer::Unknown);
+    assert!(format.is_err());
 }
