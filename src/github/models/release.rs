@@ -1,8 +1,8 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::ReleaseAsset;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 /// Represents a GitHub release.
 /// The `tag_name` is the version tag of the release.
 /// The `published_at` is the date when the release was published.

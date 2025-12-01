@@ -7,10 +7,22 @@ use std::cmp::Ordering;
 
 use super::repostring::RepoString;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq)]
 pub struct Asset {
     name: RepoString,
     versions: Vec<Version>,
+}
+
+impl PartialOrd for Asset {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Asset {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
 }
 
 // allowing dead code for the sake of having a complete set
@@ -121,11 +133,6 @@ impl Asset {
         self.versions.contains(&version)
     }
 
-    /// Compare two Asset instances. Comparison is based on their names.
-    pub fn cmp(&self, other: &Self) -> Ordering {
-        self.name.cmp(&other.name)
-    }
-
     /// Sort the vector of versions in ascending order.
     /// This is useful for ensuring that the versions are in a consistent
     /// and semantic versioning order. Ordering is done in place.
@@ -155,6 +162,6 @@ pub trait VecAssets {
 impl VecAssets for Vec<Asset> {
     /// Sorts the vector of Asset instances in place based on their names.
     fn sort(&mut self) {
-        self.sort_by(|a, b| a.cmp(b));
+        self[..].sort();
     }
 }
