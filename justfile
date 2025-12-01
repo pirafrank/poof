@@ -12,6 +12,10 @@ default:
 install-hooks:
   git config core.hooksPath hooks
 
+# Build the project
+build:
+  cargo build
+
 # Run all tests
 test:
   cargo test -- --nocapture
@@ -20,19 +24,25 @@ test:
 fmt:
   cargo fmt
 
-# Run the formatter checks
+# Run the formatter (checks only)
 fmt-check:
   cargo fmt -- --check
 
-# Run the linter
+# Run the linter on all files (exclude dependencies)
 lint:
-  cargo clippy -- -D warnings
+  cargo clippy -- --no-deps -D warnings
 
-# Run the formatter and linter
+# Auto-fix clippy warnings
+fix:
+  cargo clippy -- --no-deps -D warnings --fix --allow-dirty
+
+# Run the formatter and linter on all source files
 better: fmt lint
 
-# Run pre-commit checks
-pre-commit: fmt-check lint
+# Run pre-commit checks on staged files
+pre-commit:
+  hooks_scripts/fmt_staged.sh
+  just lint
 
 # Run pre-push checks
 pre-push: build test
@@ -45,10 +55,6 @@ pre-push-tag:
 changelog version:
   git cliff --tag {{version}} -o CHANGELOG.md
   glow CHANGELOG.md | less
-
-# Build the project
-build:
-  cargo build
 
 # Prepare release
 prepare-release version:
