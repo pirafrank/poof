@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-use poof::files::archives::extract_to_dir;
+use crate::files::archives::extract_to_dir;
 
 /// Get the path to the fixtures directory
 fn fixtures_dir() -> PathBuf {

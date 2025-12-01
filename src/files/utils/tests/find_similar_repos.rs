@@ -1,4 +1,4 @@
-use poof::files::utils::find_similar_repos;
+use crate::files::utils::find_similar_repos;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;

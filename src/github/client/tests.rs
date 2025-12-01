@@ -1,7 +1,7 @@
 //! Unit tests for GitHub client functions
 //! Tests without making actual network calls
 
-use poof::github::models::Release;
+use super::*;
 use std::fs;
 
 /// Helper function to load the fixture data
@@ -13,7 +13,7 @@ fn load_release_fixture() -> Release {
 }
 
 mod get_release_url {
-    use poof::github::client::get_release_url;
+    use super::*;
 
     #[test]
     fn test_latest_release_url() {
@@ -63,7 +63,6 @@ mod get_release_url {
 
 mod get_asset {
     use super::*;
-    use poof::github::client::get_asset;
 
     #[test]
     fn test_get_asset_finds_matching_asset() {

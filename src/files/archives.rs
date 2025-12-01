@@ -323,3 +323,6 @@ pub fn extract_to_dir(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

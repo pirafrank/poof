@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use poof::files::utils::get_file_name;
+use crate::files::utils::get_file_name;
 
 #[test]
 fn test_simple_filename() {

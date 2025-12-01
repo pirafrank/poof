@@ -1,4 +1,4 @@
-use poof::files::utils::strip_supported_extensions;
+use crate::files::utils::strip_supported_extensions;
 use std::path::PathBuf;
 
 // Test all supported multi-part extensions

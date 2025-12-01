@@ -1,17 +1,17 @@
 //! Unit tests for archive functions
 //! Tests archive format detection and validation
 
-use poof::files::magic::{
+use crate::files::magic::{
     BZIP2_MAGIC, GZIP_MAGIC, SEVENZ_MAGIC, TAR_MAGIC, TAR_MAGIC_OFFSET, XZ_MAGIC, ZIP_MAGIC,
 };
-use poof::models::binary_container::BinaryContainer;
+use crate::models::binary_container::BinaryContainer;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
 use super::common::*;
-use poof::files::archives::get_validated_archive_format;
+use crate::files::archives::get_validated_archive_format;
 
 // ============================================================================
 // Tests for valid archives with matching extension and magic bytes

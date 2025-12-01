@@ -1,4 +1,4 @@
-use poof::files::utils::get_stem_name_trimmed_at_first_separator;
+use crate::files::utils::get_stem_name_trimmed_at_first_separator;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 

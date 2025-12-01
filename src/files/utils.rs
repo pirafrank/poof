@@ -122,3 +122,6 @@ pub fn find_similar_repo(data_dir: &Path, target_repo: &str) -> Option<String> {
     // Return only the top entry as a string
     similar_repos.into_iter().next()
 }
+
+#[cfg(test)]
+mod tests;

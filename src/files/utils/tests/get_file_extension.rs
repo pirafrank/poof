@@ -1,4 +1,4 @@
-use poof::files::utils::*;
+use crate::files::utils::*;
 use std::path::PathBuf;
 
 #[test]

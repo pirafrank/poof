@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-use poof::files::magic::{TAR_MAGIC, TAR_MAGIC_OFFSET};
+use crate::files::magic::{TAR_MAGIC, TAR_MAGIC_OFFSET};
 
 /// Helper function to create a file with specific magic bytes
 pub fn create_file_with_magic(path: &Path, magic: &[u8]) -> std::io::Result<()> {
