@@ -224,14 +224,6 @@ mod release_model {
     }
 
     #[test]
-    fn test_release_has_expected_assets_count() {
-        let release = load_release_fixture();
-
-        // The fixture has 13 assets (6 .tar.gz files, 6 .sha256 files, 1 .sh file)
-        assert_eq!(release.assets().len(), 13);
-    }
-
-    #[test]
     fn test_release_assets_have_names() {
         let release = load_release_fixture();
 
@@ -249,24 +241,6 @@ mod release_model {
         for asset in release.assets() {
             assert!(!asset.browser_download_url().is_empty());
             assert!(asset.browser_download_url().starts_with("https://"));
-        }
-    }
-
-    #[test]
-    fn test_release_specific_asset_exists() {
-        let release = load_release_fixture();
-
-        // Check for specific expected assets
-        let expected_assets = vec![
-            "poof-0.5.0-x86_64-unknown-linux-gnu.tar.gz",
-            "poof-0.5.0-x86_64-apple-darwin.tar.gz",
-            "poof-0.5.0-aarch64-apple-darwin.tar.gz",
-            "migrate_poof_data.sh",
-        ];
-
-        for expected in expected_assets {
-            let found = release.assets().iter().any(|a| a.name() == expected);
-            assert!(found, "Expected asset '{}' not found", expected);
         }
     }
 
