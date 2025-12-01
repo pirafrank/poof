@@ -50,8 +50,8 @@ fn validate_magic_bytes(archive_path: &Path, expected_format: &BinaryContainer) 
 
 /// Determines archive format from file extension
 fn get_archive_format_from_extension(archive_path: &Path) -> BinaryContainer {
-    let extension = get_file_extension(archive_path);
-    match extension {
+    let extension: String = get_file_extension(archive_path).to_lowercase();
+    match extension.as_str() {
         // Multi-part extensions first (tar.xxx)
         "tar.gz" | "tgz" => BinaryContainer::TarGz,
         "tar.xz" | "txz" => BinaryContainer::TarXz,

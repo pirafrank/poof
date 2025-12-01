@@ -10,7 +10,8 @@ pub fn get_file_extension(archive_path: &Path) -> &str {
     let filename = archive_path
         .file_name()
         .and_then(|f| f.to_str())
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .to_lowercase();
 
     // Handle multi-part extensions like .tar.gz, .tar.xz, .tar.bz2
     if filename.ends_with(".tar.gz") {
