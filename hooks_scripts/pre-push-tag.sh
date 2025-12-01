@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 latest_tag=$(git tag -l | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -rV | head -n1)
 
 # Check if tag exists

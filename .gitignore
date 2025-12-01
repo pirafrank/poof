@@ -20,12 +20,9 @@ target/
 
 # End of https://www.toptal.com/developers/gitignore/api/rust
 
-
-
 # Added by cargo
-
+#
 /target
-
 
 # Added by cargo
 #
@@ -54,3 +51,8 @@ target/
 
 # testing data
 data/*
+
+# code coverage
+*.lcov
+*.info
+

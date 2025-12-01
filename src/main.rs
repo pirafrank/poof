@@ -71,11 +71,11 @@ struct UpdateArgs {
     repo: Option<String>,
 
     /// Update all installed binaries
-    #[arg(long, conflicts_with = "repo")]
+    #[arg(long, conflicts_with_all = ["repo", "update_self"])]
     all: bool,
 
     /// Update poof itself
-    #[arg(long = "self", conflicts_with = "repo")]
+    #[arg(long = "self", conflicts_with_all = ["repo", "all"])]
     update_self: bool,
 }
 

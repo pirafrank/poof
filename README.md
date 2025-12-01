@@ -7,6 +7,7 @@
 
   [![CI](https://github.com/pirafrank/poof/actions/workflows/ci.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/ci.yml)
   [![Security audit](https://github.com/pirafrank/poof/actions/workflows/security.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/security.yml)
+  [![codecov](https://codecov.io/gh/pirafrank/poof/graph/badge.svg)](https://codecov.io/gh/pirafrank/poof)
   [![dependency status](https://deps.rs/repo/github/pirafrank/poof/status.svg)](https://deps.rs/repo/github/pirafrank/poof)
 
   [![Licenses](https://github.com/pirafrank/poof/actions/workflows/licenses.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/licenses.yml)
