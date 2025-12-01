@@ -8,56 +8,65 @@ Tests are organized into the following structure:
 
 ```
 tests/
-├── common/           # Shared test utilities and fixtures
-│   ├── mod.rs        # TestFixture and helper functions
+├── common/                   # Shared test utilities and fixtures
+│   ├── fixtures/             # Test data and environment setup
+│   │   ├── mod.rs
+│   │   └── test_env.rs       # TestFixture implementation
+│   ├── mocks/                # Mock implementations
+│   ├── helpers.rs            # Helper functions
+│   ├── mod.rs
 │   └── repo_format_validation.rs  # Repository format validation utilities
-├── unit/             # Unit tests for standalone commands
-│   ├── mod.rs
-│   ├── version.rs    # Tests for 'version' command
-│   ├── info.rs       # Tests for 'info' command
-│   ├── check.rs      # Tests for 'check' command
-│   └── github_client.rs  # Tests for GitHub client functionality
-├── integration/      # Integration tests for stateful commands
-│   ├── mod.rs
-│   ├── list.rs       # Tests for 'list' command
-│   ├── make_default.rs  # Tests for 'use' command (make_default)
-│   ├── enable.rs     # Tests for 'enable' command
-│   ├── download.rs   # Tests for 'download' command
-│   ├── install.rs    # Tests for 'install' command
-│   ├── update.rs     # Tests for 'update' command
-│   └── error_handling.rs  # Error handling in stateful commands
-├── clap.rs           # Legacy test (kept for compatibility)
-├── info.rs           # Legacy test (kept for compatibility)
-└── version.rs        # Legacy test (kept for compatibility)
+├── integration/              # Integration test modules
+│   ├── command_handling/     # Tests for general argument parsing/handling
+│   │   ├── claps.rs
+│   │   └── verbose_flags.rs
+│   └── commands/             # Tests for specific CLI commands
+│       ├── check.rs
+│       ├── download.rs
+│       ├── enable.rs
+│       ├── help.rs
+│       ├── info.rs
+│       ├── install.rs
+│       ├── list.rs
+│       ├── update.rs
+│       ├── use.rs
+│       └── version.rs
+├── integration.rs            # Entry point for integration tests
+└── README.md
 ```
 
 ## Test Categories
 
-### Standalone Commands (Unit Tests)
+All tests are currently implemented as integration tests under the `integration` test target.
 
-These commands don't depend on prior state:
-- **version**: Shows version information
-- **info**: Shows platform and environment information
+### Command Tests (`tests/integration/commands/`)
+
+These tests cover specific CLI commands:
+
 - **check**: Checks if bin directory is in PATH
-- **help**: Command-line help (implicit via clap)
-
-### Stateful Commands (Integration Tests)
-
-These commands depend on prior command execution:
-- **download**: Downloads binaries to current directory (requires network for real tests)
-- **install**: Downloads and installs binaries (requires network for real tests)
-- **list**: Lists installed binaries (requires install)
-- **use**: Sets default version (requires install)
-- **update**: Updates installed binaries (requires install)
+- **download**: Downloads binaries (requires network for real tests)
 - **enable**: Adds bin directory to PATH
+- **help**: Command-line help
+- **info**: Shows platform and environment information
+- **install**: Downloads and installs binaries (requires network for real tests)
+- **list**: Lists installed binaries
+- **update**: Updates installed binaries
+- **use**: Sets default version
+- **version**: Shows version information
+
+### Command Handling Tests (`tests/integration/command_handling/`)
+
+These tests cover general argument parsing and handling:
+
+- **claps**: Tests related to clap argument parsing
+- **verbose_flags**: Tests for verbose flag handling
 
 ## Test Utilities
 
 ### TestFixture
 
-The `TestFixture` struct in `tests/common/mod.rs` provides:
+The `TestFixture` struct in `tests/common/fixtures/test_env.rs` provides:
 - Temporary directory setup
-- Environment variable management
 - Fake installation creation
 - Automatic cleanup
 
@@ -65,27 +74,12 @@ All tests use temporary file systems and never touch the actual file system.
 
 ### Repository Format Validation
 
-The `tests/common/repo_format_validation.rs` module provides reusable functions for testing
-repository format validation across different commands:
+The `tests/common/repo_format_validation.rs` module provides reusable functions for testing repository format validation across different commands:
 
 - `test_invalid_repo_formats_for_command(command: &str)` - Tests that various invalid formats are rejected
 - `test_valid_repo_formats_for_command(command: &str)` - Tests that valid formats are accepted
 
-These functions can be used in integration tests for any command that accepts repository arguments:
-
-```rust
-use super::common::repo_format_validation::*;
-
-#[test]
-fn test_install_comprehensive_invalid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
-    test_invalid_repo_formats_for_command("install")
-}
-
-#[test]
-fn test_install_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
-    test_valid_repo_formats_for_command("install")
-}
-```
+These functions can be used in integration tests for any command that accepts repository arguments.
 
 ## Running Tests
 
@@ -93,36 +87,31 @@ fn test_install_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::er
 # Run all tests
 cargo test
 
-# Run only unit tests
-cargo test --test version
-cargo test --test info
-cargo test --test check
+# Run all integration tests
+cargo test --test integration
 
-# Run only integration tests
-cargo test --test list
-cargo test --test make_default
-cargo test --test enable
-cargo test --test download
-cargo test --test install
-cargo test --test update
+# Run specific test modules
+cargo test --test integration check
+cargo test --test integration install
+cargo test --test integration list
 
 # Run with output
 cargo test -- --nocapture
 
-# Run specific test
+# Run specific test function
 cargo test test_version_command_exists
 ```
 
 ## Test Best Practices
 
-1. **No File System Changes**: All tests use `tempfile::TempDir` for temporary directories
-2. **Serial Execution**: Stateful tests use `#[serial_test::serial]` to prevent race conditions
-3. **Environment Isolation**: Tests set and restore environment variables
-4. **Error Handling**: Tests use `Result<(), Box<dyn std::error::Error>>` for proper error propagation
-5. **Descriptive Names**: Test names follow `test_<function>_<scenario>_<expected_result>` pattern
+1. **No File System Changes**: All tests use `tempfile::TempDir` for temporary directories via `TestFixture`.
+2. **Serial Execution**: Stateful tests use `#[serial_test::serial]` to prevent race conditions.
+3. **Environment Isolation**: Tests use `.env()` on `Command` instances instead of global environment variables.
+4. **Error Handling**: Tests use `Result<(), Box<dyn std::error::Error>>` for proper error propagation.
+5. **Descriptive Names**: Test names follow `test_<function>_<scenario>_<expected_result>` pattern.
 
 ## Notes
 
-- Integration tests that require network access (like `install`) may be skipped in CI or use mocks
-- The `enable` command tests modify shell RC files in temporary directories only
-- All tests are designed to be idempotent and safe to run multiple times
+- Integration tests that require network access (like `install`) may be skipped in CI or use mocks.
+- The `enable` command tests modify shell RC files in temporary directories only.
+- All tests are designed to be idempotent and safe to run multiple times.
