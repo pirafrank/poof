@@ -3,6 +3,12 @@
 echo "Running pre-push checks..."
 
 while read local_ref local_sha remote_ref remote_sha; do
+  # Check if this is a delete operation (local_sha is all zeros)
+  if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then
+    echo "Delete operation detected for $remote_ref - skipping tests."
+    exit 0
+  fi
+
   if [[ "$remote_ref" == refs/tags/* ]]; then
     echo "Tag push detected: $remote_ref"
     if ! just pre-push-tag; then
