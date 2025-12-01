@@ -115,3 +115,6 @@ where
     // Return the first compatible binary
     Ok(binaries[0].clone())
 }
+
+#[cfg(test)]
+mod tests;
