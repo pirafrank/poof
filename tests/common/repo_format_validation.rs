@@ -83,4 +83,3 @@ pub fn test_valid_repo_formats_for_command(
 
     Ok(())
 }
-

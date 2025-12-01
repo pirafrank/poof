@@ -4,16 +4,16 @@
 #[path = "common/mod.rs"]
 mod common;
 
-#[path = "integration/command_handling/claps.rs"]
-mod claps;
-#[path = "integration/command_handling/verbose_flags.rs"]
-mod verbose_flags;
 #[path = "integration/commands/check.rs"]
 mod check;
+#[path = "integration/command_handling/claps.rs"]
+mod claps;
 #[path = "integration/commands/help.rs"]
 mod help;
 #[path = "integration/commands/info.rs"]
 mod info;
+#[path = "integration/command_handling/verbose_flags.rs"]
+mod verbose_flags;
 #[path = "integration/commands/version.rs"]
 mod version;
 
