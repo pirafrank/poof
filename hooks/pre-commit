@@ -1,8 +1,13 @@
 #!/bin/bash
 
-# Check if any .toml or .rs files are about to be committed
-if ! git diff --cached --name-only | grep -E '\.(toml|rs)$' > /dev/null; then
-  echo "No Rust or TOML files changed, skipping pre-commit checks."
+set -e
+
+# Keeping this script as simple as possible by making it point
+# to the justfile for pre-commit tasks.
+
+# Check if any .rs files are about to be committed
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -E '\.rs$' > /dev/null; then
+  echo "✅ No Rust files have changed, skipping pre-commit checks."
   exit 0
 fi
 
