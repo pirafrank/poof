@@ -10,7 +10,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-use crate::archives_common::*;
+use super::common::*;
 use poof::files::archives::get_validated_archive_format;
 
 // ============================================================================
