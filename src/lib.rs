@@ -2,6 +2,8 @@
 //!
 //! This library provides the core functionality for the poof binary manager.
 
+pub mod constants;
+pub mod files;
 pub mod github;
 pub mod models;
 pub mod utils;
