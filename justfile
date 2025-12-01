@@ -125,3 +125,7 @@ ci: clean fmt-check lint build test
 # Run compliance checks
 # Run compliance checks (audit and license validation)
 compliance: audit licenses
+
+# Run code coverage
+coverage:
+  cargo llvm-cov
