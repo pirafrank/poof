@@ -63,8 +63,9 @@ impl RawVersion {
     }
 
     /// Parses a string into a RawVersion.
-    /// This matches the signature of Version::parse to allow drop-in replacement,
-    /// but allows for more lenient parsing.
+    /// The Result return type may be not need yet done to match
+    /// the signature of Version::parse to allow drop-in replacement,
+    /// while using a more lenient parsing.
     pub fn parse(s: &str) -> Result<Self, semver::Error> {
         Ok(Self::new(s.to_string()))
     }
@@ -211,19 +212,6 @@ impl SemverStringPrefix for String {
         let mut s: String = self.clone();
         if s.starts_with(['v', 'V']) {
             s.remove(0);
-        }
-        s
-    }
-}
-
-impl SemverStringPrefix for &String {
-    /// Strips the leading 'v' or 'V' from the version string.
-    /// It does not modify the original.
-    /// This is useful to avoid version parsing issues when using semver crate.
-    fn strip_v(&self) -> Self {
-        let s: &String = self;
-        if s.starts_with(['v', 'V']) {
-            s[1..].to_string();
         }
         s
     }
