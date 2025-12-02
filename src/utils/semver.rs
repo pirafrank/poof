@@ -1,5 +1,45 @@
-use semver::Version;
+use lazy_static::lazy_static;
+use regex::Regex;
+use semver::{BuildMetadata, Prerelease, Version};
 use std::cmp::Ordering;
+
+lazy_static! {
+    static ref SEMVER_REGEX: Regex =
+        Regex::new(r"(?i)^(?:[a-z\-\s]*)(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[.\-](.*))?$").unwrap();
+}
+
+/// Parses a version string loosely, handling leading zeros, 'v'/'r' prefixes, etc.
+pub fn parse_lenient(version_str: &str) -> Option<Version> {
+    // Try standard parse first
+    if let Ok(v) = Version::parse(version_str) {
+        return Some(v);
+    }
+
+    // Try parsing with regex
+    if let Some(captures) = SEMVER_REGEX.captures(version_str) {
+        let major = captures.get(1)?.as_str().parse::<u64>().ok()?;
+        let minor = captures
+            .get(2)
+            .map_or(0, |m| m.as_str().parse::<u64>().unwrap_or(0));
+        let patch = captures
+            .get(3)
+            .map_or(0, |m| m.as_str().parse::<u64>().unwrap_or(0));
+
+        let pre_str = captures.get(4).map(|m| m.as_str()).unwrap_or("");
+        let pre = Prerelease::new(pre_str).ok()?;
+        let build = BuildMetadata::default();
+
+        Some(Version {
+            major,
+            minor,
+            patch,
+            pre,
+            build,
+        })
+    } else {
+        None
+    }
+}
 
 // allowing dead code for the sake of having a complete set
 // of function available for the Asset struct.
@@ -17,13 +57,13 @@ impl SemverSort for Vec<String> {
     /// If a version string is invalid, it will be sorted to the end of the list.
     fn sort_semver(&mut self) {
         self.sort_by(|a, b| {
-            let v_a = Version::parse(a);
-            let v_b = Version::parse(b);
+            let v_a = parse_lenient(a);
+            let v_b = parse_lenient(b);
             match (v_a, v_b) {
-                (Ok(va), Ok(vb)) => va.cmp(&vb),
-                (Ok(_), Err(_)) => Ordering::Less,
-                (Err(_), Ok(_)) => Ordering::Greater,
-                (Err(_), Err(_)) => a.cmp(b), // fallback to normal string sort if neither is valid
+                (Some(va), Some(vb)) => va.cmp(&vb),
+                (Some(_), None) => Ordering::Less,
+                (None, Some(_)) => Ordering::Greater,
+                (None, None) => a.cmp(b), // fallback to normal string sort if neither is valid
             }
         });
     }
@@ -39,9 +79,8 @@ impl SemverArrayConversion for Vec<String> {
     fn to_version(&self) -> Vec<Version> {
         let mut versions: Vec<Version> = Vec::new();
         for version_str in self {
-            match Version::parse(version_str) {
-                Ok(version) => versions.push(version),
-                Err(_) => continue, // Invalid version string, skip it
+            if let Some(version) = parse_lenient(version_str) {
+                versions.push(version);
             }
         }
         versions
@@ -56,14 +95,14 @@ pub trait SemverVersionConversion {
 impl SemverVersionConversion for String {
     /// Converts a version String to an optional Version object.
     fn to_version(&self) -> Option<Version> {
-        Version::parse(self).ok()
+        parse_lenient(self)
     }
 }
 
 impl SemverVersionConversion for &str {
     /// Converts a version &str to an optional Version object.
     fn to_version(&self) -> Option<Version> {
-        Version::parse(self).ok()
+        parse_lenient(self)
     }
 }
 
@@ -301,5 +340,42 @@ mod tests {
         let version_objs = stripped.to_version();
         let back_to_strings = version_objs.to_string_vec();
         assert_eq!(back_to_strings, vec!["1.0.0", "1.5.0", "2.0.0"]);
+    }
+
+    #[test]
+    fn test_parse_lenient_cases() {
+        // Leading zeros
+        assert_eq!(parse_lenient("01.02.03").unwrap().to_string(), "1.2.3");
+        // r prefix
+        assert_eq!(parse_lenient("r35").unwrap().to_string(), "35.0.0");
+        // v prefix
+        assert_eq!(parse_lenient("v1.2").unwrap().to_string(), "1.2.0");
+        // release- prefix
+        assert_eq!(parse_lenient("release-1.0").unwrap().to_string(), "1.0.0");
+        // Prerelease
+        assert_eq!(
+            parse_lenient("1.0.0-beta.1").unwrap().to_string(),
+            "1.0.0-beta.1"
+        );
+        // Missing patch
+        assert_eq!(parse_lenient("1.2").unwrap().to_string(), "1.2.0");
+        // Missing minor and patch
+        assert_eq!(parse_lenient("1").unwrap().to_string(), "1.0.0");
+    }
+
+    #[test]
+    fn test_sort_semver_lenient() {
+        let mut versions = vec![
+            "r35".to_string(),
+            "r4".to_string(),
+            "v1.0.0".to_string(),
+            "0.1.0".to_string(),
+        ];
+        versions.sort_semver();
+        // 0.1.0 (0.1.0)
+        // v1.0.0 (1.0.0)
+        // r4 (4.0.0)
+        // r35 (35.0.0)
+        assert_eq!(versions, vec!["0.1.0", "v1.0.0", "r4", "r35"]);
     }
 }
