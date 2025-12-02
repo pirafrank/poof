@@ -61,7 +61,7 @@ impl SemverVersionConversion for String {
 }
 
 impl SemverVersionConversion for &str {
-    /// Converts a version String to an optional Version object.
+    /// Converts a version &str to an optional Version object.
     fn to_version(&self) -> Option<Version> {
         Version::parse(self).ok()
     }
@@ -157,6 +157,17 @@ mod tests {
     }
 
     #[test]
+    fn test_sort_semver_with_zeros() {
+        let mut versions = vec![
+            "2.0.0".to_string(),
+            "0.1.0".to_string(),
+            "1.05.0".to_string(),
+        ];
+        versions.sort_semver();
+        assert_eq!(versions, vec!["0.1.0", "1.05.0", "2.0.0"]);
+    }
+
+    #[test]
     fn test_sort_semver_with_prereleases() {
         let mut versions = vec![
             "1.0.0".to_string(),
@@ -222,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn test_to_version_string_types() {
+    fn test_to_version_string_types_basic() {
         // Test both String and &str types with valid versions
         let owned = "1.2.3".to_string();
         let borrowed = "1.2.3";
@@ -231,7 +242,10 @@ mod tests {
         assert_eq!(owned.to_version().unwrap().to_string(), "1.2.3");
         assert!(borrowed.to_version().is_some());
         assert_eq!(borrowed.to_version().unwrap().to_string(), "1.2.3");
+    }
 
+    #[test]
+    fn test_to_version_string_types_with_invalid() {
         // Test invalid versions
         let invalid_owned = "invalid".to_string();
         let invalid_borrowed = "invalid";
