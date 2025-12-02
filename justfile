@@ -61,7 +61,6 @@ changelog version:
 # Prepare release
 prepare-release version:
   cargo set-version {{version}}
-  git cliff --tag {{version}} -o CHANGELOG.md
 
 # Build for release
 release:
@@ -124,3 +123,14 @@ compliance: audit licenses
 coverage:
   cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
+# Assumes you have the `browse` command in PATH
+# see https://github.com/pirafrank/dotfiles/blob/main/bin/browse
+# Browse issues on GitHub
+issues:
+  browse "https://github.com/pirafrank/poof/issues"
+
+# Assumes you have the `browse` command in PATH
+# see https://github.com/pirafrank/dotfiles/blob/main/bin/browse
+# Browse coverage report on Codecov
+browse-coverage:
+  browse "https://app.codecov.io/github/pirafrank/poof"
