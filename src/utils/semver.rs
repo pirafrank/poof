@@ -44,7 +44,7 @@ pub fn parse_lenient(version_str: &str) -> Option<semver::Version> {
 /// A wrapper around semver::Version that preserves the original string representation.
 /// This is useful for non-standard versions like "r35" or "01.02.03" that would
 /// otherwise be unsupported by semver::Version.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct RawVersion {
     pub original: String,
     pub version: Option<semver::Version>,
@@ -70,6 +70,18 @@ impl RawVersion {
         Ok(Self::new(s.to_string()))
     }
 }
+
+impl PartialEq for RawVersion {
+    fn eq(&self, other: &Self) -> bool {
+        match (&self.version, &other.version) {
+            (Some(v_a), Some(v_b)) => v_a == v_b,
+            (None, None) => self.original == other.original,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for RawVersion {}
 
 impl PartialOrd for RawVersion {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
