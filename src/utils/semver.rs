@@ -41,6 +41,61 @@ pub fn parse_lenient(version_str: &str) -> Option<Version> {
     }
 }
 
+/// A wrapper around semver::Version that preserves the original string representation.
+/// This is useful for non-standard versions like "r35" or "01.02.03" that would
+/// otherwise be normalized by semver::Version.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct RawVersion {
+    pub original: String,
+    pub version: Option<Version>,
+}
+
+impl RawVersion {
+    /// Creates a new RawVersion from a string.
+    /// It uses parse_lenient to attempt to parse the version.
+    pub fn new(s: String) -> Self {
+        Self {
+            version: parse_lenient(&s),
+            original: s,
+        }
+    }
+}
+
+impl PartialOrd for RawVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for RawVersion {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (&self.version, &other.version) {
+            (Some(v_a), Some(v_b)) => v_a.cmp(v_b),
+            (Some(_), None) => Ordering::Less, // Valid versions come before invalid/unparseable
+            (None, Some(_)) => Ordering::Greater,
+            (None, None) => self.original.cmp(&other.original), // Fallback to string comparison
+        }
+    }
+}
+
+impl std::fmt::Display for RawVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.original)
+    }
+}
+
+impl From<String> for RawVersion {
+    fn from(s: String) -> Self {
+        Self::new(s)
+    }
+}
+
+impl From<&str> for RawVersion {
+    fn from(s: &str) -> Self {
+        Self::new(s.to_string())
+    }
+}
+
 // allowing dead code for the sake of having a complete set
 // of function available for the Asset struct.
 
@@ -377,5 +432,28 @@ mod tests {
         // r4 (4.0.0)
         // r35 (35.0.0)
         assert_eq!(versions, vec!["0.1.0", "v1.0.0", "r4", "r35"]);
+    }
+
+    #[test]
+    fn test_raw_version_ordering() {
+        let mut versions = vec![
+            RawVersion::new("r35".to_string()),
+            RawVersion::new("r4".to_string()),
+            RawVersion::new("v1.0.0".to_string()),
+            RawVersion::new("0.1.0".to_string()),
+        ];
+        versions.sort();
+
+        assert_eq!(versions[0].to_string(), "0.1.0");
+        assert_eq!(versions[1].to_string(), "v1.0.0");
+        assert_eq!(versions[2].to_string(), "r4");
+        assert_eq!(versions[3].to_string(), "r35");
+    }
+
+    #[test]
+    fn test_raw_version_display() {
+        let v = RawVersion::new("01.02.03".to_string());
+        assert_eq!(v.to_string(), "01.02.03");
+        assert_eq!(v.version.unwrap().to_string(), "1.2.3");
     }
 }
