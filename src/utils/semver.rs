@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use semver::{BuildMetadata, Prerelease, Version};
+use semver::{BuildMetadata, Prerelease};
 use std::cmp::Ordering;
 
 lazy_static! {
@@ -9,9 +9,9 @@ lazy_static! {
 }
 
 /// Parses a version string loosely, handling leading zeros, 'v'/'r' prefixes, etc.
-pub fn parse_lenient(version_str: &str) -> Option<Version> {
+pub fn parse_lenient(version_str: &str) -> Option<semver::Version> {
     // Try standard parse first
-    if let Ok(v) = Version::parse(version_str) {
+    if let Ok(v) = semver::Version::parse(version_str) {
         return Some(v);
     }
 
@@ -29,7 +29,7 @@ pub fn parse_lenient(version_str: &str) -> Option<Version> {
         let pre = Prerelease::new(pre_str).ok()?;
         let build = BuildMetadata::default();
 
-        Some(Version {
+        Some(semver::Version {
             major,
             minor,
             patch,
@@ -43,12 +43,14 @@ pub fn parse_lenient(version_str: &str) -> Option<Version> {
 
 /// A wrapper around semver::Version that preserves the original string representation.
 /// This is useful for non-standard versions like "r35" or "01.02.03" that would
-/// otherwise be normalized by semver::Version.
+/// otherwise be unsupported by semver::Version.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RawVersion {
     pub original: String,
-    pub version: Option<Version>,
+    pub version: Option<semver::Version>,
 }
+
+pub type Version = RawVersion;
 
 impl RawVersion {
     /// Creates a new RawVersion from a string.
@@ -58,6 +60,13 @@ impl RawVersion {
             version: parse_lenient(&s),
             original: s,
         }
+    }
+
+    /// Parses a string into a RawVersion.
+    /// This matches the signature of Version::parse to allow drop-in replacement,
+    /// but allows for more lenient parsing.
+    pub fn parse(s: &str) -> Result<Self, semver::Error> {
+        Ok(Self::new(s.to_string()))
     }
 }
 
@@ -134,9 +143,7 @@ impl SemverArrayConversion for Vec<String> {
     fn to_version(&self) -> Vec<Version> {
         let mut versions: Vec<Version> = Vec::new();
         for version_str in self {
-            if let Some(version) = parse_lenient(version_str) {
-                versions.push(version);
-            }
+            versions.push(RawVersion::new(version_str.clone()));
         }
         versions
     }
@@ -150,14 +157,14 @@ pub trait SemverVersionConversion {
 impl SemverVersionConversion for String {
     /// Converts a version String to an optional Version object.
     fn to_version(&self) -> Option<Version> {
-        parse_lenient(self)
+        Some(RawVersion::new(self.clone()))
     }
 }
 
 impl SemverVersionConversion for &str {
     /// Converts a version &str to an optional Version object.
     fn to_version(&self) -> Option<Version> {
-        parse_lenient(self)
+        Some(RawVersion::new(self.to_string()))
     }
 }
 
@@ -320,10 +327,11 @@ mod tests {
             "2.0.0".to_string(),
         ];
         let version_objs = versions.to_version();
-        // Invalid versions should be skipped
-        assert_eq!(version_objs.len(), 2);
+        // All strings are converted to RawVersion now, even invalid ones
+        assert_eq!(version_objs.len(), 3);
         assert_eq!(version_objs[0].to_string(), "1.0.0");
-        assert_eq!(version_objs[1].to_string(), "2.0.0");
+        assert_eq!(version_objs[1].to_string(), "invalid");
+        assert_eq!(version_objs[2].to_string(), "2.0.0");
     }
 
     #[test]
@@ -340,11 +348,17 @@ mod tests {
 
     #[test]
     fn test_to_version_string_types_with_invalid() {
-        // Test invalid versions
+        // Test invalid versions - they still create RawVersion but with None for version field
         let invalid_owned = "invalid".to_string();
         let invalid_borrowed = "invalid";
-        assert!(invalid_owned.to_version().is_none());
-        assert!(invalid_borrowed.to_version().is_none());
+        assert!(invalid_owned.to_version().is_some());
+        assert!(invalid_borrowed.to_version().is_some());
+        // The original string is preserved even if parsing fails
+        assert_eq!(invalid_owned.to_version().unwrap().to_string(), "invalid");
+        assert_eq!(
+            invalid_borrowed.to_version().unwrap().to_string(),
+            "invalid"
+        );
     }
 
     #[test]
@@ -365,7 +379,7 @@ mod tests {
             "v1.0.0".to_string(),
             "V2.0.0".to_string(),
             "3.0.0".to_string(),
-            "version".to_string(), // Edge case: v prefix in word
+            "version".to_string(), // Edge case: v prefix in word. Collateral: won't "fix".
         ];
         let stripped = versions.strip_v();
         assert_eq!(stripped, vec!["1.0.0", "2.0.0", "3.0.0", "ersion"]);

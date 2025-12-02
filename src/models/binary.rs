@@ -2,7 +2,6 @@
 //! and a version is a 'binary'.
 
 use crate::utils::semver::*;
-use semver::Version;
 
 use super::repostring::RepoString;
 

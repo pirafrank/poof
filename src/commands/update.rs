@@ -3,13 +3,12 @@ use crate::{
     constants::APP_NAME,
     github::client::get_release,
     models::asset::Asset,
-    utils::semver::SemverStringPrefix,
+    utils::semver::{SemverStringPrefix, Version},
     UpdateArgs,
 };
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, error, info};
 use rayon::prelude::*;
-use semver::Version;
 
 // updating a single repository
 fn update_single_repo(repo: &str) -> Result<()> {
