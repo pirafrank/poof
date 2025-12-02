@@ -72,16 +72,15 @@ pub fn list_installed_assets() -> Vec<Asset> {
         })
         .collect();
 
-    let mut map: HashMap<String, Asset> = HashMap::new();
+    let mut versions_map: HashMap<String, Vec<String>> = HashMap::new();
     for (slug, version) in assets {
-        // cloning here is necessary and impact is bare
-        let s = slug.clone();
-        map.entry(slug)
-            .and_modify(|asset| asset.add_version_as_string(&version))
-            .or_insert_with(|| Asset::new_as_string(s, vec![version]));
+        versions_map.entry(slug).or_default().push(version);
     }
 
-    let mut result: Vec<Asset> = map.into_values().collect();
+    let mut result: Vec<Asset> = versions_map
+        .into_iter()
+        .map(|(slug, versions)| Asset::new_as_string(slug, versions))
+        .collect();
     result.sort();
     result
 }
