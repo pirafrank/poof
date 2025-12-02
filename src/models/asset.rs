@@ -2,7 +2,6 @@
 //! and a list of versions is an 'asset'.
 
 use crate::utils::semver::*;
-use semver::Version;
 use std::cmp::Ordering;
 
 use super::repostring::RepoString;
