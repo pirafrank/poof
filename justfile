@@ -44,9 +44,7 @@ fix:
 better: fmt lint
 
 # Run pre-commit checks on staged files
-pre-commit:
-  hooks_scripts/fmt_staged.sh
-  just lint
+pre-commit: fmt-check lint
 
 # Run pre-push checks
 pre-push: build test
