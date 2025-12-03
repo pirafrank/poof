@@ -1,6 +1,6 @@
 //! Integration tests for the 'update' command
 
-use assert_cmd::prelude::*;
+use assert_cmd::{assert::OutputAssertExt, cargo};
 use serial_test::serial;
 use std::process::Command;
 
@@ -11,7 +11,7 @@ use super::common::repo_format_validation::*;
 #[serial]
 #[test]
 fn test_update_requires_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("update").assert().failure();
     Ok(())
 }
@@ -33,7 +33,7 @@ fn test_update_all_and_self_conflicting_flags() -> Result<(), Box<dyn std::error
     // Note: --all and --self don't actually conflict in the current implementation
     // They both can be used together, though --all takes precedence
     // This test verifies the command handles both flags gracefully
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd.arg("update").arg("--all").arg("--self").output()?;
 
     // Command should fail because --all and --self cannot be used together
@@ -46,7 +46,7 @@ fn test_update_all_and_self_conflicting_flags() -> Result<(), Box<dyn std::error
 
 #[test]
 fn test_update_all_and_repo_conflict() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd.arg("update").arg("user/repo").arg("--all").output()?;
 
     assert!(
@@ -60,7 +60,7 @@ fn test_update_all_and_repo_conflict() -> Result<(), Box<dyn std::error::Error>>
 #[test]
 fn test_update_with_repo() -> Result<(), Box<dyn std::error::Error>> {
     // Test that update accepts a repo argument
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd.arg("update").arg("user/repo").output()?;
 
     // Should not fail on argument parsing
@@ -78,7 +78,7 @@ fn test_update_with_repo() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_update_all_flag() -> Result<(), Box<dyn std::error::Error>> {
     // Test that --all flag is accepted
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd.arg("update").arg("--all").output()?;
 
     // Should not fail on argument parsing
@@ -96,7 +96,7 @@ fn test_update_all_flag() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_update_self_flag() -> Result<(), Box<dyn std::error::Error>> {
     // Test that --self flag is accepted
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd.arg("update").arg("--self").output()?;
 
     // Should not fail on argument parsing
@@ -114,7 +114,7 @@ fn test_update_self_flag() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_update_repo_and_all_conflict() -> Result<(), Box<dyn std::error::Error>> {
     // Test that repo and --all cannot be used together
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("update")
         .arg("user/repo")
         .arg("--all")
@@ -130,7 +130,7 @@ fn test_update_with_nonexistent_repo() -> Result<(), Box<dyn std::error::Error>>
     let fixture = TestFixture::new()?;
 
     // Try to update a repo that doesn't exist
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("update")
         .arg("nonexistent/repo")
         .env("HOME", fixture.home_dir.to_str().unwrap());
@@ -169,7 +169,7 @@ fn test_update_with_installed_repo() -> Result<(), Box<dyn std::error::Error>> {
     fixture.create_fake_installation(repo, version)?;
 
     // Try to update (will fail on network, but should handle gracefully)
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("update")
         .arg(repo)
         .env("HOME", fixture.home_dir.to_str().unwrap());
@@ -205,7 +205,7 @@ fn test_update_all_with_installations() -> Result<(), Box<dyn std::error::Error>
     fixture.create_fake_installation("user2/repo2", "2.0.0")?;
 
     // Try to update all (will fail on network, but should handle gracefully)
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("update")
         .arg("--all")
         .env("HOME", fixture.home_dir.to_str().unwrap());
@@ -317,7 +317,7 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
 
     // Step 3: Set the new version as default (this is what the update command now does after installation)
     // We use the "use" command to simulate this behavior, which is what update internally calls
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("use")
         .arg(repo)
         .arg(new_version)
