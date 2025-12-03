@@ -98,6 +98,7 @@ pub fn check_dir_in_path(dir: &str) -> i16 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_env_path_separator_unix() {
@@ -230,32 +231,26 @@ mod tests {
 
     #[test]
     fn test_check_dir_in_path_multiple_entries() {
+        use temp_env::with_var;
+
         // Build a fake PATH-like string and test
         let temp_path = format!(
             "/first/path{}/second/path{}/third/path",
             env_path_separator(),
             env_path_separator()
         );
-        std::env::set_var("TEST_PATH_VAR", &temp_path);
 
-        // Restore original PATH after test
-        let original_path = std::env::var("PATH").ok();
-
-        // Set our test PATH
-        std::env::set_var("PATH", &temp_path);
-
-        assert_eq!(check_dir_in_path("/first/path"), 0);
-        assert_eq!(check_dir_in_path("/second/path"), 1);
-        assert_eq!(check_dir_in_path("/third/path"), 2);
-        assert_eq!(check_dir_in_path("/nonexistent"), -1);
-
-        // Restore original PATH
-        if let Some(orig) = original_path {
-            std::env::set_var("PATH", orig);
-        }
+        // Set our test PATH - temp-env automatically restores it after the closure
+        with_var("PATH", Some(&temp_path), || {
+            assert_eq!(check_dir_in_path("/first/path"), 0);
+            assert_eq!(check_dir_in_path("/second/path"), 1);
+            assert_eq!(check_dir_in_path("/third/path"), 2);
+            assert_eq!(check_dir_in_path("/nonexistent"), -1);
+        });
     }
 
     #[test]
+    #[serial]
     fn test_env_path_separator_consistency() {
         // Ensure the separator matches the platform
         let sep = env_path_separator();
