@@ -187,7 +187,42 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
         filesys::make_executable(&installed_exec);
         // Create a symlink in the bin directory, NOT overwriting existing
         let symlink_path = bin_dir.join(exec_stem);
-        let _ = filesys::create_symlink(&installed_exec, &symlink_path, false);
+        
+        // Check if symlink already exists and provide helpful error message
+        if symlink_path.exists() {
+            let existing_target = std::fs::read_link(&symlink_path)
+                .ok()
+                .map(|p| p.to_string_lossy().to_string());
+            
+            let error_msg = if let Some(target) = existing_target {
+                format!(
+                    "Cannot create symlink '{}' in bin directory: a binary with the same name is already installed.\n\
+                    The existing symlink points to: {}\n\
+                    To resolve this conflict, you can:\n\
+                    - Remove the existing symlink manually: {}\n\
+                    - Or use a different binary name if available",
+                    exec_stem.to_string_lossy(),
+                    target,
+                    symlink_path.display()
+                )
+            } else {
+                format!(
+                    "Cannot create symlink '{}' in bin directory: a file with the same name already exists at {}",
+                    exec_stem.to_string_lossy(),
+                    symlink_path.display()
+                )
+            };
+            
+            return Err(anyhow!(error_msg));
+        }
+        
+        // Create the symlink and handle any errors
+        filesys::create_symlink(&installed_exec, &symlink_path, false)
+            .map_err(|e| anyhow!(
+                "Failed to create symlink '{}' in bin directory: {}",
+                exec_stem.to_string_lossy(),
+                e
+            ))?;
     }
     Ok(())
 }
