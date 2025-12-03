@@ -67,7 +67,7 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
         // This is useful to avoid installing files with names like "mytool-1.0.0" or "mytool-linux-x86_64"
         // and instead use just "mytool", which is how the binary will be used when in PATH.
         let exec_name = get_stem_name_trimmed_at_first_separator(file_name);
-        install_binary(&downloaded_file, &install_dir, &exec_name)
+        install_binary(&downloaded_file, &install_dir, &exec_name, repo)
             .with_context(|| format!("Failed to install executable {}", binary.name()))?;
     } else {
         // extract binary
@@ -75,7 +75,7 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
         debug!("Extracted to: {}", download_to.display());
 
         // install binary
-        install_binaries(&downloaded_file, &install_dir).with_context(|| {
+        install_binaries(&downloaded_file, &install_dir, repo).with_context(|| {
             format!(
                 "Failed to install binaries for {} version {}",
                 repo, version
@@ -142,7 +142,7 @@ fn prepare_install_dir(repo: &str, version: &str) -> Result<Option<PathBuf>> {
     }
 }
 
-fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
+fn install_binaries(archive_path: &Path, install_dir: &Path, repo: &str) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
     let execs_to_install: Vec<PathBuf> =
@@ -159,13 +159,54 @@ fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
         let exec_name = exec
             .file_name()
             .ok_or_else(|| anyhow!("Failed to get filename from {}", exec.display()))?;
-        install_binary(&exec, install_dir, &OsString::from(exec_name))
+        install_binary(&exec, install_dir, &OsString::from(exec_name), repo)
             .with_context(|| format!("Failed to install executable {}", exec.display()))?;
     }
     Ok(())
 }
 
-fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> Result<()> {
+/// Extracts the repository slug from a binary path.
+/// The path structure is: data_dir/owner/repo/version/binary_name
+/// where owner/repo is stored with OS separators (e.g., owner/repo becomes owner<SEP>repo)
+/// Returns None if the path doesn't match the expected structure.
+fn extract_repo_from_path(path: &Path) -> Option<String> {
+    let data_dir = datadirs::get_data_dir()?;
+    
+    // Check if the path is within the data directory
+    path.strip_prefix(&data_dir).ok().and_then(|relative_path| {
+        let components: Vec<_> = relative_path.components().collect();
+        
+        // We need at least 2 components: repo_path and version (and optionally binary_name)
+        // The repo is all components except the last one (version) or last two (version/binary_name)
+        // Path structure: owner/repo/version/binary_name -> we want "owner/repo"
+        if components.len() >= 2 {
+            // Get all components except the last two (version and binary_name)
+            // If there are only 2 components, we assume it's repo/version (no binary_name in path)
+            let skip_count = if components.len() >= 3 { 2 } else { 1 };
+            let repo_components: Vec<_> = components[..components.len().saturating_sub(skip_count)]
+                .iter()
+                .filter_map(|c| {
+                    if let std::path::Component::Normal(name) = c {
+                        Some(name.to_string_lossy().to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            
+            if !repo_components.is_empty() {
+                // Join with '/' to reconstruct the repo string (e.g., "owner/repo")
+                Some(repo_components.join("/"))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    })
+}
+
+fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString, repo: &str) -> Result<()> {
     let installed_exec = install_dir.join(exec_stem);
 
     // copy the executable files to the install directory
@@ -188,32 +229,54 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
         // Create a symlink in the bin directory, NOT overwriting existing
         let symlink_path = bin_dir.join(exec_stem);
         
-        // Check if symlink already exists and provide helpful error message
+        // Check if symlink already exists
         if symlink_path.exists() {
             let existing_target = std::fs::read_link(&symlink_path)
                 .ok()
-                .map(|p| p.to_string_lossy().to_string());
+                .map(|p| p.to_path_buf());
             
-            let error_msg = if let Some(target) = existing_target {
-                format!(
+            if let Some(target_path) = existing_target {
+                // Extract the repo slug from the existing symlink target
+                let existing_repo = extract_repo_from_path(&target_path);
+                
+                // Normalize repo strings for comparison (handle both 'owner/repo' and 'owner-repo' formats)
+                let current_repo_normalized = repo.replace('/', std::path::MAIN_SEPARATOR_STR);
+                
+                if let Some(existing_repo_slug) = existing_repo {
+                    let existing_repo_normalized = existing_repo_slug.replace('/', std::path::MAIN_SEPARATOR_STR);
+                    
+                    // If the existing symlink points to the same repo, skip symlink creation
+                    if existing_repo_normalized == current_repo_normalized {
+                        info!(
+                            "Symlink '{}' already exists and points to the same repository ({}). Skipping symlink creation.",
+                            exec_stem.to_string_lossy(),
+                            repo
+                        );
+                        return Ok(());
+                    }
+                }
+                
+                // Different repo - show error message
+                let error_msg = format!(
                     "Cannot create symlink '{}' in bin directory: a binary with the same name is already installed.\n\
                     The existing symlink points to: {}\n\
                     To resolve this conflict, you can:\n\
                     - Remove the existing symlink manually: {}\n\
                     - Or use a different binary name if available",
                     exec_stem.to_string_lossy(),
-                    target,
+                    target_path.display(),
                     symlink_path.display()
-                )
+                );
+                
+                return Err(anyhow!(error_msg));
             } else {
-                format!(
+                // File exists but is not a symlink
+                return Err(anyhow!(
                     "Cannot create symlink '{}' in bin directory: a file with the same name already exists at {}",
                     exec_stem.to_string_lossy(),
                     symlink_path.display()
-                )
-            };
-            
-            return Err(anyhow!(error_msg));
+                ));
+            }
         }
         
         // Create the symlink and handle any errors
