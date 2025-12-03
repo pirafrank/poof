@@ -241,12 +241,14 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
     // Get binary name
     let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
     
-    // Create a minimal ELF binary for the old version so it can be detected properly
+    // Create a minimal binary for the old version so it can be detected properly
+    // Different platforms require different binary formats
+    let binary_path_old = install_dir_old.join(binary_name);
+    
     #[cfg(target_os = "linux")]
     {
         use std::io::Write;
         use std::os::unix::fs::PermissionsExt;
-        let binary_path_old = install_dir_old.join(binary_name);
         // Create a minimal ELF binary (ELF header: 0x7F 0x45 0x4C 0x46)
         let elf_header: [u8; 54] = [
             0x7F, 0x45, 0x4C, 0x46, // ELF magic number
@@ -272,17 +274,42 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
         let mut perms = std::fs::metadata(&binary_path_old)?.permissions();
         perms.set_mode(0o755);
         std::fs::set_permissions(&binary_path_old, perms)?;
-        
-        // Create symlink pointing to old version (simulating current state before update)
-        fixture.create_bin_symlink(binary_name, &binary_path_old)?;
     }
     
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "macos")]
     {
-        // For non-Linux, use the shell script approach
-        let binary_path_old = install_dir_old.join(binary_name);
-        fixture.create_bin_symlink(binary_name, &binary_path_old)?;
+        use std::io::Write;
+        use std::os::unix::fs::PermissionsExt;
+        // Create a minimal Mach-O binary (Mach-O 64-bit magic: 0xFE 0xED 0xFA 0xCF)
+        // Minimal Mach-O header structure
+        let macho_header: [u8; 32] = [
+            0xFE, 0xED, 0xFA, 0xCF, // Mach-O 64-bit magic (little-endian)
+            0x07, 0x00, 0x00, 0x00, // CPU type: x86_64
+            0x03, 0x00, 0x00, 0x00, // CPU subtype
+            0x01, 0x00, 0x00, 0x00, // File type: MH_EXECUTE
+            0x01, 0x00, 0x00, 0x00, // Number of load commands
+            0x00, 0x00, 0x00, 0x00, // Size of load commands
+            0x85, 0x00, 0x00, 0x00, // Flags
+            0x00, 0x00, 0x00, 0x00, // Reserved
+        ];
+        let mut file = std::fs::File::create(&binary_path_old)?;
+        file.write_all(&macho_header)?;
+        file.sync_all()?;
+        drop(file);
+        // Make it executable
+        let mut perms = std::fs::metadata(&binary_path_old)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path_old, perms)?;
     }
+    
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        // For other platforms, use the shell script approach (may not work for all)
+        // This is a fallback that may not pass magic number checks
+    }
+    
+    // Create symlink pointing to old version (simulating current state before update)
+    fixture.create_bin_symlink(binary_name, &binary_path_old)?;
     
     // Verify initial symlink points to old version
     let symlink_path = fixture.bin_dir.join(binary_name);
@@ -304,13 +331,14 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
     // Step 2: Create new version installation (simulating what update would do)
     let install_dir_new = fixture.create_fake_installation(repo, new_version)?;
     
-    // Create a minimal ELF binary for the new version so it can be detected by is_exec_by_magic_number
-    // The fake installation creates a shell script, but we need an ELF binary for the "use" command to work
+    // Create a minimal binary for the new version so it can be detected by is_exec_by_magic_number
+    // The fake installation creates a shell script, but we need a proper binary for the "use" command to work
+    let binary_path_new = install_dir_new.join(binary_name);
+    
     #[cfg(target_os = "linux")]
     {
         use std::io::Write;
         use std::os::unix::fs::PermissionsExt;
-        let binary_path_new = install_dir_new.join(binary_name);
         // Create a minimal ELF binary (ELF header: 0x7F 0x45 0x4C 0x46)
         // This is a minimal valid ELF header that will pass the magic number check
         let elf_header: [u8; 54] = [
@@ -337,6 +365,38 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
         let mut perms = std::fs::metadata(&binary_path_new)?.permissions();
         perms.set_mode(0o755);
         std::fs::set_permissions(&binary_path_new, perms)?;
+    }
+    
+    #[cfg(target_os = "macos")]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::PermissionsExt;
+        // Create a minimal Mach-O binary (Mach-O 64-bit magic: 0xFE 0xED 0xFA 0xCF)
+        // Minimal Mach-O header structure
+        let macho_header: [u8; 32] = [
+            0xFE, 0xED, 0xFA, 0xCF, // Mach-O 64-bit magic (little-endian)
+            0x07, 0x00, 0x00, 0x00, // CPU type: x86_64
+            0x03, 0x00, 0x00, 0x00, // CPU subtype
+            0x01, 0x00, 0x00, 0x00, // File type: MH_EXECUTE
+            0x01, 0x00, 0x00, 0x00, // Number of load commands
+            0x00, 0x00, 0x00, 0x00, // Size of load commands
+            0x85, 0x00, 0x00, 0x00, // Flags
+            0x00, 0x00, 0x00, 0x00, // Reserved
+        ];
+        let mut file = std::fs::File::create(&binary_path_new)?;
+        file.write_all(&macho_header)?;
+        file.sync_all()?;
+        drop(file);
+        // Make it executable
+        let mut perms = std::fs::metadata(&binary_path_new)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path_new, perms)?;
+    }
+    
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        // For other platforms, use the shell script approach (may not work for all)
+        // This is a fallback that may not pass magic number checks
     }
     
     // Step 3: Set the new version as default (this is what the update command now does after installation)
