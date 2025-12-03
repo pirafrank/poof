@@ -241,9 +241,48 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
     // Get binary name
     let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
     
-    // Create symlink pointing to old version (simulating current state before update)
-    let binary_path_old = install_dir_old.join(binary_name);
-    fixture.create_bin_symlink(binary_name, &binary_path_old)?;
+    // Create a minimal ELF binary for the old version so it can be detected properly
+    #[cfg(target_os = "linux")]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::PermissionsExt;
+        let binary_path_old = install_dir_old.join(binary_name);
+        // Create a minimal ELF binary (ELF header: 0x7F 0x45 0x4C 0x46)
+        let elf_header: [u8; 54] = [
+            0x7F, 0x45, 0x4C, 0x46, // ELF magic number
+            0x02, // 64-bit
+            0x01, // little-endian
+            0x01, // ELF version
+            0x00, // System V ABI
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+            0x02, 0x00, // ET_EXEC (executable)
+            0x3E, 0x00, // x86-64
+            0x01, 0x00, 0x00, 0x00, // ELF version
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // entry point
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // program header offset
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // section header offset
+            0x00, 0x00, 0x00, 0x00, // flags
+            0x40, 0x00, // header size
+        ];
+        let mut file = std::fs::File::create(&binary_path_old)?;
+        file.write_all(&elf_header)?;
+        file.sync_all()?;
+        drop(file);
+        // Make it executable
+        let mut perms = std::fs::metadata(&binary_path_old)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path_old, perms)?;
+        
+        // Create symlink pointing to old version (simulating current state before update)
+        fixture.create_bin_symlink(binary_name, &binary_path_old)?;
+    }
+    
+    #[cfg(not(target_os = "linux"))]
+    {
+        // For non-Linux, use the shell script approach
+        let binary_path_old = install_dir_old.join(binary_name);
+        fixture.create_bin_symlink(binary_name, &binary_path_old)?;
+    }
     
     // Verify initial symlink points to old version
     let symlink_path = fixture.bin_dir.join(binary_name);
@@ -264,6 +303,41 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
 
     // Step 2: Create new version installation (simulating what update would do)
     let install_dir_new = fixture.create_fake_installation(repo, new_version)?;
+    
+    // Create a minimal ELF binary for the new version so it can be detected by is_exec_by_magic_number
+    // The fake installation creates a shell script, but we need an ELF binary for the "use" command to work
+    #[cfg(target_os = "linux")]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::PermissionsExt;
+        let binary_path_new = install_dir_new.join(binary_name);
+        // Create a minimal ELF binary (ELF header: 0x7F 0x45 0x4C 0x46)
+        // This is a minimal valid ELF header that will pass the magic number check
+        let elf_header: [u8; 54] = [
+            0x7F, 0x45, 0x4C, 0x46, // ELF magic number
+            0x02, // 64-bit
+            0x01, // little-endian
+            0x01, // ELF version
+            0x00, // System V ABI
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
+            0x02, 0x00, // ET_EXEC (executable)
+            0x3E, 0x00, // x86-64
+            0x01, 0x00, 0x00, 0x00, // ELF version
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // entry point
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // program header offset
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // section header offset
+            0x00, 0x00, 0x00, 0x00, // flags
+            0x40, 0x00, // header size
+        ];
+        let mut file = std::fs::File::create(&binary_path_new)?;
+        file.write_all(&elf_header)?;
+        file.sync_all()?;
+        drop(file);
+        // Make it executable
+        let mut perms = std::fs::metadata(&binary_path_new)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path_new, perms)?;
+    }
     
     // Step 3: Set the new version as default (this is what the update command now does after installation)
     // We use the "use" command to simulate this behavior, which is what update internally calls
