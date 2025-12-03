@@ -1,12 +1,12 @@
 //! Unit tests for the 'version' command
 
-use assert_cmd::prelude::*;
+use assert_cmd::{assert::OutputAssertExt, cargo};
 use predicates::prelude::*;
 use std::process::Command;
 
 #[test]
 fn test_version_flag() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("--version")
         .assert()
         .success()
@@ -20,7 +20,7 @@ fn test_version_flag() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn test_upper_v_version_flag() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("-V")
         .assert()
         .success()
@@ -34,7 +34,7 @@ fn test_upper_v_version_flag() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn test_version_command_exists() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("version")
         .assert()
         .success()
@@ -48,7 +48,7 @@ fn test_version_command_exists() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn test_version_command_with_extra_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     // Version command should ignore extra args or fail gracefully
     cmd.arg("version").arg("extra").assert().failure(); // clap should reject extra positional args
     Ok(())

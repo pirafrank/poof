@@ -1,6 +1,6 @@
 //! Integration tests for the 'install' command
 
-use assert_cmd::prelude::*;
+use assert_cmd::{assert::OutputAssertExt, cargo};
 use serial_test::serial;
 use std::process::Command;
 
@@ -11,7 +11,7 @@ use super::common::repo_format_validation::*;
 #[serial]
 #[test]
 fn test_install_requires_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("install").assert().failure();
     Ok(())
 }
@@ -32,7 +32,7 @@ fn test_install_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::er
 #[test]
 fn test_install_with_tag() -> Result<(), Box<dyn std::error::Error>> {
     // Test that --tag flag is accepted
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("install")
         .arg("user/repo")
@@ -57,7 +57,7 @@ fn test_install_creates_directories() -> Result<(), Box<dyn std::error::Error>> 
     let fixture = TestFixture::new()?;
 
     // Even if install fails (network, etc.), it should attempt to create cache/data dirs
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let _output = cmd
         .arg("install")
         .arg("nonexistent/repo")

@@ -1,6 +1,6 @@
 //! Integration tests for the 'download' command
 
-use assert_cmd::prelude::*;
+use assert_cmd::{assert::OutputAssertExt, cargo};
 use serial_test::serial;
 use std::process::Command;
 
@@ -10,7 +10,7 @@ use super::common::repo_format_validation::*;
 #[serial]
 #[test]
 fn test_download_requires_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("download").assert().failure();
     Ok(())
 }
@@ -31,7 +31,7 @@ fn test_download_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::e
 #[test]
 fn test_download_with_tag() -> Result<(), Box<dyn std::error::Error>> {
     // Test that --tag flag is accepted
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("download")
         .arg("user/repo")

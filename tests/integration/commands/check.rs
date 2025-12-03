@@ -1,6 +1,6 @@
 //! Unit tests for the 'check' command
 
-use assert_cmd::prelude::*;
+use assert_cmd::{assert::OutputAssertExt, cargo};
 use std::process::Command;
 use tempfile::TempDir;
 
@@ -12,7 +12,7 @@ fn test_check_warns_when_not_in_path() -> Result<(), Box<dyn std::error::Error>>
     let xdg_data_home = temp_dir.path().join(".local").join("share");
     let path = "/usr/bin:/bin"; // PATH without poof's bin dir
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("check")
         .env("HOME", home)
@@ -33,14 +33,14 @@ fn test_check_warns_when_not_in_path() -> Result<(), Box<dyn std::error::Error>>
 
 #[test]
 fn test_check_command_no_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("check").assert().success();
     Ok(())
 }
 
 #[test]
 fn test_check_command_with_extra_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     // Check command should ignore extra args or fail gracefully
     cmd.arg("check").arg("extra").assert().failure(); // clap should reject extra positional args
     Ok(())

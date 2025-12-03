@@ -1,6 +1,6 @@
 //! Integration tests for the 'list' command
 
-use assert_cmd::prelude::*;
+use assert_cmd::cargo;
 use serial_test::serial;
 use std::process::Command;
 
@@ -14,7 +14,7 @@ fn test_list_with_non_existing_data_dir() -> Result<(), Box<dyn std::error::Erro
 
     // Do NOT create data dir
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("list")
         .env("HOME", fixture.home_dir.to_str().unwrap())
@@ -42,7 +42,7 @@ fn test_list_with_non_existing_data_dir() -> Result<(), Box<dyn std::error::Erro
 fn test_list_with_no_installations() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("list")
         .env("HOME", fixture.home_dir.to_str().unwrap())
@@ -84,7 +84,7 @@ fn test_list_with_single_installation() -> Result<(), Box<dyn std::error::Error>
     let version = "1.0.0";
     fixture.create_fake_installation(repo, version)?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("list")
         .env("HOME", fixture.home_dir.to_str().unwrap())
@@ -126,7 +126,7 @@ fn test_list_with_multiple_installations() -> Result<(), Box<dyn std::error::Err
     fixture.create_fake_installation("user1/repo1", "2.0.0")?;
     fixture.create_fake_installation("user2/repo2", "1.5.0")?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("list")
         .env("HOME", fixture.home_dir.to_str().unwrap())
@@ -170,7 +170,7 @@ fn test_list_output_format() -> Result<(), Box<dyn std::error::Error>> {
 
     fixture.create_fake_installation("test/repo", "1.0.0")?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("list")
         .env("HOME", fixture.home_dir.to_str().unwrap())
@@ -207,7 +207,7 @@ fn test_list_with_corrupted_directory_structure() -> Result<(), Box<dyn std::err
     std::fs::create_dir_all(bad_path.parent().unwrap())?;
     std::fs::write(&bad_path, b"not a directory")?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("list")
         .env("HOME", fixture.home_dir.to_str().unwrap())
