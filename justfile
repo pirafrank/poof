@@ -24,6 +24,10 @@ test:
 test-integration:
   cargo test --test integration -- --nocapture
 
+# Get errors and warnings without running the tests
+warnings:
+  cargo test --no-run 2>&1 | grep -A 5 "warning\|error" || true
+
 # Run the formatter
 fmt:
   cargo fmt
@@ -53,14 +57,24 @@ pre-push: build test
 pre-push-tag:
   hooks_scripts/pre-push-tag.sh
 
-# Generate changelog (git-cliff required)
+# The following recipe requires git-cliff.
+# Generate changelog
 changelog version:
   git cliff --tag {{version}} -o CHANGELOG.md
   glow CHANGELOG.md | less
 
 # Prepare release
 prepare-release version:
+  git cliff --tag {{version}} -o CHANGELOG.md
+  nvim CHANGELOG.md
   cargo set-version {{version}}
+  git add Cargo.toml Cargo.lock CHANGELOG.md
+  git commit -S -m "chore(release): prepare for {{version}}"
+
+# Make and tag a release
+make-release version:
+  git checkout main
+  git tag -s -a v{{version}} -m "{{version}}"
 
 # Build for release
 release:
