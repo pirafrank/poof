@@ -1,5 +1,5 @@
 use crate::{
-    commands::{self, list::list_installed_assets},
+    commands::{self, list::list_installed_assets, make_default},
     constants::APP_NAME,
     github::client::get_release,
     models::asset::Asset,
@@ -84,8 +84,16 @@ fn update_single_repo(repo: &str) -> Result<()> {
                 latest_version_str, repo
             )
         })?;
+        // 5. set the newly installed version as the default (active) version
+        let stripped_version = latest_version_str.strip_v();
+        make_default::set_default(repo, &stripped_version).with_context(|| {
+            format!(
+                "Failed to set version {} as default for {}",
+                stripped_version, repo
+            )
+        })?;
         info!(
-            "Successfully updated {} to version {}",
+            "Successfully updated {} to version {} and set it as default",
             repo, latest_version
         );
     } else {
