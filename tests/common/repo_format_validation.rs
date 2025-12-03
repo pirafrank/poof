@@ -3,7 +3,7 @@
 //! These functions can be used to test repository format validation
 //! across different commands (install, update, download, etc.)
 
-use assert_cmd::prelude::*;
+use assert_cmd::cargo;
 use std::process::Command;
 
 /// Test that various invalid repository formats are rejected by a command
@@ -30,7 +30,7 @@ pub fn test_invalid_repo_formats_for_command(
     ];
 
     for invalid in invalid_formats {
-        let mut cmd = Command::cargo_bin("poof")?;
+        let mut cmd = Command::new(cargo::cargo_bin!("poof"));
         let output = cmd.arg(command).arg(invalid).output()?;
         assert!(
             !output.status.success(),
@@ -67,7 +67,7 @@ pub fn test_valid_repo_formats_for_command(
     ];
 
     for valid in valid_formats {
-        let mut cmd = Command::cargo_bin("poof")?;
+        let mut cmd = Command::new(cargo::cargo_bin!("poof"));
         let output = cmd.arg(command).arg(valid).output()?;
         let stderr = String::from_utf8_lossy(&output.stderr);
 

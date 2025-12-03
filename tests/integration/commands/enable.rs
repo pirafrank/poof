@@ -1,6 +1,6 @@
 //! Integration tests for the 'enable' command
 
-use assert_cmd::prelude::*;
+use assert_cmd::cargo;
 use serial_test::serial;
 use std::fs;
 use std::process::Command;
@@ -28,7 +28,7 @@ fn test_enable_creates_bashrc_entry() -> Result<(), Box<dyn std::error::Error>> 
         .join("bin");
     fs::create_dir_all(&bin_dir)?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("enable")
         .env("HOME", temp_home.path())
         .env("SHELL", "/bin/bash");
@@ -89,7 +89,7 @@ fn test_enable_creates_zshrc_entry() -> Result<(), Box<dyn std::error::Error>> {
         .join("bin");
     fs::create_dir_all(&bin_dir)?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("enable")
         .env("HOME", temp_home.path())
         .env("SHELL", "/usr/bin/zsh");
@@ -151,7 +151,7 @@ fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(&bin_dir)?;
 
     // Run enable twice
-    let mut cmd1 = Command::cargo_bin("poof")?;
+    let mut cmd1 = Command::new(cargo::cargo_bin!("poof"));
     cmd1.arg("enable")
         .env("HOME", temp_home.path())
         .env("SHELL", "/bin/bash");
@@ -164,7 +164,7 @@ fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     }
     cmd1.output()?;
 
-    let mut cmd2 = Command::cargo_bin("poof")?;
+    let mut cmd2 = Command::new(cargo::cargo_bin!("poof"));
     cmd2.arg("enable")
         .env("HOME", temp_home.path())
         .env("SHELL", "/bin/bash");
@@ -223,7 +223,7 @@ fn test_enable_preserves_existing_content() -> Result<(), Box<dyn std::error::Er
     let bashrc_path = temp_home.path().join(".bashrc");
     fs::write(&bashrc_path, "PRE_EXISTING_LINE\n")?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("enable")
         .env("HOME", temp_home.path())
         .env("SHELL", "/bin/bash");
@@ -275,7 +275,7 @@ fn test_enable_zsh_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(&bin_dir)?;
 
     // Run enable twice with zsh
-    let mut cmd1 = Command::cargo_bin("poof")?;
+    let mut cmd1 = Command::new(cargo::cargo_bin!("poof"));
     cmd1.arg("enable")
         .env("HOME", temp_home.path())
         .env("SHELL", "/usr/bin/zsh");
@@ -288,7 +288,7 @@ fn test_enable_zsh_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     }
     cmd1.output()?;
 
-    let mut cmd2 = Command::cargo_bin("poof")?;
+    let mut cmd2 = Command::new(cargo::cargo_bin!("poof"));
     cmd2.arg("enable")
         .env("HOME", temp_home.path())
         .env("SHELL", "/usr/bin/zsh");
@@ -343,7 +343,7 @@ fn test_enable_unknown_shell_defaults_to_bash() -> Result<(), Box<dyn std::error
         .join("bin");
     fs::create_dir_all(&bin_dir)?;
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("enable")
         .env("HOME", temp_home.path())
         .env("SHELL", "/usr/bin/unknown-shell");

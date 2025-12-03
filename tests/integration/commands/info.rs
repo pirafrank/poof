@@ -1,12 +1,12 @@
 //! Unit tests for the 'info' command
 
-use assert_cmd::prelude::*;
+use assert_cmd::{assert::OutputAssertExt, cargo};
 use predicates::prelude::*;
 use std::process::Command;
 
 #[test]
 fn test_info_command_exists() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("info")
         .assert()
         .success()
@@ -17,7 +17,7 @@ fn test_info_command_exists() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn test_info_shows_platform_information() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd.arg("info").output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -37,7 +37,7 @@ fn test_info_shows_platform_information() -> Result<(), Box<dyn std::error::Erro
 
 #[test]
 fn test_info_shows_environment_information() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd.arg("info").output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -56,7 +56,7 @@ fn test_info_shows_environment_information() -> Result<(), Box<dyn std::error::E
 
 #[test]
 fn test_info_shows_directory_information() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd.arg("info").output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -74,14 +74,14 @@ fn test_info_shows_directory_information() -> Result<(), Box<dyn std::error::Err
 
 #[test]
 fn test_info_command_no_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("info").assert().success();
     Ok(())
 }
 
 #[test]
 fn test_info_command_with_extra_args() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     // Info command should ignore extra args or fail gracefully
     cmd.arg("info").arg("extra").assert().failure(); // clap should reject extra positional args
     Ok(())

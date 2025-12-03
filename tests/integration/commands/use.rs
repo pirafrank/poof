@@ -1,7 +1,7 @@
 //! Integration tests for the 'use' command (make_default)
 //! Note: module named make_default because 'use' is a Rust keyword
 
-use assert_cmd::prelude::*;
+use assert_cmd::{assert::OutputAssertExt, cargo};
 use predicates::prelude::*;
 use serial_test::serial;
 use std::process::Command;
@@ -11,7 +11,7 @@ use super::common::fixtures::test_env::TestFixture;
 
 #[test]
 fn test_use_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("use")
         .assert()
         .failure()
@@ -21,7 +21,7 @@ fn test_use_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
 
 #[test]
 fn test_use_missing_version() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("use")
         .arg("testuser/testrepo")
         .assert()
@@ -36,7 +36,7 @@ fn test_use_requires_installation() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
 
     // Try to use a version that doesn't exist
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("use")
         .arg("nonexistent/repo")
@@ -87,7 +87,7 @@ fn test_use_with_nonexistent_version() -> Result<(), Box<dyn std::error::Error>>
         "Version 1 binary should exist"
     );
 
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("use")
         .arg(repo)
@@ -146,7 +146,7 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Use version 2.0.0 as default
-    let mut cmd = Command::cargo_bin("poof")?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     let output = cmd
         .arg("use")
         .arg(repo)
