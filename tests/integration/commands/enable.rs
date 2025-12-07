@@ -11,25 +11,35 @@ use tempfile::TempDir;
 fn test_enable_creates_bashrc_entry() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
 
-    // Create bin directory structure
+    // Create bin directory structure (platform-specific)
+    #[cfg(target_os = "linux")]
     let bin_dir = temp_home
         .path()
         .join(".local")
         .join("share")
         .join("poof")
         .join("bin");
+    #[cfg(target_os = "macos")]
+    let bin_dir = temp_home
+        .path()
+        .join("Library")
+        .join("Application Support")
+        .join("poof")
+        .join("bin");
     fs::create_dir_all(&bin_dir)?;
 
     let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd
-        .arg("enable")
+    cmd.arg("enable")
         .env("HOME", temp_home.path())
-        .env("SHELL", "/bin/bash")
-        .env(
+        .env("SHELL", "/bin/bash");
+    #[cfg(target_os = "linux")]
+    {
+        cmd.env(
             "XDG_DATA_HOME",
             temp_home.path().join(".local").join("share"),
-        )
-        .output()?;
+        );
+    }
+    let output = cmd.output()?;
 
     assert!(output.status.success(), "Enable command should succeed");
 
@@ -62,25 +72,35 @@ fn test_enable_creates_bashrc_entry() -> Result<(), Box<dyn std::error::Error>> 
 fn test_enable_creates_zshrc_entry() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
 
-    // Create bin directory structure
+    // Create bin directory structure (platform-specific)
+    #[cfg(target_os = "linux")]
     let bin_dir = temp_home
         .path()
         .join(".local")
         .join("share")
         .join("poof")
         .join("bin");
+    #[cfg(target_os = "macos")]
+    let bin_dir = temp_home
+        .path()
+        .join("Library")
+        .join("Application Support")
+        .join("poof")
+        .join("bin");
     fs::create_dir_all(&bin_dir)?;
 
     let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd
-        .arg("enable")
+    cmd.arg("enable")
         .env("HOME", temp_home.path())
-        .env("SHELL", "/usr/bin/zsh")
-        .env(
+        .env("SHELL", "/usr/bin/zsh");
+    #[cfg(target_os = "linux")]
+    {
+        cmd.env(
             "XDG_DATA_HOME",
             temp_home.path().join(".local").join("share"),
-        )
-        .output()?;
+        );
+    }
+    let output = cmd.output()?;
 
     assert!(output.status.success(), "Enable command should succeed");
 
@@ -113,11 +133,19 @@ fn test_enable_creates_zshrc_entry() -> Result<(), Box<dyn std::error::Error>> {
 fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
 
-    // Create bin directory structure
+    // Create bin directory structure (platform-specific)
+    #[cfg(target_os = "linux")]
     let bin_dir = temp_home
         .path()
         .join(".local")
         .join("share")
+        .join("poof")
+        .join("bin");
+    #[cfg(target_os = "macos")]
+    let bin_dir = temp_home
+        .path()
+        .join("Library")
+        .join("Application Support")
         .join("poof")
         .join("bin");
     fs::create_dir_all(&bin_dir)?;
@@ -126,22 +154,28 @@ fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd1 = Command::cargo_bin("poof")?;
     cmd1.arg("enable")
         .env("HOME", temp_home.path())
-        .env("SHELL", "/bin/bash")
-        .env(
+        .env("SHELL", "/bin/bash");
+    #[cfg(target_os = "linux")]
+    {
+        cmd1.env(
             "XDG_DATA_HOME",
             temp_home.path().join(".local").join("share"),
-        )
-        .output()?;
+        );
+    }
+    cmd1.output()?;
 
     let mut cmd2 = Command::cargo_bin("poof")?;
     cmd2.arg("enable")
         .env("HOME", temp_home.path())
-        .env("SHELL", "/bin/bash")
-        .env(
+        .env("SHELL", "/bin/bash");
+    #[cfg(target_os = "linux")]
+    {
+        cmd2.env(
             "XDG_DATA_HOME",
             temp_home.path().join(".local").join("share"),
-        )
-        .output()?;
+        );
+    }
+    cmd2.output()?;
 
     // Check that export line appears only once
     let bashrc_path = temp_home.path().join(".bashrc");
@@ -168,11 +202,19 @@ fn test_enable_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
 fn test_enable_preserves_existing_content() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
 
-    // Create bin directory structure
+    // Create bin directory structure (platform-specific)
+    #[cfg(target_os = "linux")]
     let bin_dir = temp_home
         .path()
         .join(".local")
         .join("share")
+        .join("poof")
+        .join("bin");
+    #[cfg(target_os = "macos")]
+    let bin_dir = temp_home
+        .path()
+        .join("Library")
+        .join("Application Support")
         .join("poof")
         .join("bin");
     fs::create_dir_all(&bin_dir)?;
@@ -182,15 +224,17 @@ fn test_enable_preserves_existing_content() -> Result<(), Box<dyn std::error::Er
     fs::write(&bashrc_path, "PRE_EXISTING_LINE\n")?;
 
     let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd
-        .arg("enable")
+    cmd.arg("enable")
         .env("HOME", temp_home.path())
-        .env("SHELL", "/bin/bash")
-        .env(
+        .env("SHELL", "/bin/bash");
+    #[cfg(target_os = "linux")]
+    {
+        cmd.env(
             "XDG_DATA_HOME",
             temp_home.path().join(".local").join("share"),
-        )
-        .output()?;
+        );
+    }
+    let output = cmd.output()?;
 
     assert!(output.status.success(), "Enable command should succeed");
 
@@ -213,11 +257,19 @@ fn test_enable_preserves_existing_content() -> Result<(), Box<dyn std::error::Er
 fn test_enable_zsh_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
 
-    // Create bin directory structure
+    // Create bin directory structure (platform-specific)
+    #[cfg(target_os = "linux")]
     let bin_dir = temp_home
         .path()
         .join(".local")
         .join("share")
+        .join("poof")
+        .join("bin");
+    #[cfg(target_os = "macos")]
+    let bin_dir = temp_home
+        .path()
+        .join("Library")
+        .join("Application Support")
         .join("poof")
         .join("bin");
     fs::create_dir_all(&bin_dir)?;
@@ -226,22 +278,28 @@ fn test_enable_zsh_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd1 = Command::cargo_bin("poof")?;
     cmd1.arg("enable")
         .env("HOME", temp_home.path())
-        .env("SHELL", "/usr/bin/zsh")
-        .env(
+        .env("SHELL", "/usr/bin/zsh");
+    #[cfg(target_os = "linux")]
+    {
+        cmd1.env(
             "XDG_DATA_HOME",
             temp_home.path().join(".local").join("share"),
-        )
-        .output()?;
+        );
+    }
+    cmd1.output()?;
 
     let mut cmd2 = Command::cargo_bin("poof")?;
     cmd2.arg("enable")
         .env("HOME", temp_home.path())
-        .env("SHELL", "/usr/bin/zsh")
-        .env(
+        .env("SHELL", "/usr/bin/zsh");
+    #[cfg(target_os = "linux")]
+    {
+        cmd2.env(
             "XDG_DATA_HOME",
             temp_home.path().join(".local").join("share"),
-        )
-        .output()?;
+        );
+    }
+    cmd2.output()?;
 
     // Check that export line appears only once
     let zshrc_path = temp_home.path().join(".zshrc");
@@ -268,25 +326,35 @@ fn test_enable_zsh_is_idempotent() -> Result<(), Box<dyn std::error::Error>> {
 fn test_enable_unknown_shell_defaults_to_bash() -> Result<(), Box<dyn std::error::Error>> {
     let temp_home = TempDir::new()?;
 
-    // Create bin directory structure
+    // Create bin directory structure (platform-specific)
+    #[cfg(target_os = "linux")]
     let bin_dir = temp_home
         .path()
         .join(".local")
         .join("share")
         .join("poof")
         .join("bin");
+    #[cfg(target_os = "macos")]
+    let bin_dir = temp_home
+        .path()
+        .join("Library")
+        .join("Application Support")
+        .join("poof")
+        .join("bin");
     fs::create_dir_all(&bin_dir)?;
 
     let mut cmd = Command::cargo_bin("poof")?;
-    let output = cmd
-        .arg("enable")
+    cmd.arg("enable")
         .env("HOME", temp_home.path())
-        .env("SHELL", "/usr/bin/unknown-shell")
-        .env(
+        .env("SHELL", "/usr/bin/unknown-shell");
+    #[cfg(target_os = "linux")]
+    {
+        cmd.env(
             "XDG_DATA_HOME",
             temp_home.path().join(".local").join("share"),
-        )
-        .output()?;
+        );
+    }
+    let output = cmd.output()?;
 
     assert!(output.status.success(), "Enable command should succeed");
 

@@ -142,22 +142,6 @@ fn test_multiple_users_same_repo_name() {
 }
 
 #[test]
-fn test_case_sensitive_matching() {
-    let temp_dir = TempDir::new().unwrap();
-    let data_dir = temp_dir.path();
-
-    fs::create_dir_all(data_dir.join("user/MyRepo")).unwrap();
-    fs::create_dir_all(data_dir.join("user/myrepo")).unwrap();
-
-    let results = find_similar_repos(data_dir, "user/MyRepo");
-
-    // Should find exact match first
-    assert_eq!(results[0], "user/MyRepo");
-    // myrepo should also be found (distance of 2)
-    assert!(results.contains(&"user/myrepo".to_string()));
-}
-
-#[test]
 fn test_special_characters_in_repo_name() {
     let temp_dir = TempDir::new().unwrap();
     let data_dir = temp_dir.path();

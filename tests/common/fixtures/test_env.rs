@@ -37,16 +37,38 @@ impl TestFixture {
         // Note: data_dir includes "github.com" subdir. Let's pretend all
         // fake binaries come from GitHub because original source doesn't really matter
         // in fake environment tests.
+        // Platform-specific paths:
+        // - Linux: ~/.local/share/poof/data/github.com
+        // - macOS: ~/Library/Application Support/poof/data/github.com
+        #[cfg(target_os = "linux")]
         let data_dir = home_dir
             .join(".local")
             .join("share")
             .join("poof")
             .join("data")
             .join("github.com");
+        #[cfg(target_os = "linux")]
         let cache_dir = home_dir.join(".cache").join("poof");
+        #[cfg(target_os = "linux")]
         let bin_dir = home_dir
             .join(".local")
             .join("share")
+            .join("poof")
+            .join("bin");
+
+        #[cfg(target_os = "macos")]
+        let data_dir = home_dir
+            .join("Library")
+            .join("Application Support")
+            .join("poof")
+            .join("data")
+            .join("github.com");
+        #[cfg(target_os = "macos")]
+        let cache_dir = home_dir.join("Library").join("Caches").join("poof");
+        #[cfg(target_os = "macos")]
+        let bin_dir = home_dir
+            .join("Library")
+            .join("Application Support")
             .join("poof")
             .join("bin");
 

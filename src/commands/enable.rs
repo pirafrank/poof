@@ -73,19 +73,25 @@ pub fn run() {
 mod tests {
     use super::run;
     use crate::files::datadirs::get_bin_dir;
-    use serial_test::serial;
-    use std::{env, fs};
+    use std::fs;
     use tempfile::TempDir;
 
     /// prepare HOME and XDG_DATA_HOME, then create the real bin dir
-    fn create_fake_bin(home: &TempDir) {
+    /// Returns the bin directory path
+    fn create_fake_bin(home: &TempDir) -> std::path::PathBuf {
         // point datadirs::get_bin_dir() at our temp dir
-        env::set_var("HOME", home.path());
-        env::set_var("XDG_DATA_HOME", home.path());
-
-        // now this is "<temp>/poof/bin"
-        let bin = get_bin_dir().unwrap();
-        fs::create_dir_all(&bin).unwrap();
+        temp_env::with_vars(
+            [
+                ("HOME", Some(home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(home.path().to_str().unwrap())),
+            ],
+            || {
+                // now this is "<temp>/poof/bin"
+                let bin = get_bin_dir().unwrap();
+                fs::create_dir_all(&bin).unwrap();
+                bin
+            },
+        )
     }
 
     /// read the contents of the given rc‐file
@@ -93,43 +99,64 @@ mod tests {
         fs::read_to_string(rc).unwrap_or_default()
     }
 
-    #[serial]
     #[test]
     /// test that bashrc is written to and running twice doesn't duplicate
     fn bashrc_idempotent() {
         let temp_home = TempDir::new().unwrap();
-        // shell + HOME are set inside create_fake_bin
-        create_fake_bin(&temp_home);
-        env::set_var("SHELL", "/bin/bash");
+        let _bin = create_fake_bin(&temp_home);
 
-        // run twice for idempotence
-        run();
-        run();
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+                ("SHELL", Some("/bin/bash")),
+            ],
+            || {
+                // run twice for idempotence
+                run();
+                run();
+            },
+        );
 
         let rc_path = temp_home.path().join(".bashrc");
         let contents = get_rc_contents(&rc_path);
 
         // Build the exact expected export from the same helper
-        let binding = get_bin_dir().unwrap();
-        let bin = binding.to_string_lossy();
-        let expected = format!("export PATH=\"{}:$PATH\"", bin);
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+            ],
+            || {
+                let binding = get_bin_dir().unwrap();
+                let bin = binding.to_string_lossy();
+                let expected = format!("export PATH=\"{}:$PATH\"", bin);
 
-        assert_eq!(
-            contents.matches(&expected).count(),
-            1,
-            "export line should appear exactly once"
+                assert_eq!(
+                    contents.matches(&expected).count(),
+                    1,
+                    "export line should appear exactly once"
+                );
+            },
         );
     }
 
-    #[serial]
     #[test]
     /// test that zshrc is written to
     fn writes_to_zshrc() {
         let temp_home = TempDir::new().unwrap();
-        create_fake_bin(&temp_home);
-        env::set_var("SHELL", "/usr/bin/zsh");
+        let _bin = create_fake_bin(&temp_home);
 
-        run();
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+                ("SHELL", Some("/usr/bin/zsh")),
+            ],
+            || {
+                run();
+            },
+        );
 
         let rc_path = temp_home.path().join(".zshrc");
         let contents = get_rc_contents(&rc_path);
@@ -139,40 +166,62 @@ mod tests {
         );
     }
 
-    #[serial]
     #[test]
     /// test that zshrc is written to and running twice doesn't duplicate
     fn zsh_idempotent() {
         let temp_home = TempDir::new().unwrap();
-        create_fake_bin(&temp_home);
-        env::set_var("SHELL", "/usr/bin/zsh");
+        let _bin = create_fake_bin(&temp_home);
 
-        run();
-        run();
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+                ("SHELL", Some("/usr/bin/zsh")),
+            ],
+            || {
+                run();
+                run();
+            },
+        );
 
         let rc_path = temp_home.path().join(".zshrc");
         let contents = get_rc_contents(&rc_path);
 
-        let binding = get_bin_dir().unwrap();
-        let bin = binding.to_string_lossy();
-        let line = format!("export PATH=\"{}:$PATH\"", bin);
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+            ],
+            || {
+                let binding = get_bin_dir().unwrap();
+                let bin = binding.to_string_lossy();
+                let line = format!("export PATH=\"{}:$PATH\"", bin);
 
-        assert_eq!(
-            contents.matches(&line).count(),
-            1,
-            "zsh idempotence: export line should appear exactly once"
+                assert_eq!(
+                    contents.matches(&line).count(),
+                    1,
+                    "zsh idempotence: export line should appear exactly once"
+                );
+            },
         );
     }
 
-    #[serial]
     #[test]
     /// test that unknown shell defaults to bash
     fn unknown_shell_defaults_to_bash() {
         let temp_home = TempDir::new().unwrap();
-        create_fake_bin(&temp_home);
-        env::remove_var("SHELL");
+        let _bin = create_fake_bin(&temp_home);
 
-        run();
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+                ("SHELL", None), // Remove SHELL var
+            ],
+            || {
+                run();
+            },
+        );
 
         let contents = get_rc_contents(&temp_home.path().join(".bashrc"));
         assert!(
@@ -181,43 +230,66 @@ mod tests {
         );
     }
 
-    #[serial]
     #[test]
     /// test that existing rc file content is preserved
     fn preserves_existing_content() {
         let temp_home = TempDir::new().unwrap();
-        create_fake_bin(&temp_home);
-        env::set_var("SHELL", "/bin/bash");
+        let _bin = create_fake_bin(&temp_home);
 
         // Pre-seed .bashrc
         let rc_path = temp_home.path().join(".bashrc");
         fs::write(&rc_path, "PRE_EXISTING_LINE\n").unwrap();
 
-        run();
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+                ("SHELL", Some("/bin/bash")),
+            ],
+            || {
+                run();
+            },
+        );
 
         let contents = get_rc_contents(&rc_path);
-        let binding = get_bin_dir().unwrap();
-        let bin = binding.to_string_lossy();
 
-        assert!(
-            contents.contains("PRE_EXISTING_LINE"),
-            "existing content must be preserved"
-        );
-        assert!(
-            contents.contains(&format!("export PATH=\"{}:$PATH\"", bin)),
-            "export line must be appended"
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+            ],
+            || {
+                let binding = get_bin_dir().unwrap();
+                let bin = binding.to_string_lossy();
+
+                assert!(
+                    contents.contains("PRE_EXISTING_LINE"),
+                    "existing content must be preserved"
+                );
+                assert!(
+                    contents.contains(&format!("export PATH=\"{}:$PATH\"", bin)),
+                    "export line must be appended"
+                );
+            },
         );
     }
 
-    #[serial]
     #[test]
     /// test that comment marker is added to rc file
     fn adds_comment_marker() {
         let temp_home = TempDir::new().unwrap();
-        create_fake_bin(&temp_home);
-        env::set_var("SHELL", "/bin/bash");
+        let _bin = create_fake_bin(&temp_home);
 
-        run();
+        temp_env::with_vars(
+            [
+                ("HOME", Some(temp_home.path().to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
+                ("SHELL", Some("/bin/bash")),
+            ],
+            || {
+                run();
+            },
+        );
 
         let contents = get_rc_contents(&temp_home.path().join(".bashrc"));
         assert!(
