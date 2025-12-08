@@ -185,7 +185,14 @@ fn install_binary(
     // TODO: this Result may be an Err variant, which should be handled
     // for now, we just use let _ = to ignore the resulting value
     // but it is rrealy important to handle it
-    let _ = filesys::copy_file(exec, &installed_exec);
+    filesys::copy_file(exec, &installed_exec).map_err(|e| {
+        anyhow!(
+            "Failed to copy {} to install dir ({}): {}",
+            exec.display(),
+            installed_exec.display(),
+            e
+        )
+    })?;
 
     let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
 
