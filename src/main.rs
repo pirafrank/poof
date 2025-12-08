@@ -196,7 +196,7 @@ fn run() -> Result<()> {
                 &args.repo,
                 args.tag.as_deref().unwrap_or("(latest)")
             );
-            commands::install::process_install(&args.repo, args.tag.as_deref())?;
+            commands::install::install(&args.repo, args.tag.as_deref())?;
         }
         Cmd::Use(args) => {
             let version = &args.version;
