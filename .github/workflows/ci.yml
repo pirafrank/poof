@@ -33,18 +33,8 @@ jobs:
       - name: Clone repo
         uses: actions/checkout@v4
 
-      - name: Extract toolchain channel
-        id: extract_toolchain
-        shell: bash
-        run: |
-          TOOLCHAIN_CHANNEL=$(grep 'channel' rust-toolchain.toml | cut -d '"' -f 2)
-          echo "Toolchain channel: $TOOLCHAIN_CHANNEL"
-          echo "TOOLCHAIN_CHANNEL=$TOOLCHAIN_CHANNEL" >> $GITHUB_OUTPUT
-
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: ${{ steps.extract_toolchain.outputs.TOOLCHAIN_CHANNEL }}
 
       - name: Setup just runner
         uses: extractions/setup-just@v2
