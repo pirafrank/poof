@@ -1,6 +1,7 @@
 use std::{fs::File, io::Read, path::Path};
 
 // Magic number constants for file format detection
+pub const SHEBANG_MAGIC: &[u8] = &[0x23, 0x21]; // "#!"
 
 #[cfg(target_os = "macos")]
 pub const MACHO_MAGIC_NUMBERS: &[[u8; 4]] = &[
@@ -54,6 +55,9 @@ pub fn is_exec_by_magic_number(path: &Path) -> bool {
     if let Ok(mut file) = File::open(path) {
         let mut buffer = [0u8; 4];
         if file.read_exact(&mut buffer).is_ok() {
+            if buffer.starts_with(SHEBANG_MAGIC) {
+                return true;
+            }
             return is_exec_magic(&buffer);
         }
     }
