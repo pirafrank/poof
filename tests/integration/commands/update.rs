@@ -127,8 +127,8 @@ fn test_update_self_checks_for_updates() -> Result<(), Box<dyn std::error::Error
     // 3. Fail gracefully on network error (but not crash)
     // The key is that it should not crash or produce unexpected errors
     assert!(
-        stdout.contains("Fairy Council") 
-            || stdout.contains("up-to-date") 
+        stdout.contains("Fairy Council")
+            || stdout.contains("up-to-date")
             || stdout.contains("version")
             || stderr.contains("Failed")
             || stderr.contains("network")
@@ -175,7 +175,7 @@ fn test_update_self_version_comparison() -> Result<(), Box<dyn std::error::Error
     // Either "up-to-date", "version", or error about version parsing
     // The command should attempt to check versions even if network fails
     // We're lenient here since network errors are acceptable in test environments
-    let _has_version_info = stdout.contains("version") 
+    let _has_version_info = stdout.contains("version")
         || stdout.contains("up-to-date")
         || stdout.contains("Updating")
         || stderr.contains("version")

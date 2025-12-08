@@ -3,10 +3,8 @@ use crate::{
     constants::APP_NAME,
     core::selector::is_env_compatible,
     files::{
-        archives::extract_to_dir,
-        filesys::find_exec_files_from_extracted_archive,
-        magic::is_exec_by_magic_number,
-        utils::get_stem_name_trimmed_at_first_separator,
+        archives::extract_to_dir, filesys::find_exec_files_from_extracted_archive,
+        magic::is_exec_by_magic_number, utils::get_stem_name_trimmed_at_first_separator,
     },
     github::client::{get_asset, get_release},
     models::asset::Asset,
@@ -201,18 +199,30 @@ fn update_self() -> Result<()> {
     let latest_release = get_release(repo, None)
         .with_context(|| "Failed to get latest release information for poof")?;
     let latest_version_str = latest_release.tag_name();
-    let latest_version = Version::parse(latest_version_str.strip_v().as_str())
-        .with_context(|| format!("Failed to parse latest release tag '{}' as semver", latest_version_str))?;
+    let latest_version =
+        Version::parse(latest_version_str.strip_v().as_str()).with_context(|| {
+            format!(
+                "Failed to parse latest release tag '{}' as semver",
+                latest_version_str
+            )
+        })?;
 
-    let current_version_parsed = Version::parse(current_version)
-        .with_context(|| format!("Failed to parse current version '{}' as semver", current_version))?;
+    let current_version_parsed = Version::parse(current_version).with_context(|| {
+        format!(
+            "Failed to parse current version '{}' as semver",
+            current_version
+        )
+    })?;
 
     info!("Current version: {}", current_version);
     info!("Latest available version: {}", latest_version);
 
     // Check if update is needed
     if latest_version <= current_version_parsed {
-        info!("{} is already up-to-date (version {}).", APP_NAME, current_version);
+        info!(
+            "{} is already up-to-date (version {}).",
+            APP_NAME, current_version
+        );
         return Ok(());
     }
 
@@ -222,17 +232,31 @@ fn update_self() -> Result<()> {
     );
 
     // Find compatible asset
-    let binary = get_asset(&latest_release, is_env_compatible)
-        .with_context(|| format!("Failed to find compatible asset for release {}", latest_version_str))?;
+    let binary = get_asset(&latest_release, is_env_compatible).with_context(|| {
+        format!(
+            "Failed to find compatible asset for release {}",
+            latest_version_str
+        )
+    })?;
 
     // Create a temporary directory for downloading
     let temp_dir = std::env::temp_dir().join(format!("poof-update-{}", latest_version_str));
-    std::fs::create_dir_all(&temp_dir)
-        .with_context(|| format!("Failed to create temporary directory {}", temp_dir.display()))?;
+    std::fs::create_dir_all(&temp_dir).with_context(|| {
+        format!(
+            "Failed to create temporary directory {}",
+            temp_dir.display()
+        )
+    })?;
 
     // Download the binary
-    download_binary(binary.name(), binary.browser_download_url(), &temp_dir)
-        .with_context(|| format!("Failed to download binary for version {}", latest_version_str))?;
+    download_binary(binary.name(), binary.browser_download_url(), &temp_dir).with_context(
+        || {
+            format!(
+                "Failed to download binary for version {}",
+                latest_version_str
+            )
+        },
+    )?;
 
     let downloaded_file = temp_dir.join(binary.name());
     let new_binary_path = if is_exec_by_magic_number(&downloaded_file) {
@@ -241,7 +265,10 @@ fn update_self() -> Result<()> {
         downloaded_file
     } else {
         // Archive - extract and find the binary
-        debug!("Downloaded file {} is an archive. Extracting...", binary.name());
+        debug!(
+            "Downloaded file {} is an archive. Extracting...",
+            binary.name()
+        );
         extract_to_dir(&downloaded_file, &temp_dir)
             .map_err(|e| anyhow!("Failed to extract archive: {}", e))?;
 
@@ -269,12 +296,20 @@ fn update_self() -> Result<()> {
 
     // Use self_replace to replace the current executable
     info!("Replacing current executable with new version...");
-    self_replace::self_replace(&new_binary_path)
-        .with_context(|| format!("Failed to replace executable with {}", new_binary_path.display()))?;
+    self_replace::self_replace(&new_binary_path).with_context(|| {
+        format!(
+            "Failed to replace executable with {}",
+            new_binary_path.display()
+        )
+    })?;
 
     // Clean up temporary directory
     if let Err(e) = std::fs::remove_dir_all(&temp_dir) {
-        debug!("Failed to clean up temporary directory {}: {}", temp_dir.display(), e);
+        debug!(
+            "Failed to clean up temporary directory {}: {}",
+            temp_dir.display(),
+            e
+        );
     }
 
     info!(
