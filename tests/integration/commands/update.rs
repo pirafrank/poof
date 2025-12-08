@@ -370,11 +370,14 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
                     expected_binary_path.display()
                 );
             } else {
-                // If symlink doesn't exist, that's also acceptable - the test verifies the behavior
-                // when the command succeeds
+                // make the test fail
+                panic!("Symlink should exist after update");
             }
         }
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        {
+            panic!("This test is only supported on Linux and macOS");
+        }
     }
-
     Ok(())
 }
