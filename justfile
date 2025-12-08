@@ -12,6 +12,16 @@ default:
 install-hooks:
   git config core.hooksPath hooks
 
+# Install required cargo plugins for recipes to run
+install-cargo-plugins:
+  cargo install cargo-binstall
+  cargo install cargo-edit
+  cargo install cargo-deny
+  cargo binstall cargo-semver-checks
+  cargo install cargo-outdated --locked
+  cargo install cargo-audit --locked
+  cargo install cargo-llvm-cov
+
 # Build the project
 build:
   cargo build
