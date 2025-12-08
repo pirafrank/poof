@@ -2,6 +2,44 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.5.1] - 2025-12-08
+
+### 🚀 Features
+
+- *(update)* [**breaking**] Automatically set new version as default after updating an asset (#106)
+
+### 🐛 Bug Fixes
+
+- *(update)* Update args --all and --self cannot be used together
+- Better handling of state to avoid panic
+- Moving to unit-prefix to address RUSTSEC-2025-0119 #99 (#103)
+- Listing installed assets fails or behaves incorrectly with non semver asset versions (#104)
+
+### 🧪 Testing
+
+- Fix tests on macOS (#108)
+- Fix deprecation of cargo_bin after dependencies update
+
+### 🔧 Setup & Quality
+
+- Justfile improvements
+- *(git)* Enforce conventional commit messages
+- *(git)* Avoid running tests for git push -d operations
+- Added a bunch of integration tests, unit tests, and code coverage (#101)
+- Perform tests on macOS as well and pin runner versions
+- Simplify workflow files and improve consistency (#110)
+- Justfile improvements
+
+### ⚙️ Miscellaneous Tasks
+
+- *(lint)* Fixed linting error for ambiguous cmp reference
+- Do not commit code coverage reports and allow bzip2-1.0.6 license
+- Added clippy.toml
+- Edited coverage recipe
+- Added couple of recipes as utils and split changelog and prepare-release recipes
+- Git-cliff config small update
+- Cargo update
+
 ## [0.5.0] - 2025-06-16
 
 ### 🚀 Features
