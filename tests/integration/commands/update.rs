@@ -228,7 +228,7 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
     // 2. Create a new version installation (simulating what update would install)
     // 3. Set the new version as default (simulating what update now does after installation)
     // 4. Verify the symlink now points to the new version
-    
+
     let fixture = TestFixture::new()?;
 
     let repo = "testuser/testrepo";
@@ -237,14 +237,14 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
 
     // Step 1: Create old version installation
     let install_dir_old = fixture.create_fake_installation(repo, old_version)?;
-    
+
     // Get binary name
     let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
-    
+
     // Create a minimal binary for the old version so it can be detected properly
     // Different platforms require different binary formats
     let binary_path_old = install_dir_old.join(binary_name);
-    
+
     #[cfg(target_os = "linux")]
     {
         use std::io::Write;
@@ -275,7 +275,7 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
         perms.set_mode(0o755);
         std::fs::set_permissions(&binary_path_old, perms)?;
     }
-    
+
     #[cfg(target_os = "macos")]
     {
         use std::io::Write;
@@ -301,24 +301,21 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
         perms.set_mode(0o755);
         std::fs::set_permissions(&binary_path_old, perms)?;
     }
-    
+
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         // For other platforms, use the shell script approach (may not work for all)
         // This is a fallback that may not pass magic number checks
     }
-    
+
     // Create symlink pointing to old version (simulating current state before update)
     fixture.create_bin_symlink(binary_name, &binary_path_old)?;
-    
+
     // Verify initial symlink points to old version
     let symlink_path = fixture.bin_dir.join(binary_name);
     #[cfg(not(target_os = "windows"))]
     {
-        assert!(
-            symlink_path.exists(),
-            "Symlink should exist initially"
-        );
+        assert!(symlink_path.exists(), "Symlink should exist initially");
         let initial_target = std::fs::read_link(&symlink_path)?;
         let initial_target_str = initial_target.to_string_lossy();
         assert!(
@@ -330,11 +327,11 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
 
     // Step 2: Create new version installation (simulating what update would do)
     let install_dir_new = fixture.create_fake_installation(repo, new_version)?;
-    
+
     // Create a minimal binary for the new version so it can be detected by is_exec_by_magic_number
     // The fake installation creates a shell script, but we need a proper binary for the "use" command to work
     let binary_path_new = install_dir_new.join(binary_name);
-    
+
     #[cfg(target_os = "linux")]
     {
         use std::io::Write;
@@ -366,7 +363,7 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
         perms.set_mode(0o755);
         std::fs::set_permissions(&binary_path_new, perms)?;
     }
-    
+
     #[cfg(target_os = "macos")]
     {
         use std::io::Write;
@@ -392,13 +389,13 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
         perms.set_mode(0o755);
         std::fs::set_permissions(&binary_path_new, perms)?;
     }
-    
+
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         // For other platforms, use the shell script approach (may not work for all)
         // This is a fallback that may not pass magic number checks
     }
-    
+
     // Step 3: Set the new version as default (this is what the update command now does after installation)
     // We use the "use" command to simulate this behavior, which is what update internally calls
     let mut cmd = Command::cargo_bin("poof")?;
