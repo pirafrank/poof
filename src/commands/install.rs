@@ -18,7 +18,15 @@ use crate::{
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
 
-pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
+pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
+    process_install(repo, tag, false)
+}
+
+pub fn install_new_default(repo: &str, tag: Option<&str>) -> Result<()> {
+    process_install(repo, tag, true)
+}
+
+fn process_install(repo: &str, tag: Option<&str>, is_update: bool) -> Result<()> {
     // let config_dir = filesys::get_config_dir().ok_or(libc::ENOENT).unwrap();
     // info!("Config directory: {}", config_dir);
     let cache_dir: PathBuf =
@@ -67,7 +75,7 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
         // This is useful to avoid installing files with names like "mytool-1.0.0" or "mytool-linux-x86_64"
         // and instead use just "mytool", which is how the binary will be used when in PATH.
         let exec_name = get_stem_name_trimmed_at_first_separator(file_name);
-        install_binary(&downloaded_file, &install_dir, &exec_name)
+        install_binary(&downloaded_file, &install_dir, &exec_name, is_update)
             .with_context(|| format!("Failed to install executable {}", binary.name()))?;
     } else {
         // extract binary
@@ -75,7 +83,7 @@ pub fn process_install(repo: &str, tag: Option<&str>) -> Result<()> {
         debug!("Extracted to: {}", download_to.display());
 
         // install binary
-        install_binaries(&downloaded_file, &install_dir).with_context(|| {
+        install_binaries(&downloaded_file, &install_dir, is_update).with_context(|| {
             format!(
                 "Failed to install binaries for {} version {}",
                 repo, version
@@ -142,7 +150,7 @@ fn prepare_install_dir(repo: &str, version: &str) -> Result<Option<PathBuf>> {
     }
 }
 
-fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
+fn install_binaries(archive_path: &Path, install_dir: &Path, is_update: bool) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
     let execs_to_install: Vec<PathBuf> =
@@ -159,13 +167,18 @@ fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
         let exec_name = exec
             .file_name()
             .ok_or_else(|| anyhow!("Failed to get filename from {}", exec.display()))?;
-        install_binary(&exec, install_dir, &OsString::from(exec_name))
+        install_binary(&exec, install_dir, &OsString::from(exec_name), is_update)
             .with_context(|| format!("Failed to install executable {}", exec.display()))?;
     }
     Ok(())
 }
 
-fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> Result<()> {
+fn install_binary(
+    exec: &PathBuf,
+    install_dir: &Path,
+    exec_stem: &OsString,
+    is_update: bool,
+) -> Result<()> {
     let installed_exec = install_dir.join(exec_stem);
 
     // copy the executable files to the install directory
@@ -185,9 +198,9 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
     {
         // Make the file executable on Unix-like systems
         filesys::make_executable(&installed_exec);
-        // Create a symlink in the bin directory, NOT overwriting existing
+        // Create a symlink in the bin directory, overwriting existing if the install is an update
         let symlink_path = bin_dir.join(exec_stem);
-        let _ = filesys::create_symlink(&installed_exec, &symlink_path, false);
+        let _ = filesys::create_symlink(&installed_exec, &symlink_path, is_update);
     }
     Ok(())
 }
