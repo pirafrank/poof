@@ -31,8 +31,8 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
                 // Attempt to parse the JSON response into a Vec<Release>
                 match response.json::<Release>() {
                     Ok(release) => {
-                        if tag.is_some() {
-                            info!("Selected release tag: {}", tag.unwrap());
+                        if let Some(tag) = tag {
+                            info!("Selected release tag: {}", tag);
                         } else {
                             info!("Current latest release tag: {}", release.tag_name());
                         }
