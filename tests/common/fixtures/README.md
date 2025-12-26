@@ -27,7 +27,7 @@ use super::common::fixtures::mock_github::MockGitHub;
 let mut mock_github = MockGitHub::new();
 
 // Mock up-to-date response
-let _m = mock_github.mock_poof_up_to_date("v1.0.0");
+let _m = mock_github.mock_poof_update_get_version("v1.0.0");
 
 // Run command with mock API URL
 let output = cmd

@@ -135,8 +135,8 @@ fn test_update_self_checks_for_updates() -> Result<(), Box<dyn std::error::Error
 
     // Should successfully check and report up-to-date status
     assert!(
-        output.status.success() || output.status.code().is_some(),
-        "Update --self should complete. stdout: {}, stderr: {}",
+        output.status.success(),
+        "Update --self should succeed when poof is already up-to-date. stdout: {}, stderr: {}",
         stdout,
         stderr
     );
