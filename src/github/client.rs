@@ -11,6 +11,11 @@ const GITHUB_API_URL: &str = "https://api.github.com/repos";
 const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
 const GITHUB_API_ACCEPT: &str = "application/vnd.github.v3+json";
 
+/// Get the base API URL from environment or use the default
+fn get_base_api_url() -> String {
+    std::env::var("POOF_GITHUB_API_URL").unwrap_or_else(|_| GITHUB_API_URL.to_string())
+}
+
 pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
     let release_url = get_release_url(repo, tag);
     info!("Release URL: {}", release_url);
@@ -36,7 +41,7 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
                         } else {
                             info!("Current latest release tag: {}", release.tag_name());
                         }
-                        info!("Published at: {}", release.published_at());
+                        debug!("Published at: {}", release.published_at());
                         debug!("Available assets:");
                         for asset in release.assets() {
                             debug!("\t{}", asset.name());
@@ -77,9 +82,10 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
 }
 
 pub fn get_release_url(repo: &str, tag: Option<&str>) -> String {
+    let base_url = get_base_api_url();
     match tag {
-        Some(tag) => format!("{}/{}/releases/tags/{}", GITHUB_API_URL, repo, tag),
-        None => format!("{}/{}/releases/latest", GITHUB_API_URL, repo),
+        Some(tag) => format!("{}/{}/releases/tags/{}", base_url, repo, tag),
+        None => format!("{}/{}/releases/latest", base_url, repo),
     }
 }
 

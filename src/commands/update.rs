@@ -185,8 +185,7 @@ fn update_self() -> Result<()> {
         )
     })?;
 
-    info!("Current version: {}", current_version);
-    info!("Latest available version: {}", latest_version);
+    info!("Current installed version: {}", current_version);
 
     // Check if update is needed
     if latest_version <= current_version_parsed {

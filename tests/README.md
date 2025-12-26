@@ -9,28 +9,10 @@ Tests are organized into the following structure:
 ```
 tests/
 ├── common/                   # Shared test utilities and fixtures
-│   ├── fixtures/             # Test data and environment setup
-│   │   ├── mod.rs
-│   │   └── test_env.rs       # TestFixture implementation
-│   ├── mocks/                # Mock implementations
-│   ├── helpers.rs            # Helper functions
-│   ├── mod.rs
-│   └── repo_format_validation.rs  # Repository format validation utilities
+├── fixtures/                 # Test data and environment setup
 ├── integration/              # Integration test modules
 │   ├── command_handling/     # Tests for general argument parsing/handling
-│   │   ├── claps.rs
-│   │   └── verbose_flags.rs
 │   └── commands/             # Tests for specific CLI commands
-│       ├── check.rs
-│       ├── download.rs
-│       ├── enable.rs
-│       ├── help.rs
-│       ├── info.rs
-│       ├── install.rs
-│       ├── list.rs
-│       ├── update.rs
-│       ├── use.rs
-│       └── version.rs
 ├── integration.rs            # Entry point for integration tests
 └── README.md
 ```
