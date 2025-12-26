@@ -14,7 +14,6 @@ use crate::{
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, error, info};
 use rayon::prelude::*;
-use std::env::consts::{ARCH, OS};
 
 // updating a single repository
 fn update_single_repo(repo: &str) -> Result<()> {
@@ -160,37 +159,9 @@ fn update_all_repos() -> Result<()> {
     }
 }
 
-/// Constructs a target triple string from the current platform.
-/// This is used to identify compatible release assets.
-#[allow(dead_code)]
-fn get_target_triple() -> String {
-    // Map OS names to target triple format
-    let os_str = match OS {
-        "linux" => "linux",
-        "macos" => "darwin",
-        "windows" => "windows",
-        "freebsd" => "freebsd",
-        "openbsd" => "openbsd",
-        "netbsd" => "netbsd",
-        _ => OS,
-    };
-
-    // Map architecture names to target triple format
-    let arch_str = match ARCH {
-        "x86_64" => "x86_64",
-        "x86" => "i686",
-        "arm" => "arm",
-        "aarch64" => "aarch64",
-        _ => ARCH,
-    };
-
-    // Construct target triple: arch-os
-    format!("{}-{}", arch_str, os_str)
-}
-
 /// Update poof itself
 fn update_self() -> Result<()> {
-    info!("Consulting the Fairy Council for updates...");
+    info!("Checking github.com for updates...");
 
     let current_version = env!("CARGO_PKG_VERSION");
     let repo = "pirafrank/poof";
