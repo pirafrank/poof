@@ -10,7 +10,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use tar::Archive;
 use xz2::read::XzDecoder;
-use zip::ZipArchive;
+use zip::read::ZipArchive;
 
 // Fallback directory name for extracted files
 const OUTPUT_DIR: &str = "output";
