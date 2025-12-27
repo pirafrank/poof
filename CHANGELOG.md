@@ -2,6 +2,20 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.5.2] - 2025-12-27
+
+### 🐛 Bug Fixes
+
+- Updated `update --self` logic to replace forked `self_update` crate with `self_replace` to publish poof on crates.io again (#117)
+
+### 🔧 Setup & Quality
+
+- Added git-cliff to cargo plugins in justfile recipe
+
+### ⚙️ Miscellaneous Tasks
+
+- Fix linter issues
+
 ## [0.5.1] - 2025-12-08
 
 ### 🚀 Features
