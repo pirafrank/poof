@@ -21,6 +21,7 @@ install-cargo-plugins:
   cargo install cargo-outdated --locked
   cargo install cargo-audit --locked
   cargo install cargo-llvm-cov
+  cargo binstall git-cliff
 
 # Build the project
 build:
