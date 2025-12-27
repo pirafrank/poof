@@ -5,6 +5,7 @@ use serial_test::serial;
 use std::process::Command;
 
 // Common module is included from the parent integration.rs file
+use super::common::fixtures::mock_github::MockGitHub;
 use super::common::fixtures::test_env::TestFixture;
 use super::common::repo_format_validation::*;
 
@@ -104,6 +105,114 @@ fn test_update_self_flag() -> Result<(), Box<dyn std::error::Error>> {
     assert!(
         !stderr.contains("unexpected argument") && !stderr.contains("unknown flag"),
         "--self flag should be accepted: {}",
+        stderr
+    );
+
+    Ok(())
+}
+
+#[serial]
+#[test]
+fn test_update_self_checks_for_updates() -> Result<(), Box<dyn std::error::Error>> {
+    // Test that update --self attempts to check for updates
+    // Uses a mock GitHub API server to avoid network calls
+    let mut mock_github = MockGitHub::new();
+
+    // Mock the response for poof being up-to-date
+    // Use the current version from Cargo.toml
+    let current_version = env!("CARGO_PKG_VERSION");
+    let _m = mock_github.mock_poof_update_get_version(&format!("v{}", current_version));
+
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    let output = cmd
+        .arg("update")
+        .arg("--self")
+        .env("POOF_GITHUB_API_URL", mock_github.base_url())
+        .output()?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Should successfully check and report up-to-date status
+    assert!(
+        output.status.success(),
+        "Update --self should succeed when poof is already up-to-date. stdout: {}, stderr: {}",
+        stdout,
+        stderr
+    );
+
+    // Should indicate it's up-to-date (message goes to stderr via logging)
+    assert!(
+        stderr.contains("up-to-date") || stderr.contains(&current_version),
+        "Should indicate up-to-date status. stdout: {}, stderr: {}",
+        stdout,
+        stderr
+    );
+
+    Ok(())
+}
+
+#[serial]
+#[test]
+fn test_update_self_newer_version_available() -> Result<(), Box<dyn std::error::Error>> {
+    // Test that update --self detects when a newer version is available
+    // Uses a mock GitHub API server to avoid network calls
+    let mut mock_github = MockGitHub::new();
+
+    // Mock the response with a newer version available
+    let _m = mock_github.mock_poof_update_get_version("v999.999.999");
+
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    let output = cmd
+        .arg("update")
+        .arg("--self")
+        .env("POOF_GITHUB_API_URL", mock_github.base_url())
+        .output()?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Should detect newer version
+    // Note: The actual update will fail because we're not providing a real binary,
+    // but it should at least detect the version difference
+    assert!(
+        stdout.contains("Newer version 999.999.999 found")
+            || stderr.contains("Newer version 999.999.999 found"),
+        "Should detect newer version. stdout: {}, stderr: {}",
+        stdout,
+        stderr
+    );
+
+    Ok(())
+}
+
+#[serial]
+#[test]
+fn test_update_self_handles_network_error() -> Result<(), Box<dyn std::error::Error>> {
+    // Test that update --self handles network errors gracefully
+    let mut mock_github = MockGitHub::new();
+
+    // Mock a network error response
+    let _m = mock_github.mock_network_error("pirafrank/poof");
+
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    let output = cmd
+        .arg("update")
+        .arg("--self")
+        .env("POOF_GITHUB_API_URL", mock_github.base_url())
+        .output()?;
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Should fail gracefully with an error message
+    assert!(
+        !output.status.success(),
+        "Should fail when GitHub API returns error"
+    );
+
+    assert!(
+        stderr.contains("Failed") || stderr.contains("error") || stderr.contains("Error"),
+        "Should report error gracefully. stderr: {}",
         stderr
     );
 

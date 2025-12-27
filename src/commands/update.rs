@@ -1,7 +1,12 @@
 use crate::{
-    commands::{self, list::list_installed_assets},
+    commands::{self, download::download_binary, list::list_installed_assets},
     constants::APP_NAME,
-    github::client::get_release,
+    core::selector::is_env_compatible,
+    files::{
+        archives::extract_to_dir, filesys::find_exec_files_from_extracted_archive,
+        magic::is_exec_by_magic_number, utils::get_stem_name_trimmed_at_first_separator,
+    },
+    github::client::{get_asset, get_release},
     models::asset::Asset,
     utils::semver::{SemverStringPrefix, Version},
     UpdateArgs,
@@ -154,53 +159,136 @@ fn update_all_repos() -> Result<()> {
     }
 }
 
-// Update poof itself
+/// Update poof itself
 fn update_self() -> Result<()> {
-    info!("Consulting the Fairy Council for updates...");
+    info!("Checking github.com for updates...");
 
     let current_version = env!("CARGO_PKG_VERSION");
-    let target_triple = self_update::get_target();
+    let repo = "pirafrank/poof";
 
-    // configure the self_update crate
-    let status_result = self_update::backends::github::Update::configure()
-        .repo_owner("pirafrank")
-        .repo_name("poof")
-        .target(target_triple)
-        .bin_name(APP_NAME)
-        .current_version(current_version)
-        .build();
+    // Get the latest release from GitHub
+    let latest_release = get_release(repo, None)
+        .with_context(|| "Failed to get latest release information for poof")?;
+    let latest_version_str = latest_release.tag_name();
+    let latest_version =
+        Version::parse(latest_version_str.strip_v().as_str()).with_context(|| {
+            format!(
+                "Failed to parse latest release tag '{}' as semver",
+                latest_version_str
+            )
+        })?;
 
-    let status = match status_result {
-        Ok(s) => s,
-        Err(e) => {
-            return Err(e).context("failed to configure self-update check");
+    let current_version_parsed = Version::parse(current_version).with_context(|| {
+        format!(
+            "Failed to parse current version '{}' as semver",
+            current_version
+        )
+    })?;
+
+    info!("Current installed version: {}", current_version);
+
+    // Check if update is needed
+    if latest_version <= current_version_parsed {
+        info!(
+            "{} is already up-to-date (version {}).",
+            APP_NAME, current_version
+        );
+        return Ok(());
+    }
+
+    info!(
+        "Newer version {} found. Updating from {}.",
+        latest_version, current_version
+    );
+
+    // Find compatible asset
+    let binary = get_asset(&latest_release, is_env_compatible).with_context(|| {
+        format!(
+            "Failed to find compatible asset for release {}",
+            latest_version_str
+        )
+    })?;
+
+    // Create a temporary directory for downloading
+    let temp_dir = std::env::temp_dir().join(format!("poof-update-{}", latest_version_str));
+    std::fs::create_dir_all(&temp_dir).with_context(|| {
+        format!(
+            "Failed to create temporary directory {}",
+            temp_dir.display()
+        )
+    })?;
+
+    // Download the binary
+    download_binary(binary.name(), binary.browser_download_url(), &temp_dir).with_context(
+        || {
+            format!(
+                "Failed to download binary for version {}",
+                latest_version_str
+            )
+        },
+    )?;
+
+    let downloaded_file = temp_dir.join(binary.name());
+    let new_binary_path = if is_exec_by_magic_number(&downloaded_file) {
+        // Direct executable binary
+        debug!("Downloaded file {} is an executable binary.", binary.name());
+        downloaded_file
+    } else {
+        // Archive - extract and find the binary
+        debug!(
+            "Downloaded file {} is an archive. Extracting...",
+            binary.name()
+        );
+        extract_to_dir(&downloaded_file, &temp_dir)
+            .map_err(|e| anyhow!("Failed to extract archive: {}", e))?;
+
+        let exec_files = find_exec_files_from_extracted_archive(&downloaded_file);
+        if exec_files.is_empty() {
+            bail!("No executable found in extracted archive");
         }
+
+        // Find the binary matching APP_NAME or use the first executable
+        let target_binary = exec_files
+            .iter()
+            .find(|path| {
+                path.file_name()
+                    .map(|n| {
+                        let stem = get_stem_name_trimmed_at_first_separator(n);
+                        stem.to_string_lossy() == APP_NAME || n.to_string_lossy() == APP_NAME
+                    })
+                    .unwrap_or(false)
+            })
+            .or_else(|| exec_files.first())
+            .ok_or_else(|| anyhow!("No executable found in archive"))?;
+
+        target_binary.clone()
     };
 
-    // directly attempt the update
-    // the .update() method handles the version comparison internally.
-    info!("Checking for and applying updates if available...");
-    match status.update() {
-        Ok(update_status) => match update_status {
-            // update() should return UpToDate if no update was needed/performed
-            self_update::Status::UpToDate(v) => {
-                info!("{} is already up-to-date (version {}).", APP_NAME, v);
-                Ok(())
-            }
-            self_update::Status::Updated(v) => {
-                info!(
-                    "Successfully updated {} from version {} to {}",
-                    APP_NAME, current_version, v
-                );
-                info!("Please restart the application if it hasn't exited automatically.");
-                Ok(())
-            }
-        },
-        Err(e) => {
-            // handle errors during the update process (download, replace, etc.)
-            Err(e).context(format!("Self-update failed for {}", APP_NAME))
-        }
+    // Use self_replace to replace the current executable
+    info!("Replacing current executable with new version...");
+    self_replace::self_replace(&new_binary_path).with_context(|| {
+        format!(
+            "Failed to replace executable with {}",
+            new_binary_path.display()
+        )
+    })?;
+
+    // Clean up temporary directory
+    if let Err(e) = std::fs::remove_dir_all(&temp_dir) {
+        debug!(
+            "Failed to clean up temporary directory {}: {}",
+            temp_dir.display(),
+            e
+        );
     }
+
+    info!(
+        "Successfully updated {} from version {} to {}",
+        APP_NAME, current_version, latest_version
+    );
+    info!("Please restart the application if it hasn't exited automatically.");
+
+    Ok(())
 }
 
 // Main process
