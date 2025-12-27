@@ -36,6 +36,7 @@ fn run() -> Result<()> {
     // Set up logging
     env_logger::Builder::new()
         .filter_level(cli.verbose.log_level_filter())
+        .parse_default_env() // This allows RUST_LOG to override
         .format_timestamp(None)
         .format_module_path(false)
         .format_target(false)
@@ -167,17 +168,15 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
-    // call the main logic function
-    let result = run();
-
-    // log the error explicitly
-    if let Err(e) = &result {
-        error!("Execution failed: {:?}", e);
+fn main() {
+    if let Err(e) = run() {
+        if log::log_enabled!(log::Level::Debug) {
+            // Show full chain in debug mode
+            error!("{:?}", e);
+        } else {
+            // Show only top-level error in normal mode
+            error!("{}", e);
+        }
+        std::process::exit(1);
     }
-
-    // return the result
-    // if Ok(()) -> exit code 0
-    // if Err(e) -> anyhow's Termination impl prints the error and exits with code 1
-    result
 }

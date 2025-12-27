@@ -86,7 +86,7 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
             }
         }
         Err(e) => {
-            error!("Cannot send request: {}", e);
+            error!("Failed: {}. Are you connected to the internet?", e);
             // return Err instaed of exit
             Err(anyhow!(e).context(format!("Cannot send request to {}", release_url)))
         }
