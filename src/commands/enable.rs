@@ -1,33 +1,21 @@
 //! sibellavia: persistently add poof's bin directory to PATH
-//! we can evaluate using `anyhow` instead!
 //! Also, for now we are not considering Windows.
 //! TODO: add support for Windows.
 
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
-use log::{error, info};
+use anyhow::{Context, Result};
+use log::info;
 
 use crate::files::datadirs::get_bin_dir;
 
-pub fn run() {
+pub fn run() -> Result<()> {
     /* 1 ─ get the directory that holds poof's executables */
-    let bin_dir = match get_bin_dir() {
-        Some(p) => p,
-        None => {
-            error!("Cannot locate bin directory");
-            return;
-        }
-    };
+    let bin_dir = get_bin_dir().context("Cannot locate bin directory")?;
     let bin = bin_dir.to_string_lossy();
 
     /* 2 ─ pick which startup script (.bashrc or .zshrc) to modify */
-    let home = match dirs::home_dir() {
-        Some(h) => h,
-        None => {
-            error!("Cannot find $HOME");
-            return;
-        }
-    };
+    let home = dirs::home_dir().context("Cannot find $HOME")?;
 
     let shell = std::env::var("SHELL").unwrap_or_default();
     let rc: PathBuf = if shell.ends_with("zsh") {
@@ -40,28 +28,26 @@ pub fn run() {
     if let Ok(text) = std::fs::read_to_string(&rc) {
         if text.contains(bin.as_ref()) {
             info!("poof already enabled in {}", rc.display());
-            return;
+            return Ok(());
         }
     }
 
     /* 4 ─ append the export line */
-    let mut file = match OpenOptions::new().create(true).append(true).open(&rc) {
-        Ok(f) => f,
-        Err(e) => {
-            error!("Cannot open {}: {}", rc.display(), e);
-            return;
-        }
-    };
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&rc)
+        .with_context(|| format!("Cannot open {}", rc.display()))?;
 
-    if writeln!(file, "\n# added by poof\nexport PATH=\"{}:$PATH\"", bin).is_err() {
-        error!("Could not write to {}", rc.display());
-        return;
-    }
+    writeln!(file, "\n# added by poof\nexport PATH=\"{}:$PATH\"", bin)
+        .with_context(|| format!("Could not write to {}", rc.display()))?;
 
     info!(
         "🪄 Added poof to {}.\n   Run `source {0}` or open a new terminal.",
         rc.display()
     );
+
+    Ok(())
 }
 
 // ------------------------------------------------------------------
@@ -87,7 +73,7 @@ mod tests {
             ],
             || {
                 // now this is "<temp>/poof/bin"
-                let bin = get_bin_dir().unwrap();
+                let bin = get_bin_dir().expect("Failed to get bin dir");
                 fs::create_dir_all(&bin).unwrap();
                 bin
             },
@@ -113,8 +99,8 @@ mod tests {
             ],
             || {
                 // run twice for idempotence
-                run();
-                run();
+                run().unwrap();
+                run().unwrap();
             },
         );
 
@@ -128,7 +114,7 @@ mod tests {
                 ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
             ],
             || {
-                let binding = get_bin_dir().unwrap();
+                let binding = get_bin_dir().expect("Failed to get bin dir");
                 let bin = binding.to_string_lossy();
                 let expected = format!("export PATH=\"{}:$PATH\"", bin);
 
@@ -154,7 +140,7 @@ mod tests {
                 ("SHELL", Some("/usr/bin/zsh")),
             ],
             || {
-                run();
+                run().unwrap();
             },
         );
 
@@ -179,8 +165,8 @@ mod tests {
                 ("SHELL", Some("/usr/bin/zsh")),
             ],
             || {
-                run();
-                run();
+                run().unwrap();
+                run().unwrap();
             },
         );
 
@@ -193,7 +179,7 @@ mod tests {
                 ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
             ],
             || {
-                let binding = get_bin_dir().unwrap();
+                let binding = get_bin_dir().expect("Failed to get bin dir");
                 let bin = binding.to_string_lossy();
                 let line = format!("export PATH=\"{}:$PATH\"", bin);
 
@@ -219,7 +205,7 @@ mod tests {
                 ("SHELL", None), // Remove SHELL var
             ],
             || {
-                run();
+                run().unwrap();
             },
         );
 
@@ -247,7 +233,7 @@ mod tests {
                 ("SHELL", Some("/bin/bash")),
             ],
             || {
-                run();
+                run().unwrap();
             },
         );
 
@@ -259,7 +245,7 @@ mod tests {
                 ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
             ],
             || {
-                let binding = get_bin_dir().unwrap();
+                let binding = get_bin_dir().expect("Failed to get bin dir");
                 let bin = binding.to_string_lossy();
 
                 assert!(
@@ -287,7 +273,7 @@ mod tests {
                 ("SHELL", Some("/bin/bash")),
             ],
             || {
-                run();
+                run().unwrap();
             },
         );
 

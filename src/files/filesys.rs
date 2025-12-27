@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use log::{debug, warn};
 use std::path::{Path, PathBuf};
 
@@ -22,7 +23,9 @@ pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
 }
 
 pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBuf> {
-    let archive_parent = archive_path.parent().unwrap();
+    let Some(archive_parent) = archive_path.parent() else {
+        return Vec::new();
+    };
     // Get the filename without the extension
     // and create the path of a directory with the same name as the archive, minus the extension.
     // If it exists, we will search for executables in that directory.
@@ -51,46 +54,48 @@ pub fn is_executable(path: &PathBuf) -> bool {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn make_executable(file: &Path) {
+pub fn make_executable(file: &Path) -> Result<()> {
     if !file.is_file() {
         debug!("File {} is not a regular file", file.to_string_lossy());
-        return;
+        return Ok(());
     }
     debug!("Making {} executable", file.to_string_lossy());
     // Unix-like systems require setting executable permissions
     use std::os::unix::fs::PermissionsExt;
-    let mut perms = std::fs::metadata(file).unwrap().permissions();
+    let mut perms = std::fs::metadata(file)
+        .with_context(|| format!("Failed to read metadata for {}", file.display()))?
+        .permissions();
     // Add executable bits to current permissions (equivalent to chmod +x)
     perms.set_mode(perms.mode() | 0o111);
-    std::fs::set_permissions(file, perms).unwrap();
+    std::fs::set_permissions(file, perms).with_context(|| {
+        format!(
+            "Failed to set executable permissions for {}",
+            file.display()
+        )
+    })?;
     debug!("Set executable permissions for {}", file.display());
+    Ok(())
 }
 
-pub fn copy_file(source: &PathBuf, target: &PathBuf) -> Result<(), String> {
+pub fn copy_file(source: &PathBuf, target: &PathBuf) -> Result<()> {
     debug!(
         "Copying file from {} to {}",
         source.display(),
         target.display()
     );
-    if let Err(e) = std::fs::copy(source, target) {
-        let e_msg = format!(
-            "Error copying {} to {}: {}",
+    std::fs::copy(source, target).with_context(|| {
+        format!(
+            "Failed to copy {} to {}",
             source.display(),
-            target.display(),
-            e
-        );
-        return Err(e_msg);
-    };
+            target.display()
+        )
+    })?;
     debug!("File copied successfully");
     Ok(())
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn create_symlink(
-    source: &PathBuf,
-    target: &PathBuf,
-    remove_existing: bool,
-) -> Result<(), String> {
+pub fn create_symlink(source: &PathBuf, target: &PathBuf, remove_existing: bool) -> Result<()> {
     use log::info;
 
     let msg = if remove_existing { "" } else { " NOT" };
@@ -102,9 +107,8 @@ pub fn create_symlink(
     );
     if target.exists() {
         if remove_existing {
-            if let Err(e) = std::fs::remove_file(target) {
-                return Err(format!("Cannot remove {}, Error: {}", target.display(), e));
-            }
+            std::fs::remove_file(target)
+                .with_context(|| format!("Failed to remove existing file {}", target.display()))?;
             debug!("Removed existing symlink {}", target.display());
         } else {
             // If the symlink already exists and we don't want to remove it, skip.
@@ -114,23 +118,17 @@ pub fn create_symlink(
     }
 
     // Create a symlink in the target directory pointing to the installed binary.
-    match std::os::unix::fs::symlink(source, target) {
-        Ok(_) => {
-            info!(
-                "Symlink created: {} -> {}",
-                source.display(),
-                target.display()
-            );
-        }
-        Err(e) => {
-            let e_msg = format!(
-                "Error creating symlink {} -> {}: {}",
-                source.display(),
-                target.display(),
-                e
-            );
-            return Err(e_msg);
-        }
-    }
+    std::os::unix::fs::symlink(source, target).with_context(|| {
+        format!(
+            "Failed to create symlink {} -> {}",
+            source.display(),
+            target.display()
+        )
+    })?;
+    info!(
+        "Symlink created: {} -> {}",
+        source.display(),
+        target.display()
+    );
     Ok(())
 }

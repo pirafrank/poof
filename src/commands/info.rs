@@ -1,10 +1,11 @@
 use crate::constants::*;
 use crate::core::platform_info::*;
 use crate::files::datadirs;
+use anyhow::{Context, Result};
 use std::io::{self, Write};
 
 /// Print platform information useful for debug purposes.
-pub fn show_info() {
+pub fn show_info() -> Result<()> {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
 
@@ -45,8 +46,12 @@ pub fn show_info() {
     output.push_str(&format!("  USER : {}\n", get_env_var("USER")));
     output.push_str(&format!("  HOME : {}\n", get_env_var("HOME")));
 
-    let bin_dir = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
-    let path_status = match check_dir_in_path(bin_dir.to_str().unwrap()) {
+    let bin_dir = datadirs::get_bin_dir().context("Failed to locate bin directory")?;
+    let path_status = match check_dir_in_path(
+        bin_dir
+            .to_str()
+            .context("Failed to convert bin directory path to string")?,
+    ) {
         -1 => "Not in PATH",
         0 => "In PATH at the beginning",
         _ => "In PATH, but NOT at the beginning",
@@ -56,10 +61,10 @@ pub fn show_info() {
     // Directories
     output.push_str("\nDirectories:\n");
 
-    let cache_dir = datadirs::get_cache_dir().unwrap_or_default();
+    let cache_dir = datadirs::get_cache_dir().context("Failed to locate cache directory")?;
     output.push_str(&format!("  Cache dir: {}\n", cache_dir.display()));
 
-    let data_dir = datadirs::get_data_dir().unwrap_or_default();
+    let data_dir = datadirs::get_data_dir().context("Failed to locate data directory")?;
     //TODO: remove .parent() when poof will be updated to support different services apart from GitHub.
     output.push_str(&format!(
         "  Data dir : {}\n",
@@ -69,6 +74,10 @@ pub fn show_info() {
     output.push_str(&format!("  Bin dir  : {}\n", bin_dir.display()));
 
     // Write everything at once
-    let _ = handle.write_all(output.as_bytes());
-    let _ = handle.flush();
+    handle
+        .write_all(output.as_bytes())
+        .context("Failed to write output")?;
+    handle.flush().context("Failed to flush output")?;
+
+    Ok(())
 }

@@ -95,11 +95,10 @@ pub fn is_env_compatible(input: &str) -> bool {
     // Check if this architecture matches our current architecture
     let matching_arch_alias = match CPU_ARCH.get(ARCH) {
         Some(aliases) => {
-            let found = aliases.iter().find(|&&alias| item.contains(alias));
-            if found.is_none() {
+            let Some(found) = aliases.iter().find(|&&alias| item.contains(alias)) else {
                 return false;
-            }
-            found.unwrap()
+            };
+            found
         }
         None => return false,
     };

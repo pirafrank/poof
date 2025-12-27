@@ -60,15 +60,13 @@ pub fn set_default(repo: &str, version: &str) -> Result<()> {
             };
             // make exec available in PATH, overwriting any existing symlink
             let symlink_path = bin_dir.join(file_name);
-            filesys::create_symlink(&path, &symlink_path, true)
-                .map_err(anyhow::Error::msg)
-                .with_context(|| {
-                    format!(
-                        "Failed to create symlink from {} to {}",
-                        path.display(),
-                        symlink_path.display()
-                    )
-                })?;
+            filesys::create_symlink(&path, &symlink_path, true).with_context(|| {
+                format!(
+                    "Failed to create symlink from {} to {}",
+                    path.display(),
+                    symlink_path.display()
+                )
+            })?;
         }
     }
     Ok(())

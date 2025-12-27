@@ -20,7 +20,7 @@ fn update_single_repo(repo: &str) -> Result<()> {
     info!("Checking for updates for {}", repo);
 
     // 1. get all installed assets
-    let installed_assets: Vec<Asset> = list_installed_assets();
+    let installed_assets: Vec<Asset> = list_installed_assets()?;
 
     if installed_assets.is_empty() {
         info!("No binaries installed yet. Nothing to update.");
@@ -110,7 +110,7 @@ fn update_all_repos() -> Result<()> {
     info!("Checking for updates for all installed binaries...");
 
     // 1. get all installed assets
-    let installed_assets: Vec<Asset> = list_installed_assets();
+    let installed_assets: Vec<Asset> = list_installed_assets()?;
 
     if installed_assets.is_empty() {
         info!("No binaries installed yet. Nothing to update.");

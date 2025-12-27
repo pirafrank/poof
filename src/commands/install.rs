@@ -27,8 +27,6 @@ pub fn install_new_default(repo: &str, tag: Option<&str>) -> Result<()> {
 }
 
 fn process_install(repo: &str, tag: Option<&str>, is_update: bool) -> Result<()> {
-    // let config_dir = filesys::get_config_dir().ok_or(libc::ENOENT).unwrap();
-    // info!("Config directory: {}", config_dir);
     let cache_dir: PathBuf =
         datadirs::get_cache_dir().context("Failed to determine cache directory")?;
     debug!("Cache directory: {}", cache_dir.display());
@@ -79,7 +77,8 @@ fn process_install(repo: &str, tag: Option<&str>, is_update: bool) -> Result<()>
             .with_context(|| format!("Failed to install executable {}", binary.name()))?;
     } else {
         // extract binary
-        archives::extract_to_dir(&downloaded_file, &download_to).unwrap();
+        archives::extract_to_dir(&downloaded_file, &download_to)
+            .with_context(|| format!("Failed to extract archive to {}", download_to.display()))?;
         debug!("Extracted to: {}", download_to.display());
 
         // install binary
@@ -92,7 +91,7 @@ fn process_install(repo: &str, tag: Option<&str>, is_update: bool) -> Result<()>
     }
 
     info!("{} {} installed successfully.", repo, &version);
-    commands::check::check_if_bin_in_path();
+    commands::check::check_if_bin_in_path()?;
     Ok(())
 }
 
@@ -182,32 +181,30 @@ fn install_binary(
     let installed_exec = install_dir.join(exec_stem);
 
     // copy the executable files to the install directory
-    // TODO: this Result may be an Err variant, which should be handled
-    // for now, we just use let _ = to ignore the resulting value
-    // but it is rrealy important to handle it
-    filesys::copy_file(exec, &installed_exec).map_err(|e| {
-        anyhow!(
-            "Failed to copy {} to install dir ({}): {}",
+    // Copy the binary to the install directory
+    filesys::copy_file(exec, &installed_exec).with_context(|| {
+        format!(
+            "Failed to copy {} to install dir ({})",
             exec.display(),
-            installed_exec.display(),
-            e
+            installed_exec.display()
         )
     })?;
 
-    let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
+    let bin_dir: PathBuf = datadirs::get_bin_dir().context("Failed to locate bin directory")?;
 
     // make them executable
     // Set executable permissions, platform-specific
     // Note: Windows does not require setting executable permissions
-    // TODO: below we have the same issue as in line 166, Result that should
-    // be handled. we use the same workaround to ignore the warning
     #[cfg(not(target_os = "windows"))]
     {
         // Make the file executable on Unix-like systems
-        filesys::make_executable(&installed_exec);
+        filesys::make_executable(&installed_exec)
+            .with_context(|| format!("Failed to make {} executable", installed_exec.display()))?;
         // Create a symlink in the bin directory, overwriting existing if the install is an update
         let symlink_path = bin_dir.join(exec_stem);
-        let _ = filesys::create_symlink(&installed_exec, &symlink_path, is_update);
+        filesys::create_symlink(&installed_exec, &symlink_path, is_update).with_context(|| {
+            format!("Failed to create symlink for {}", installed_exec.display())
+        })?;
     }
     Ok(())
 }

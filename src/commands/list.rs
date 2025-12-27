@@ -1,5 +1,6 @@
 //! Main file handling 'list' command
 
+use anyhow::{Context, Result};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
@@ -9,7 +10,7 @@ use crate::files::datadirs::get_data_dir;
 use crate::models::asset::Asset;
 use crate::models::asset::VecAssets;
 
-pub fn list_installed_assets() -> Vec<Asset> {
+pub fn list_installed_assets() -> Result<Vec<Asset>> {
     // List all files in the bin directory.
     // Making this iterative for clarity and performance,
     // data dir as a known structure with fixed number of levels.
@@ -22,14 +23,14 @@ pub fn list_installed_assets() -> Vec<Asset> {
     // speed up the process. We wont' need
     // to use a mutex because each thread will be working on a different
     // directory, with data aggregated sequentially at the end.
-    let data_dir: PathBuf = get_data_dir().unwrap();
+    let data_dir: PathBuf = get_data_dir().context("Failed to locate data directory")?;
 
     // Look through each subdirectory in data_dir for any installed assets.
     // Read user directories in parallel.
 
     let entries = match fs::read_dir(&data_dir) {
         Ok(entries) => entries.flatten().collect::<Vec<_>>(),
-        Err(_) => return Vec::new(),
+        Err(_) => return Ok(Vec::new()),
     };
 
     let assets: Vec<(String, String)> = entries
@@ -82,5 +83,5 @@ pub fn list_installed_assets() -> Vec<Asset> {
         .map(|(slug, versions)| Asset::new_as_string(slug, versions))
         .collect();
     result.sort();
-    result
+    Ok(result)
 }

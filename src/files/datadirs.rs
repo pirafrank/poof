@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 use crate::constants::*;
@@ -11,12 +12,17 @@ use crate::constants::*;
 ///
 /// Windows: %APPDATA%/APPNAME/config
 ///
-pub fn _get_config_dir() -> Option<PathBuf> {
-    let config_dir = dirs::config_dir()?.join(APP_NAME).join("config");
+pub fn _get_config_dir() -> Result<PathBuf> {
+    let config_dir = dirs::config_dir()
+        .context("Failed to determine config directory")?
+        .join(APP_NAME)
+        .join("config");
     if !config_dir.exists() {
-        std::fs::create_dir_all(&config_dir).ok()?;
+        std::fs::create_dir_all(&config_dir).with_context(|| {
+            format!("Failed to create config directory {}", config_dir.display())
+        })?;
     }
-    Some(config_dir)
+    Ok(config_dir)
 }
 
 /// This function returns the path to the data directory for the application.
@@ -28,16 +34,18 @@ pub fn _get_config_dir() -> Option<PathBuf> {
 ///
 /// Windows: %LOCALAPPDATA%/APPNAME/data
 ///
-pub fn get_data_dir() -> Option<PathBuf> {
+pub fn get_data_dir() -> Result<PathBuf> {
     //TODO: remove .join(GITHUB_SUBDIR) when poof will be updated to support different services apart from GitHub.
-    let data_dir = dirs::data_dir()?
+    let data_dir = dirs::data_dir()
+        .context("Failed to determine data directory")?
         .join(APP_NAME)
         .join(DATA_SUBDIR)
         .join(GITHUB_SUBDIR);
     if !data_dir.exists() {
-        std::fs::create_dir_all(&data_dir).ok()?;
+        std::fs::create_dir_all(&data_dir)
+            .with_context(|| format!("Failed to create data directory {}", data_dir.display()))?;
     }
-    Some(data_dir)
+    Ok(data_dir)
 }
 
 /// This function returns the path to the bin directory for the application.
@@ -50,12 +58,16 @@ pub fn get_data_dir() -> Option<PathBuf> {
 ///
 /// Windows: %LOCALAPPDATA%/APPNAME/bin
 ///
-pub fn get_bin_dir() -> Option<PathBuf> {
-    let bin_dir = dirs::data_dir()?.join(APP_NAME).join(BIN_SUBDIR);
+pub fn get_bin_dir() -> Result<PathBuf> {
+    let bin_dir = dirs::data_dir()
+        .context("Failed to determine data directory")?
+        .join(APP_NAME)
+        .join(BIN_SUBDIR);
     if !bin_dir.exists() {
-        std::fs::create_dir_all(&bin_dir).ok()?;
+        std::fs::create_dir_all(&bin_dir)
+            .with_context(|| format!("Failed to create bin directory {}", bin_dir.display()))?;
     }
-    Some(bin_dir)
+    Ok(bin_dir)
 }
 
 /// This function returns the path to the cache directory for the application.
@@ -68,12 +80,15 @@ pub fn get_bin_dir() -> Option<PathBuf> {
 ///
 /// Windows: %LOCALAPPDATA%/APPNAME/cache
 ///
-pub fn get_cache_dir() -> Option<PathBuf> {
-    let cache_dir = dirs::cache_dir()?.join(APP_NAME);
+pub fn get_cache_dir() -> Result<PathBuf> {
+    let cache_dir = dirs::cache_dir()
+        .context("Failed to determine cache directory")?
+        .join(APP_NAME);
     if !cache_dir.exists() {
-        std::fs::create_dir_all(&cache_dir).ok()?;
+        std::fs::create_dir_all(&cache_dir)
+            .with_context(|| format!("Failed to create cache directory {}", cache_dir.display()))?;
     }
-    Some(cache_dir)
+    Ok(cache_dir)
 }
 
 // Function to get a path for a binary file with the directory
@@ -139,9 +154,9 @@ mod tests {
         // Test that config dir returns a value (if dirs::config_dir() works)
         let config_dir = _get_config_dir();
 
-        // This might be None in some test environments, but if it returns Some,
+        // This might fail in some test environments, but if it succeeds,
         // it should contain the APP_NAME
-        if let Some(dir) = config_dir {
+        if let Ok(dir) = config_dir {
             let path_str = dir.to_str().unwrap();
             #[cfg(target_os = "linux")]
             assert!(path_str.ends_with(&format!(".config/{}/config", APP_NAME)));
@@ -157,8 +172,8 @@ mod tests {
         // Test that data dir returns a value (if dirs::data_dir() works)
         let data_dir = get_data_dir();
 
-        // If it returns Some, it should contain the APP_NAME
-        if let Some(dir) = data_dir {
+        // If it succeeds, it should contain the APP_NAME
+        if let Ok(dir) = data_dir {
             let path_str = dir.to_str().unwrap();
             // TODO: remove GITHUB_SUBDIR when poof will be updated to support different services apart from GitHub.
             #[cfg(target_os = "linux")]
@@ -183,8 +198,8 @@ mod tests {
         // Test that bin dir returns a value (if dirs::data_dir() works)
         let bin_dir = get_bin_dir();
 
-        // If it returns Some, it should contain the APP_NAME
-        if let Some(dir) = bin_dir {
+        // If it succeeds, it should contain the APP_NAME
+        if let Ok(dir) = bin_dir {
             let path_str = dir.to_str().unwrap();
             #[cfg(target_os = "linux")]
             assert!(path_str.ends_with(&format!(".local/share/{}/bin", APP_NAME)));
@@ -200,8 +215,8 @@ mod tests {
         // Test that cache dir returns a value (if dirs::cache_dir() works)
         let cache_dir = get_cache_dir();
 
-        // If it returns Some, it should contain the APP_NAME
-        if let Some(dir) = cache_dir {
+        // If it succeeds, it should contain the APP_NAME
+        if let Ok(dir) = cache_dir {
             let path_str = dir.to_str().unwrap();
             assert!(path_str.contains(APP_NAME));
         }

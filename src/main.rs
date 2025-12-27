@@ -212,14 +212,16 @@ fn run() -> Result<()> {
             info!("Version '{}' set as default.", version);
         }
         Cmd::List => {
-            let list = commands::list::list_installed_assets();
+            let list = commands::list::list_installed_assets()?;
             if list.is_empty() {
                 info!("No installed binaries found.");
             } else {
                 let mut stdout = std::io::stdout().lock();
-                writeln!(stdout).unwrap();
-                writeln!(stdout, "{:<40} {:<15}", "Repository", "Versions").unwrap();
-                writeln!(stdout, "{:<40} {:<15}", "----------", "--------").unwrap();
+                writeln!(stdout).context("Failed to write to stdout")?;
+                writeln!(stdout, "{:<40} {:<15}", "Repository", "Versions")
+                    .context("Failed to write to stdout")?;
+                writeln!(stdout, "{:<40} {:<15}", "----------", "--------")
+                    .context("Failed to write to stdout")?;
                 for asset in list {
                     writeln!(
                         stdout,
@@ -227,9 +229,9 @@ fn run() -> Result<()> {
                         asset.get_name(),
                         asset.get_versions().to_string_vec()
                     )
-                    .unwrap();
+                    .context("Failed to write to stdout")?;
                 }
-                writeln!(stdout).unwrap();
+                writeln!(stdout).context("Failed to write to stdout")?;
                 drop(stdout); // explicitly release the lock
             }
         }
@@ -237,19 +239,19 @@ fn run() -> Result<()> {
             commands::update::process_update(args)?; // we use ? here, it returns a Result
         }
         Cmd::Check => {
-            commands::check::check_if_bin_in_path();
+            commands::check::check_if_bin_in_path()?;
         }
         Cmd::Version => {
             println!("{}", crate::core::platform_info::long_version());
         }
         Cmd::Info => {
-            commands::info::show_info();
+            commands::info::show_info()?;
         }
         Cmd::Debug => {
-            commands::info::show_info();
+            commands::info::show_info()?;
         }
         Cmd::Enable => {
-            commands::enable::run();
+            commands::enable::run()?;
         }
         Cmd::Clean => {
             commands::clean::run_clean()?;
