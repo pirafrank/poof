@@ -62,7 +62,12 @@ More and more often modern tools are built with languages like Rust and Go, and 
 ## Quick start
 
 1. Get `poof` using one of the methods below:
-    - **Pre-built binary**: Download the binary from [latest release](https://github.com/pirafrank/poof/releases), and move it to some directory in your `$PATH`.
+    - **Pre-built binary**: Download the binary from [latest release](https://github.com/pirafrank/poof/releases), and move it to some directory in your `$PATH`. You may use the one-liner below.
+
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh
+    ```
+
     - **binstall**: If you have [binstall](https://github.com/cargo-bins/cargo-binstall), you can get the binary using `cargo` and skip compilation:
 
     ```sh
