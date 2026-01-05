@@ -1,0 +1,15 @@
+[
+    "tabiew-aarch64-unknown-linux-gnu.deb",
+    "tabiew-aarch64-unknown-linux-gnu.rpm",
+    "tabiew-armv7-unknown-linux-gnueabihf.deb",
+    "tabiew-armv7-unknown-linux-gnueabihf.rpm",
+    "tabiew-x86_64-unknown-linux-gnu.deb",
+    "tabiew-x86_64-unknown-linux-gnu.rpm",
+    "tw-aarch64-apple-darwin",
+    "tw-aarch64-pc-windows-msvc.exe",
+    "tw-aarch64-unknown-linux-gnu",
+    "tw-armv7-unknown-linux-gnueabihf",
+    "tw-x86_64-apple-darwin",
+    "tw-x86_64-pc-windows-msvc.exe",
+    "tw-x86_64-unknown-linux-gnu",
+]

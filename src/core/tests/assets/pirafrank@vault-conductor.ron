@@ -1,0 +1,14 @@
+[
+    "vault-conductor-0.2.1-aarch64-apple-darwin.tar.gz",
+    "vault-conductor-0.2.1-aarch64-apple-darwin.tar.gz.sha256",
+    "vault-conductor-0.2.1-aarch64-unknown-linux-gnu.tar.gz",
+    "vault-conductor-0.2.1-aarch64-unknown-linux-gnu.tar.gz.sha256",
+    "vault-conductor-0.2.1-aarch64-unknown-linux-musl.tar.gz",
+    "vault-conductor-0.2.1-aarch64-unknown-linux-musl.tar.gz.sha256",
+    "vault-conductor-0.2.1-x86_64-apple-darwin.tar.gz",
+    "vault-conductor-0.2.1-x86_64-apple-darwin.tar.gz.sha256",
+    "vault-conductor-0.2.1-x86_64-unknown-linux-gnu.tar.gz",
+    "vault-conductor-0.2.1-x86_64-unknown-linux-gnu.tar.gz.sha256",
+    "vault-conductor-0.2.1-x86_64-unknown-linux-musl.tar.gz",
+    "vault-conductor-0.2.1-x86_64-unknown-linux-musl.tar.gz.sha256",
+]

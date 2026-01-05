@@ -1,0 +1,18 @@
+[
+    "SHA256SUMS",
+    "witr-0.2.3-linux-amd64.apk",
+    "witr-0.2.3-linux-amd64.deb",
+    "witr-0.2.3-linux-amd64.rpm",
+    "witr-0.2.3-linux-arm64.apk",
+    "witr-0.2.3-linux-arm64.deb",
+    "witr-0.2.3-linux-arm64.rpm",
+    "witr-darwin-amd64",
+    "witr-darwin-arm64",
+    "witr-freebsd-amd64",
+    "witr-freebsd-arm64",
+    "witr-linux-amd64",
+    "witr-linux-arm64",
+    "witr-windows-amd64.zip",
+    "witr-windows-arm64.zip",
+    "witr.1",
+]

@@ -31,6 +31,10 @@ build:
 test:
   cargo test -- --nocapture
 
+# Run only asset selector tests
+test-selector:
+  cargo test --package poof --bin poof -- core::tests::selector_tests::tests --nocapture
+
 # Run only integration tests
 test-integration:
   cargo test --test integration -- --nocapture

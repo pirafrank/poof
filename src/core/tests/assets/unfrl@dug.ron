@@ -1,0 +1,12 @@
+[
+    "dug-linux-arm64",
+    "dug-linux-x64",
+    "dug-osx-x64",
+    "dug.0.0.94.linux-arm64.deb",
+    "dug.0.0.94.linux-x64.deb",
+    "dug.0.0.94.linux-x64.rpm",
+    "dug.0.0.94.linux-x64.tar.gz",
+    "dug.0.0.94.nupkg",
+    "dug.0.0.94.osx-x64.tar.gz",
+    "dug.exe",
+]

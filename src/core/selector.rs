@@ -40,19 +40,6 @@ lazy_static! {
     };
 }
 
-#[cfg(target_arch = "arm")]
-pub fn hf_supported() -> &'static bool {
-    #[cfg(target_feature = "vfp2")]
-    {
-        &true
-    }
-
-    #[cfg(not(target_feature = "vfp2"))]
-    {
-        &false
-    }
-}
-
 // Checks if the item has a valid extension.
 fn has_extension(item: &str) -> bool {
     // if the item does not contain a dot, it does not have an extension,

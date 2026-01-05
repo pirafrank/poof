@@ -1,0 +1,13 @@
+[
+    "kube-health-monitor_Darwin_arm64.tar.gz",
+    "kube-health-monitor_Darwin_x86_64.tar.gz",
+    "kube-health-monitor_Linux_arm64.tar.gz",
+    "kube-health-monitor_Linux_i386.tar.gz",
+    "kube-health-monitor_Linux_x86_64.tar.gz",
+    "kube-health_0.3.1_checksums.txt",
+    "kube-health_Darwin_arm64.tar.gz",
+    "kube-health_Darwin_x86_64.tar.gz",
+    "kube-health_Linux_arm64.tar.gz",
+    "kube-health_Linux_i386.tar.gz",
+    "kube-health_Linux_x86_64.tar.gz",
+]
