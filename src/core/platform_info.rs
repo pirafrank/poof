@@ -21,11 +21,45 @@ pub fn long_version() -> &'static str {
     let linking_type = "dynamically linked";
     Box::leak(
         format!(
-            "\nVersion   : {}\nCommit    : {}\nBuild Date: {}\nC library : {} ({})",
-            VERSION, COMMIT, BUILD_DATE, COMPILE_C_LIB, linking_type
+            "\nVersion   : {}\nCommit    : {}\nBuild Date: {}\nBuilt with: {} ({}){}",
+            VERSION,
+            COMMIT,
+            BUILD_DATE,
+            COMPILE_C_LIB,
+            linking_type,
+            get_glibc_version_string()
         )
         .into_boxed_str(),
     )
+}
+
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+/// Returns the Glibc version if the build is GNU, otherwise returns an empty string.
+pub fn get_glibc_version() -> Option<String> {
+    let result = std::panic::catch_unwind(|| unsafe {
+        let version_ptr = libc::gnu_get_libc_version();
+        if !version_ptr.is_null() {
+            let version_cstr = std::ffi::CStr::from_ptr(version_ptr);
+            return version_cstr.to_str().ok().map(|s| s.to_string());
+        }
+        None
+    });
+    result.unwrap_or(None)
+}
+
+#[cfg(not(all(target_os = "linux", target_env = "gnu")))]
+pub fn get_glibc_version() -> Option<String> {
+    None
+}
+
+/// Returns the Glibc string to show in platform info method
+fn get_glibc_version_string() -> String {
+    match get_glibc_version() {
+        Some(version) => {
+            format!("\nRunning on: glibc v{}", version)
+        }
+        None => "".to_string(),
+    }
 }
 
 pub fn short_description() -> &'static str {
@@ -127,7 +161,7 @@ mod tests {
         assert!(version.contains("Version"));
         assert!(version.contains("Commit"));
         assert!(version.contains("Build Date"));
-        assert!(version.contains("C library"));
+        assert!(version.contains("Built with"));
         // Check for linking type
         assert!(
             version.contains("statically linked") || version.contains("dynamically linked"),
