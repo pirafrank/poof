@@ -1,0 +1,15 @@
+[
+    "aarch64-apple-darwin.zip",
+    "aarch64-pc-windows-msvc.zip",
+    "aarch64-unknown-linux-gnu.deb",
+    "aarch64-unknown-linux-gnu.zip",
+    "aarch64-unknown-linux-musl.deb",
+    "aarch64-unknown-linux-musl.zip",
+    "x86_64-apple-darwin.zip",
+    "x86_64-pc-windows-gnu.zip",
+    "x86_64-pc-windows-msvc.zip",
+    "x86_64-unknown-linux-gnu.deb",
+    "x86_64-unknown-linux-gnu.zip",
+    "x86_64-unknown-linux-musl.deb",
+    "x86_64-unknown-linux-musl.zip",
+]

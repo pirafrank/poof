@@ -1,0 +1,7 @@
+[
+    "git-ignore-aarch64-apple-darwin.tar.gz",
+    "git-ignore-x86_64-apple-darwin.tar.gz",
+    "git-ignore-x86_64-pc-windows-msvc.zip",
+    "git-ignore-x86_64-unknown-linux-gnu.tar.gz",
+    "git-ignore-x86_64-unknown-linux-musl.tar.gz",
+]

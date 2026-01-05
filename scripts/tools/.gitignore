@@ -1,0 +1,3 @@
+list.txt
+outputs/**/*
+!outputs/**/.gitkeep

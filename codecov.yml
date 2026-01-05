@@ -10,5 +10,6 @@ coverage:
         threshold: 1%
 ignore:
   - "tests/*"
+  - "src/core/tests/**"
   - "build.rs"
 

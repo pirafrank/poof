@@ -1,0 +1,9 @@
+[
+    "oha-linux-amd64",
+    "oha-linux-amd64-pgo",
+    "oha-linux-arm64",
+    "oha-macos-amd64",
+    "oha-macos-arm64",
+    "oha-windows-amd64-pgo.exe",
+    "oha-windows-amd64.exe",
+]
