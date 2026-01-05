@@ -85,7 +85,7 @@ pub fn is_env_compatible(input: &str) -> bool {
 }
 
 /// Returns true if the input string has patterns compatible with the given OS, ARCH, triple.
-fn is_triple_compatible(input: &str, t: &AssetTriple) -> bool {
+pub fn is_triple_compatible(input: &str, t: &AssetTriple) -> bool {
     // Convert item to lowercase for comparison as
     // OPERATING_SYSTEM and CPU_ARCH are lowercase in the code above.
     let item = input.to_lowercase();
