@@ -1,6 +1,6 @@
+use crate::models::asset_triple::AssetTriple;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
-use std::env::consts::{ARCH, OS};
 
 use crate::constants::SUPPORTED_EXTENSIONS;
 
@@ -66,20 +66,23 @@ fn is_exec_name_only(arch: &&str, s: &str) -> bool {
     false
 }
 
+/// Returns true if the input string has patterns compatible with the current environment.
 pub fn is_env_compatible(input: &str) -> bool {
+    // get the current environment as an AssetTriple
+    let t = AssetTriple::default();
+    is_triple_compatible(input, &t)
+}
+
+/// Returns true if the input string has patterns compatible with the given OS, ARCH, triple.
+fn is_triple_compatible(input: &str, t: &AssetTriple) -> bool {
     // Convert item to lowercase for comparison as
     // OPERATING_SYSTEM and CPU_ARCH are lowercase in the code above.
     let item = input.to_lowercase();
 
-    // TODO: Avoiding musl binaries on linux for now. Support to come later on.
-    if item.contains("musl") && OS == "linux" {
-        return false;
-    }
-
     // OPERATING_SYSTEM
     // Check if this OS matches our current OS
     if !OPERATING_SYSTEM
-        .get(OS)
+        .get(t.get_os().as_str())
         .is_some_and(|aliases| aliases.iter().any(|alias| item.contains(alias)))
     {
         return false;
@@ -87,7 +90,7 @@ pub fn is_env_compatible(input: &str) -> bool {
 
     // CPU_ARCH
     // Check if this architecture matches our current architecture
-    let matching_arch_alias = match CPU_ARCH.get(ARCH) {
+    let matching_arch_alias = match CPU_ARCH.get(t.get_arch().as_str()) {
         Some(aliases) => {
             let found = aliases.iter().find(|&&alias| item.contains(alias));
             if found.is_none() {
@@ -110,57 +113,19 @@ pub fn is_env_compatible(input: &str) -> bool {
         return false;
     }
 
+    // MUSL
+    // Check if the binary is musl
+    if t.is_musl() && !item.contains("musl") {
+        return false;
+    }
+
     // if we got this far, we have a winner
     true
-}
-
-#[allow(dead_code)]
-/// Check if the input string is compatible with the current OS and architecture.
-pub fn are_env_compatible(input: Vec<String>) -> Option<String> {
-    // Iterate through inputs and find a match for current OS and architecture
-    input
-        .into_iter()
-        .find(|item_str| is_env_compatible(item_str))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Using a static array instead of a const with to_string() calls
-    static INPUT: [&str; 31] = [
-        "deb.sh",
-        "ipinfo_3.3.1_darwin_amd64.tar.gz",
-        "ipinfo_3.3.1_darwin_arm64.tar.gz",
-        "ipinfo_3.3.1_dragonfly_amd64.tar.gz",
-        "ipinfo_3.3.1_freebsd_386.tar.gz",
-        "ipinfo_3.3.1_freebsd_amd64.tar.gz",
-        "ipinfo_3.3.1_freebsd_arm.tar.gz",
-        "ipinfo_3.3.1_freebsd_arm64.tar.gz",
-        "ipinfo_3.3.1_linux_386.deb",
-        "ipinfo_3.3.1_linux_386.tar.gz",
-        "ipinfo_3.3.1_linux_amd64.deb",
-        "ipinfo_3.3.1_linux_amd64.tar.gz",
-        "ipinfo_3.3.1_linux_arm.deb",
-        "ipinfo_3.3.1_linux_arm.tar.gz",
-        "ipinfo_3.3.1_linux_arm64.deb",
-        "ipinfo_3.3.1_linux_arm64.tar.gz",
-        "ipinfo_3.3.1_netbsd_386.tar.gz",
-        "ipinfo_3.3.1_netbsd_amd64.tar.gz",
-        "ipinfo_3.3.1_netbsd_arm.tar.gz",
-        "ipinfo_3.3.1_netbsd_arm64.tar.gz",
-        "ipinfo_3.3.1_openbsd_386.tar.gz",
-        "ipinfo_3.3.1_openbsd_amd64.tar.gz",
-        "ipinfo_3.3.1_openbsd_arm.tar.gz",
-        "ipinfo_3.3.1_openbsd_arm64.tar.gz",
-        "ipinfo_3.3.1_solaris_amd64.tar.gz",
-        "ipinfo_3.3.1_windows_386.zip",
-        "ipinfo_3.3.1_windows_amd64.zip",
-        "ipinfo_3.3.1_windows_arm.zip",
-        "ipinfo_3.3.1_windows_arm64.zip",
-        "macos.sh",
-        "windows.ps1",
-    ];
 
     #[test]
     fn test_is_env_compatible() {
@@ -179,26 +144,6 @@ mod tests {
         )) {
             assert_eq!(true, is_env_compatible(&windows));
             assert_eq!(false, is_env_compatible(&linux));
-        }
-    }
-
-    #[test]
-    fn test_are_env_compatible() {
-        let input_strings: Vec<String> = INPUT.iter().map(|&s| s.to_string()).collect();
-        let result = are_env_compatible(input_strings);
-
-        // Warning: This assertion depends on the platform running the test.
-        // If running on Linux AMD64, this should pass.
-        if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-            assert_eq!(result.clone().unwrap(), "ipinfo_3.3.1_linux_amd64.tar.gz");
-        }
-        // If running on Windows with MSVC, this should pass.
-        if cfg!(all(
-            target_os = "windows",
-            target_arch = "x86_64",
-            target_env = "msvc"
-        )) {
-            assert_eq!(result.unwrap(), "ipinfo_3.3.1_windows_amd64.zip");
         }
     }
 }
