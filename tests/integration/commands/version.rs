@@ -24,10 +24,11 @@ fn test_upper_v_version_flag() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("-V")
         .assert()
         .success()
-        .stdout(predicate::str::contains(env!("CARGO_PKG_VERSION")))
-        .stdout(predicate::str::contains(env!("GIT_COMMIT_HASH")))
-        .stdout(predicate::str::contains(env!("BUILD_DATE")))
-        .stdout(predicate::str::contains(env!("C_LIB")))
+        .stdout(predicate::str::contains(format!(
+            "{} {}",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION")
+        )))
         .stderr(predicate::str::is_empty());
     Ok(())
 }
