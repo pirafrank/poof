@@ -1,7 +1,6 @@
 use crate::{
     commands::{self, download::download_binary, list::list_installed_assets},
     constants::APP_NAME,
-    core::selector::is_env_compatible,
     files::{
         archives::extract_to_dir, filesys::find_exec_files_from_extracted_archive,
         magic::is_exec_by_magic_number, utils::get_stem_name_trimmed_at_first_separator,
@@ -202,7 +201,7 @@ fn update_self() -> Result<()> {
     );
 
     // Find compatible asset
-    let binary = get_asset(&latest_release, is_env_compatible).with_context(|| {
+    let binary = get_asset(&latest_release).with_context(|| {
         format!(
             "Failed to find compatible asset for release {}",
             latest_version_str
