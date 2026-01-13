@@ -7,7 +7,6 @@ use std::{
 
 use crate::{
     commands::{self, download::download_binary},
-    core::selector::is_env_compatible,
     files::{
         archives, datadirs, filesys, magic::is_exec_by_magic_number,
         utils::get_stem_name_trimmed_at_first_separator,
@@ -36,7 +35,7 @@ fn process_install(repo: &str, tag: Option<&str>, is_update: bool) -> Result<()>
     // download binary
     let release = get_release(repo, tag)
         .with_context(|| format!("Failed to get release information for {}", repo))?;
-    let binary = get_asset(&release, is_env_compatible).with_context(|| {
+    let binary = get_asset(&release).with_context(|| {
         format!(
             "Failed to find compatible asset for release {}",
             release.tag_name()

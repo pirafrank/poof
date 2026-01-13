@@ -56,3 +56,5 @@ data/*
 *.lcov
 *.info
 
+# easily exclude files and directories
+**/*.ignore
