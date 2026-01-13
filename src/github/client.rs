@@ -1,7 +1,8 @@
 //! GitHub API interaction for fetching releases and assets.
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, error, info, warn};
+use reqwest::blocking::{Client, RequestBuilder};
 
 use crate::core::selector::get_env_compatible_assets;
 
@@ -11,6 +12,14 @@ const GITHUB_API_URL: &str = "https://api.github.com/repos";
 const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
 const GITHUB_API_ACCEPT: &str = "application/vnd.github.v3+json";
 
+fn get_github_token() -> Result<String> {
+    let token = std::env::var("GITHUB_TOKEN").with_context(|| "GITHUB_TOKEN is not set")?;
+    if token.is_empty() {
+        bail!("GITHUB_TOKEN is not set");
+    }
+    Ok(token)
+}
+
 /// Get the base API URL from environment or use the default
 fn get_base_api_url() -> String {
     std::env::var("POOF_GITHUB_API_URL").unwrap_or_else(|_| GITHUB_API_URL.to_string())
@@ -19,15 +28,20 @@ fn get_base_api_url() -> String {
 pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
     let release_url = get_release_url(repo, tag);
     info!("Release URL: {}", release_url);
-    let client = reqwest::blocking::Client::new();
+    let client: Client = Client::new();
 
-    // Make the request
-    match client
+    let mut request: RequestBuilder = client
         .get(&release_url)
         .header("User-Agent", GITHUB_API_USER_AGENT) // Keep User-Agent header for GitHub API
-        .header("Accept", GITHUB_API_ACCEPT)
-        .send()
-    {
+        .header("Accept", GITHUB_API_ACCEPT);
+
+    // Add Authorization header if token is available to avoid rate limiting
+    if let Ok(token) = get_github_token() {
+        request = request.header("Authorization", format!("Bearer {}", token));
+    }
+
+    // Make the request
+    match request.send() {
         Ok(response) => {
             debug!("Response Status: {}", response.status());
             let status = response.status(); // we store for error case
