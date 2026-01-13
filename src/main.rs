@@ -17,7 +17,6 @@ mod utils;
 
 use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
-use crate::core::selector::is_env_compatible;
 use github::client::{get_asset, get_release};
 use utils::semver::SemverStringConversion;
 
@@ -178,7 +177,7 @@ fn run() -> Result<()> {
 
             let release = get_release(&args.repo, args.tag.as_deref())
                 .with_context(|| format!("Failed to get release info for {}", args.repo))?;
-            let binary = get_asset(&release, is_env_compatible).with_context(|| {
+            let binary = get_asset(&release).with_context(|| {
                 format!(
                     "Failed to find compatible asset for release {}",
                     release.tag_name()

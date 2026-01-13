@@ -3,9 +3,9 @@
 use anyhow::{anyhow, bail, Result};
 use log::{debug, error, info, warn};
 
-use crate::github::models::Release;
+use crate::core::selector::get_env_compatible_assets;
 
-use super::models::ReleaseAsset;
+use super::models::{Release, ReleaseAsset};
 
 const GITHUB_API_URL: &str = "https://api.github.com/repos";
 const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
@@ -89,23 +89,23 @@ pub fn get_release_url(repo: &str, tag: Option<&str>) -> String {
     }
 }
 
-pub fn get_asset<F>(release: &Release, f: F) -> Result<ReleaseAsset>
-where
-    F: Fn(&str) -> bool,
-{
-    let binaries: Vec<ReleaseAsset> = release
-        .assets()
-        .iter()
-        .filter(|asset| f(asset.name()))
-        .cloned()
-        .collect();
+pub fn get_asset(release: &Release) -> Result<ReleaseAsset> {
+    let binaries: Option<Vec<ReleaseAsset>> =
+        get_env_compatible_assets(release.assets(), |asset| asset.name());
+    let not_found = format!(
+        "No compatible pre-built binaries found for release {} matching the specified criteria.",
+        release.tag_name()
+    );
 
-    if binaries.is_empty() {
-        bail!(
-            "No compatible pre-built binaries found for release {} matching the specified criteria.",
-            release.tag_name()
-        );
+    if binaries.is_none() {
+        bail!(not_found);
     }
+
+    let binaries = binaries.unwrap();
+    if binaries.is_empty() {
+        bail!(not_found);
+    }
+
     debug!("Compatible binaries found:");
     for binary in &binaries {
         debug!("\t{}", binary.name());
