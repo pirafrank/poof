@@ -82,14 +82,12 @@ fn update_single_repo(repo: &str) -> Result<()> {
             latest_version, repo, highest_installed
         );
         // 4. call process_install for the latest tag
-        commands::install::install_new_default(repo, Some(latest_version_str)).with_context(
-            || {
-                format!(
-                    "Failed to install version {} as the default for {}",
-                    latest_version_str, repo
-                )
-            },
-        )?;
+        commands::install::install_update(repo, Some(latest_version_str)).with_context(|| {
+            format!(
+                "Failed to install version {} as the default for {}",
+                latest_version_str, repo
+            )
+        })?;
         info!(
             "Successfully updated {} to version {} and set it as default",
             repo, latest_version
