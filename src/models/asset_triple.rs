@@ -1,13 +1,10 @@
-//! A tuple of OS, Architecture, Endianness, and Musl.
+//! A tuple of OS, Architecture, and Musl flag.
 use std::{
     env::consts::{ARCH, OS},
     fmt::Display,
 };
 
-#[cfg(not(target_env = "musl"))]
-const MUSL: bool = false;
-#[cfg(target_env = "musl")]
-const MUSL: bool = true;
+use crate::core::musl::target_prefers_musl;
 
 pub struct AssetTriple {
     os: String,
@@ -41,7 +38,7 @@ impl Default for AssetTriple {
         Self {
             os: OS.to_string(),
             arch: ARCH.to_string(),
-            musl: MUSL, // default to target build of poof, user can override
+            musl: target_prefers_musl(),
         }
     }
 }
