@@ -21,7 +21,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     process_install(repo, tag, false)
 }
 
-pub fn install_new_default(repo: &str, tag: Option<&str>) -> Result<()> {
+pub fn install_update(repo: &str, tag: Option<&str>) -> Result<()> {
     process_install(repo, tag, true)
 }
 
