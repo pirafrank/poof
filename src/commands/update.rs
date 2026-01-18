@@ -7,6 +7,7 @@ use crate::{
     },
     github::client::{get_assets, get_release},
     models::spell::Spell,
+    utils::installation::is_externally_managed_installation,
     utils::semver::{SemverStringPrefix, Version},
     UpdateArgs,
 };
@@ -292,11 +293,21 @@ fn update_self() -> Result<()> {
 
 // Main process
 pub fn process_update(args: &UpdateArgs) -> Result<()> {
-    if args.all {
-        update_all_repos().context("Failed during update --all")?;
+    if args.update_self {
+        // Check if installed via cargo, .deb, or .rpm
+        if is_externally_managed_installation() {
+            bail!(
+                "Self-update is not available for installations managed by package managers.\n\
+                Please use your package manager to update poof:\n\
+                  - cargo: cargo install --locked poof\n"
+            );
+        }
+
+        info!("Updating poof itself...");
+        update_self()?;
         Ok(())
-    } else if args.update_self {
-        update_self().context("Failed during update --self")?;
+    } else if args.all {
+        update_all_repos().context("Failed during update --all")?;
         Ok(())
     } else if let Some(repo) = &args.repo {
         update_single_repo(repo)
