@@ -1,0 +1,29 @@
+name: Match Version Check
+description: Check if the version in Cargo.toml matches the version provided
+inputs:
+  app_version:
+    description: The version of the application from Cargo.toml
+    required: true
+  compare_to:
+    description: The version to run the check against
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Match version check
+      id: match_version_check
+      shell: bash
+      run: |
+        APP_VERSION="${{ inputs.app_version }}"
+        TAG=$(echo "${{ inputs.compare_to }}" | sed -e 's,.*/\(.*\),\1,')
+        if [[ $TAG == v* ]]; then
+          TAG=${TAG:1}
+        fi
+        echo "Extracted tag for comparison: $TAG"
+        if [[ $APP_VERSION != $TAG ]]; then
+          echo "❌ Version check failed: version in Cargo.toml ($APP_VERSION) does not match the version provided($TAG)"
+          exit 1
+        else
+          echo "✅ Version check passed"
+          exit 0
+        fi

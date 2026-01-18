@@ -1,0 +1,27 @@
+name: Get App Info
+description: Extract app name and version from Cargo.toml
+outputs:
+  app_name:
+    description: The name of the application from Cargo.toml
+    value: ${{ steps.name.outputs.app_name }}
+  app_version:
+    description: The version of the application from Cargo.toml
+    value: ${{ steps.version.outputs.app_version }}
+runs:
+  using: composite
+  steps:
+    - name: Get app name
+      id: name
+      shell: bash
+      run: |
+        APP_NAME=$(grep -m1 -oP '(?<=name = ")[^"]*' Cargo.toml)
+        echo "app_name=$APP_NAME"
+        echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
+
+    - name: Get app version
+      id: version
+      shell: bash
+      run: |
+        APP_VERSION=$(grep -m1 -oP '(?<=version = ")[^"]*' Cargo.toml)
+        echo "app_version=$APP_VERSION"
+        echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
