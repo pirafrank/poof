@@ -18,43 +18,26 @@ jobs:
     name: Check version
     runs-on: ubuntu-latest
     outputs:
-      APP_NAME: ${{ steps.name.outputs.name }}
-      APP_VERSION: ${{ steps.version.outputs.version }}
+      APP_NAME: ${{ steps.info.outputs.app_name }}
+      APP_VERSION: ${{ steps.info.outputs.app_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Get app name
-        id: name
-        shell: bash
-        run: |
-          APP_NAME=$(grep -m1 -oP '(?<=name = ")[^"]*' Cargo.toml)
-          echo "name=$APP_NAME"
-          echo "name=$APP_NAME" >> $GITHUB_OUTPUT
+        with:
+          fetch-depth: 1
 
-      - name: Get app version
-        id: version
-        shell: bash
-        run: |
-          APP_VERSION=$(grep -m1 -oP '(?<=version = ")[^"]*' Cargo.toml)
-          echo "version=$APP_VERSION"
-          echo "version=$APP_VERSION" >> $GITHUB_OUTPUT
+      - name: Get app info
+        id: info
+        uses: ./.github/actions/get-info
 
       - name: Match version check
-        id: match_version_check
-        shell: bash
-        run: |
-          APP_VERSION="${{ steps.version.outputs.version }}"
-          TAG=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          if [[ $TAG == v* ]]; then
-            TAG=${TAG:1}
-          fi
-          echo "Extracted tag for comparison: $TAG"
-          if [[ $APP_VERSION != $TAG ]]; then
-            echo "ERROR: version in Cargo.toml ($APP_VERSION) does not match the pushed tag ($TAG)"
-            exit 1
-          fi
+        uses: ./.github/actions/match-version-check
+        with:
+          app_version: ${{ steps.info.outputs.app_version }}
+          compare_to: ${{ github.ref }}
 
   make_matrix:
+    name: Create matrix
     runs-on: ubuntu-latest
     needs: checks
     outputs:
@@ -67,6 +50,7 @@ jobs:
         with:
           fetch-depth: 1
       - id: set-matrix
+        name: Set matrix
         run: |
           echo "matrix=$(grep -v '//' $MATRIX_FILE | jq -c '.')" >> "$GITHUB_OUTPUT"
 
@@ -102,34 +86,11 @@ jobs:
 
       - name: Compress and archive
         id: archive
-        shell: bash
-        run: |
-          mkdir -p _temp/release
-          FILENAMEBASE="${{ needs.checks.outputs.APP_NAME }}-${{ needs.checks.outputs.APP_VERSION }}-${{ matrix.target }}"
-          cp LICENSE.md README.md CHANGELOG.md _temp/release/
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            cp target/${{ matrix.target }}/release/${{ env.BIN_NAME }}.exe _temp/release/
-            cd _temp/release
-            7z a -tzip ../${FILENAMEBASE}.zip *
-            echo "archive_name=${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
-            echo "archive_path=_temp/${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
-            # Generate SHA256 checksum for the compressed archive
-            cd ..
-            ${{ matrix.shacmd }} ${FILENAMEBASE}.zip > ${FILENAMEBASE}.zip.sha256
-            echo "sha256_name=${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
-            echo "sha256_path=_temp/${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
-          else
-            cp target/${{ matrix.target }}/release/${{ env.BIN_NAME }} _temp/release/
-            cd _temp/release
-            tar -czvf ../${FILENAMEBASE}.tar.gz * > /dev/null
-            echo "archive_name=${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
-            echo "archive_path=_temp/${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
-            # Generate SHA256 checksum for the compressed archive
-            cd ..
-            ${{ matrix.shacmd }} ${FILENAMEBASE}.tar.gz > ${FILENAMEBASE}.tar.gz.sha256
-            echo "sha256_name=${FILENAMEBASE}.tar.gz.sha256" >> $GITHUB_OUTPUT
-            echo "sha256_path=_temp/${FILENAMEBASE}.tar.gz.sha256" >> $GITHUB_OUTPUT
-          fi
+        uses: ./.github/actions/compress-and-archive
+        with:
+          filenamebase: ${{ needs.checks.outputs.APP_NAME }}-${{ needs.checks.outputs.APP_VERSION }}-${{ matrix.target }}
+          files: LICENSE* README.md CHANGELOG.md
+          binary_path: target/${{ matrix.target }}/release/${{ env.BIN_NAME }}${{ runner.os == 'Windows' && '.exe' || '' }}
 
       - name: Upload artifact
         if: startsWith(github.ref, 'refs/tags/v')
@@ -173,9 +134,9 @@ jobs:
           files: artifacts/**/*
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'beta') || contains(github.ref, 'rc') || contains(github.ref, 'alpha') || contains(github.ref, 'nightly') }}
           # Note: drafts and prereleases cannot be set as latest.
-          make_latest: ${{ !contains(github.ref, 'pre') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc') }}
+          make_latest: ${{ !contains(github.ref, 'pre') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc') && !contains(github.ref, 'alpha') && !contains(github.ref, 'nightly') }}
           fail_on_unmatched_files: true
           # no need to specify GITHUB_TOKEN here, it is automatically provided by GitHub Actions
 

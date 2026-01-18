@@ -1,0 +1,78 @@
+name: "Compress and Archive"
+description: "Compresses files into an archive and generates SHA256 checksum"
+inputs:
+  filenamebase:
+    description: "Base filename for the archive (without extension)"
+    required: true
+  files:
+    description: "Space-separated list of files to copy to the archive"
+    required: true
+  binary_path:
+    description: "Path to the binary file to include"
+    required: true
+outputs:
+  archive_name:
+    description: "Name of the created archive file"
+    value: ${{ steps.archive.outputs.archive_name }}
+  archive_path:
+    description: "Path to the created archive file"
+    value: ${{ steps.archive.outputs.archive_path }}
+  sha256_name:
+    description: "Name of the SHA256 checksum file"
+    value: ${{ steps.archive.outputs.sha256_name }}
+  sha256_path:
+    description: "Path to the SHA256 checksum file"
+    value: ${{ steps.archive.outputs.sha256_path }}
+runs:
+  using: "composite"
+  steps:
+    - name: Compress and archive
+      id: archive
+      shell: bash
+      run: |
+        # Create temporary release directory
+        mkdir -p _temp/release
+
+        FILENAMEBASE="${{ inputs.filenamebase }}"
+
+        # Copy files to release directory
+        for file in ${{ inputs.files }}; do
+          if [ -f "$file" ]; then
+            cp "$file" _temp/release/
+          fi
+        done
+
+        # Determine SHA command based on runner OS
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          SHACMD="shasum -a 256"
+        else
+          # Linux and Windows use 'sha256sum'
+          SHACMD="sha256sum"
+        fi
+
+        # Create archive based on OS
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          # Windows: copy binary with .exe extension and create zip
+          cp "${{ inputs.binary_path }}" _temp/release/
+          cd _temp/release
+          7z a -tzip ../${FILENAMEBASE}.zip *
+          echo "archive_name=${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
+          echo "archive_path=_temp/${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
+          # Generate SHA256 checksum for the compressed archive
+          cd ..
+          ${SHACMD} ${FILENAMEBASE}.zip > ${FILENAMEBASE}.zip.sha256
+          echo "sha256_name=${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
+          echo "sha256_path=_temp/${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
+        else
+          # Linux/macOS: copy binary without extension and create tar.gz
+          cp "${{ inputs.binary_path }}" _temp/release/
+          cd _temp/release
+          tar -czvf ../${FILENAMEBASE}.tar.gz * > /dev/null
+          echo "archive_name=${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
+          echo "archive_path=_temp/${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
+          # Generate SHA256 checksum for the compressed archive
+          cd ..
+          ${SHACMD} ${FILENAMEBASE}.tar.gz > ${FILENAMEBASE}.tar.gz.sha256
+          echo "sha256_name=${FILENAMEBASE}.tar.gz.sha256" >> $GITHUB_OUTPUT
+          echo "sha256_path=_temp/${FILENAMEBASE}.tar.gz.sha256" >> $GITHUB_OUTPUT
+        fi
