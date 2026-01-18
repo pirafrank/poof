@@ -37,32 +37,41 @@ For more information read below or check the documentation in the wiki. Got an i
 
 ## Features
 
-- **🛠️ Zero-config**: Works immediately without any setup required for first run
-- **📦 Zero-install**: Simply download the binary for your platform and use it right away
-- **🔗 Zero-dependencies**: It runs standalone without requiring any additional software
-- **👤 User-space**: Designed to work in user-space, no root access needed
-- **🌍 Cross-platform**: Works on Linux and macOS and runs on different architectures (FreeBSD and Windows support is planned)
-- **🚀 Easy to use**: Sensible commands that are easy to remember and to type. Just run `poof help` to know more.
+- **🛠️ Zero-config**: Use it straight away, no yaml, no TOML or other boring configuration
+- **📦 Zero-install**: one self-contained binary you just put in `PATH` and `rm` to uninstall
+- **🔗 Zero-dependencies**: It runs standalone, no additional software needed
+- **👤 User-space**: Designed to work in user-space and be portable. No root access needed to manage your tools
+- **🌍 Cross-platform**: Works on Linux and macOS and runs on many popular architectures (FreeBSD support is planned)
+- **🚀 Easy to use**: Sensible commands that are easy to remember and to type. Just run `poof help` to know more
+- **🧠 Smart**: Automatically detects your setup and downloads the right binaries for it
 
-Bonus:
+What's more?
 
 - **⚙️ Written in Rust**: Safe and fast binaries built on reliable dependencies, with linting and formatting applied at commit time
 - **0️⃣ Zero-versioned**: Because major versions are [a thing of the past](https://0ver.org/) (and *poof*, albeit magic, is baby).
 
 ## Why
 
-More and more often modern tools are built with languages like Rust and Go, and offer pre-built binaries. But they aren't always available in standard package managers. Here's where `poof` helps:
+More and more often modern tools are built with languages like C/C++, Rust or Go, and offer pre-built binaries. But they aren't always available in standard package managers. Here's where `poof` helps:
 
 - Download and put in `$PATH` binaries from GitHub with a single command
 - Install tools discovered on sites like [Terminal Trove](http://terminaltrove.com) instantly
 - Test newer versions of tools before they reach official repositories without uninstalling your current version
-- Fast jump on interesting utilities you read about without hassle
-- Prefer use of pre-built, portable, self-contained binaries without involving system package managers
+- Easily install multiple versions of the same tool and switch between them
+- Keep your system clean from unnecessary packages and dependencies installed via system package managers
+- Configure your CI/CD pipelines to use pre-built binaries without messing with additional requirements
+- Install software in sandboxed environments without root access
+
+## Requirements
+
+- Linux or macOS released in the last 10 years, running on one of the supported architectures:
+  - Linux (`x86_64`, `aarch64`, `armv7l`, `i686`, `ppc64le`, `s390x`, `riscv64gc`, `loongarch64`)
+  - macOS (`x86_64`, `aarch64`)
 
 ## Quick start
 
 1. Get `poof` using one of the methods below:
-    - **Pre-built binary**: Download the binary from [latest release](https://github.com/pirafrank/poof/releases), and move it to some directory in your `$PATH`. You may use the one-liner below.
+    - **Pre-built binary**: Download the binary from [latest release](https://github.com/pirafrank/poof/releases), and move it to some directory in your `$PATH`.<br/>You may use the one-liner below:
 
     ```sh
     curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh
@@ -91,7 +100,7 @@ More and more often modern tools are built with languages like Rust and Go, and 
 3. **Done!** Now try to install something, for example:
 
     ```sh
-    poof install pirafrank/rust_exif_renamer
+    poof install pirafrank/vault-conductor
     ```
 
 Additional information about [installation](https://github.com/pirafrank/poof/wiki/How-to-install) and [supported platforms](https://github.com/pirafrank/poof/wiki/Supported-platforms) is available in the Wiki.
