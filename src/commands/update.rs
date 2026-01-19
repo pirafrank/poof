@@ -8,8 +8,8 @@ use crate::{
     github::client::{get_assets, get_release},
     models::spell::Spell,
     utils::semver::{SemverStringPrefix, Version},
-    UpdateArgs,
 };
+use crate::cli::UpdateArgs;
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, error, info};
 use rayon::prelude::*;

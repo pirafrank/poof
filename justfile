@@ -113,6 +113,10 @@ clean-dl:
 # Clean all artifacts
 clean-all: clean clean-dl
 
+# Generate man pages
+man:
+  cargo run --example gen_man
+
 # Generate documentation
 docs:
   cargo doc --no-deps --open
