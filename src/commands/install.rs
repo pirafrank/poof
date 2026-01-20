@@ -12,7 +12,7 @@ use crate::{
         utils::get_stem_name_trimmed_at_first_separator,
     },
     github::{
-        client::{get_asset, get_release},
+        client::{get_assets, get_release},
         models::{Release, ReleaseAsset},
     },
     utils::semver::SemverStringPrefix,
@@ -21,7 +21,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
 
 pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
-    let (release, asset) = select_assets(repo, tag)?;
+    let (release, assets) = select_assets(repo, tag)?;
     let version: String = release.tag_name().strip_v();
 
     let install_dir = get_install_dir(repo, &version)?;
@@ -41,22 +41,26 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         datadirs::get_cache_dir().context("Failed to determine cache directory")?;
     debug!("Cache directory: {}", cache_dir.display());
 
-    // if not installed, download release assets
-    let download_to = datadirs::get_binary_nest(&cache_dir, repo, &version);
-    let downloaded_file =
-        match download_asset(asset.name(), asset.browser_download_url(), &download_to)
-            .with_context(|| format!("Failed to download asset for {} version {}", repo, version))
-        {
-            Ok(file) => file,
-            Err(e) => {
-                bail!(e);
-            }
-        };
+    for asset in assets {
+        // if not installed, download release assets
+        let download_to = datadirs::get_binary_nest(&cache_dir, repo, &version);
+        let downloaded_file =
+            match download_asset(asset.name(), asset.browser_download_url(), &download_to)
+                .with_context(|| {
+                    format!("Failed to download asset for {} version {}", repo, version)
+                }) {
+                Ok(file) => file,
+                Err(e) => {
+                    bail!(e);
+                }
+            };
 
-    process_install(&download_to, &downloaded_file, &install_dir, asset.name())
-        .with_context(|| format!("Failed to install {} version {}", repo, version))?;
-
+        process_install(&download_to, &downloaded_file, &install_dir, asset.name())
+            .with_context(|| format!("Failed to install {} version {}", repo, version))?;
+    }
     info!("{} {} installed successfully.", repo, &version);
+
+    // check if the binaries are in the PATH by checking if poof's bin directory is in PATH
     commands::check::check_if_bin_in_path();
     Ok(())
 }
@@ -96,17 +100,17 @@ fn process_install(
 /// Select the assets to download for the requested software.
 /// Returns a tuple of the release and the asset.
 /// Returns an error if the release or asset cannot be selected.
-pub fn select_assets(repo: &str, tag: Option<&str>) -> Result<(Release, ReleaseAsset)> {
+pub fn select_assets(repo: &str, tag: Option<&str>) -> Result<(Release, Vec<ReleaseAsset>)> {
     // select assets to download
     let release: Release = get_release(repo, tag)
         .with_context(|| format!("Failed to get release information for {}", repo))?;
-    let asset: ReleaseAsset = get_asset(&release).with_context(|| {
+    let assets: Vec<ReleaseAsset> = get_assets(&release).with_context(|| {
         format!(
             "Failed to find compatible asset for release {}",
             release.tag_name()
         )
     })?;
-    Ok((release, asset))
+    Ok((release, assets))
 }
 
 /// Get the installation directory for the requested software.

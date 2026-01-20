@@ -10,7 +10,7 @@ pub fn download_asset(
     download_url: &String,
     download_to: &PathBuf,
 ) -> Result<PathBuf> {
-    info!("Downloading {}\nfrom {}", filename, download_url);
+    info!("Downloading {} from {}", filename, download_url);
 
     let response = reqwest::blocking::get(download_url)
         .with_context(|| format!("Failed to initiate download from {}", download_url))?;

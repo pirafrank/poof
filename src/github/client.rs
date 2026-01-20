@@ -1,7 +1,7 @@
 //! GitHub API interaction for fetching releases and assets.
 
 use anyhow::{anyhow, bail, Context, Result};
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use reqwest::blocking::{Client, RequestBuilder};
 
 use crate::core::selector::get_env_compatible_assets;
@@ -103,7 +103,7 @@ pub fn get_release_url(repo: &str, tag: Option<&str>) -> String {
     }
 }
 
-pub fn get_asset(release: &Release) -> Result<ReleaseAsset> {
+pub fn get_assets(release: &Release) -> Result<Vec<ReleaseAsset>> {
     let binaries: Option<Vec<ReleaseAsset>> =
         get_env_compatible_assets(release.assets(), |asset| asset.name());
     let not_found = format!(
@@ -115,7 +115,7 @@ pub fn get_asset(release: &Release) -> Result<ReleaseAsset> {
         bail!(not_found);
     }
 
-    let binaries = binaries.unwrap();
+    let binaries: Vec<ReleaseAsset> = binaries.unwrap_or_default();
     if binaries.is_empty() {
         bail!(not_found);
     }
@@ -124,16 +124,7 @@ pub fn get_asset(release: &Release) -> Result<ReleaseAsset> {
     for binary in &binaries {
         debug!("\t{}", binary.name());
     }
-    if binaries.len() > 1 {
-        warn!(
-            "Multiple compatible binaries found for release {}. Selecting first: {}",
-            release.tag_name(),
-            binaries[0].name()
-        );
-        // TODO: allow to specify which binary to download via explicit URL given to 'install' command
-    }
-    // Return the first compatible binary
-    Ok(binaries[0].clone())
+    Ok(binaries)
 }
 
 #[cfg(test)]

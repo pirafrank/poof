@@ -5,7 +5,7 @@ use crate::{
         archives::extract_to_dir, filesys::find_exec_files_from_extracted_archive,
         magic::is_exec_by_magic_number, utils::get_stem_name_trimmed_at_first_separator,
     },
-    github::client::{get_asset, get_release},
+    github::client::{get_assets, get_release},
     models::asset::Asset,
     utils::semver::{SemverStringPrefix, Version},
     UpdateArgs,
@@ -199,12 +199,16 @@ fn update_self() -> Result<()> {
     );
 
     // Find compatible asset
-    let binary = get_asset(&latest_release).with_context(|| {
+    let assets = get_assets(&latest_release).with_context(|| {
         format!(
             "Failed to find compatible asset for release {}",
             latest_version_str
         )
     })?;
+    // for self-update, we only need the first asset since we are pretty sure for poof there only will be one.
+    let binary = assets
+        .first()
+        .ok_or_else(|| anyhow!("No compatible asset found"))?;
 
     // Create a temporary directory for downloading
     let temp_dir = std::env::temp_dir().join(format!("poof-update-{}", latest_version_str));

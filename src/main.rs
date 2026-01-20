@@ -174,20 +174,23 @@ fn run() -> Result<()> {
                 std::env::current_dir().context("Failed to determine current directory")?;
             debug!("Working directory: {}", current_dir.display());
 
-            let (_, asset) = commands::install::select_assets(&args.repo, args.tag.as_deref())?;
-            commands::download::download_asset(
-                asset.name(),
-                asset.browser_download_url(),
-                &current_dir,
-            )
-            .with_context(|| {
-                format!(
-                    "Failed to download asset for {} version {}",
-                    args.repo,
-                    args.tag.as_deref().unwrap_or("(latest)")
+            let (_, assets) = commands::install::select_assets(&args.repo, args.tag.as_deref())?;
+
+            for asset in assets {
+                commands::download::download_asset(
+                    asset.name(),
+                    asset.browser_download_url(),
+                    &current_dir,
                 )
-            })?;
-            info!("Download complete.");
+                .with_context(|| {
+                    format!(
+                        "Failed to download asset for {} version {}",
+                        args.repo,
+                        args.tag.as_deref().unwrap_or("(latest)")
+                    )
+                })?;
+            }
+            info!("All done.");
         }
         Cmd::Install(args) => {
             info!(
