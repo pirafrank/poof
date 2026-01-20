@@ -55,7 +55,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
                 }
             };
 
-        process_install(&download_to, &downloaded_file, &install_dir, asset.name())
+        process_install(&downloaded_file, &download_to, &install_dir, asset.name())
             .with_context(|| format!("Failed to install {} version {}", repo, version))?;
     }
     info!("{} {} installed successfully.", repo, &version);
