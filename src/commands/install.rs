@@ -195,6 +195,7 @@ fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
     }
 
     for exec in execs_to_install {
+        debug!("Installing executable: {}", exec.display());
         // if we have multiple executables, we install each one.
         // we assume that to have multiple executables, those were in an archive.
         let exec_name = exec
@@ -210,9 +211,6 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
     let installed_exec = install_dir.join(exec_stem);
 
     // copy the executable files to the install directory
-    // TODO: this Result may be an Err variant, which should be handled
-    // for now, we just use let _ = to ignore the resulting value
-    // but it is rrealy important to handle it
     filesys::copy_file(exec, &installed_exec).map_err(|e| {
         anyhow!(
             "Failed to copy {} to install dir ({}): {}",
