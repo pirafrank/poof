@@ -41,9 +41,13 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         datadirs::get_cache_dir().context("Failed to determine cache directory")?;
     debug!("Cache directory: {}", cache_dir.display());
 
+    let mut i = 1;
     for asset in assets {
-        // if not installed, download release assets
-        let download_to = datadirs::get_binary_nest(&cache_dir, repo, &version);
+        // if not installed, download release assets.
+        // we use a counter to name the assets differently to avoid conflicts in case of multiple assets,
+        // which themselves may contain multiple executables.
+        let download_to =
+            datadirs::get_binary_nest(&cache_dir, repo, &version).join(format!("asset_{}", i));
         let downloaded_file =
             match download_asset(asset.name(), asset.browser_download_url(), &download_to)
                 .with_context(|| {
@@ -54,6 +58,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
                     bail!(e);
                 }
             };
+        i += 1;
 
         process_install(&downloaded_file, &download_to, &install_dir, asset.name())
             .with_context(|| format!("Failed to install {} version {}", repo, version))?;
