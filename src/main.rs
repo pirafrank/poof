@@ -17,7 +17,6 @@ mod utils;
 
 use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
-use github::client::{get_asset, get_release};
 use utils::semver::SemverStringConversion;
 
 // Constants
@@ -175,19 +174,20 @@ fn run() -> Result<()> {
                 std::env::current_dir().context("Failed to determine current directory")?;
             debug!("Working directory: {}", current_dir.display());
 
-            let release = get_release(&args.repo, args.tag.as_deref())
-                .with_context(|| format!("Failed to get release info for {}", args.repo))?;
-            let binary = get_asset(&release).with_context(|| {
+            let (_, asset) = commands::install::select_assets(&args.repo, args.tag.as_deref())?;
+            commands::download::download_asset(
+                asset.name(),
+                asset.browser_download_url(),
+                &current_dir,
+            )
+            .with_context(|| {
                 format!(
-                    "Failed to find compatible asset for release {}",
-                    release.tag_name()
+                    "Failed to download asset for {} version {}",
+                    args.repo,
+                    args.tag.as_deref().unwrap_or("(latest)")
                 )
             })?;
-            commands::download::download_binary(
-                binary.name(),
-                binary.browser_download_url(),
-                &current_dir,
-            )?;
+            info!("Download complete.");
         }
         Cmd::Install(args) => {
             info!(

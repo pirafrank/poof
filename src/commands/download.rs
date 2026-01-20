@@ -5,11 +5,11 @@ use log::{debug, info};
 use std::{fs::File, io::copy, path::PathBuf};
 
 // Function to handle downloading and potentially installing binaries
-pub fn download_binary(
+pub fn download_asset(
     filename: &String,
     download_url: &String,
     download_to: &PathBuf,
-) -> Result<()> {
+) -> Result<PathBuf> {
     info!("Downloading {}\nfrom {}", filename, download_url);
 
     let response = reqwest::blocking::get(download_url)
@@ -22,11 +22,11 @@ pub fn download_binary(
             .with_context(|| format!("Failed to create directory {}", download_to.display()))?;
 
         // Create the file path and open it for writing
-        let archive_path = download_to.join(filename);
-        let mut file = File::create(&archive_path)
-            .with_context(|| format!("Failed to create file {}", archive_path.display()))?;
+        let target_file_path = download_to.join(filename);
+        let mut file = File::create(&target_file_path)
+            .with_context(|| format!("Failed to create file {}", target_file_path.display()))?;
 
-        debug!("Saving to: {}", archive_path.display());
+        debug!("Saving to: {}", target_file_path.display());
 
         // Copy the response body to the file
         let content = response
@@ -36,7 +36,7 @@ pub fn download_binary(
             .context("Failed to write downloaded data to file")?;
 
         info!("Download complete.");
-        Ok(())
+        Ok(target_file_path.clone())
     } else {
         // we use anyhow::bail! for errors originating here
         let error_body = response

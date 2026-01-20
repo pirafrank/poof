@@ -1,5 +1,5 @@
 use crate::{
-    commands::{self, download::download_binary, list::list_installed_assets},
+    commands::{self, download::download_asset, list::list_installed_assets},
     constants::APP_NAME,
     files::{
         archives::extract_to_dir, filesys::find_exec_files_from_extracted_archive,
@@ -82,7 +82,7 @@ fn update_single_repo(repo: &str) -> Result<()> {
             latest_version, repo, highest_installed
         );
         // 4. call process_install for the latest tag
-        commands::install::install_update(repo, Some(latest_version_str)).with_context(|| {
+        commands::install::install(repo, Some(latest_version_str)).with_context(|| {
             format!(
                 "Failed to install version {} as the default for {}",
                 latest_version_str, repo
@@ -216,14 +216,12 @@ fn update_self() -> Result<()> {
     })?;
 
     // Download the binary
-    download_binary(binary.name(), binary.browser_download_url(), &temp_dir).with_context(
-        || {
-            format!(
-                "Failed to download binary for version {}",
-                latest_version_str
-            )
-        },
-    )?;
+    download_asset(binary.name(), binary.browser_download_url(), &temp_dir).with_context(|| {
+        format!(
+            "Failed to download binary for version {}",
+            latest_version_str
+        )
+    })?;
 
     let downloaded_file = temp_dir.join(binary.name());
     let new_binary_path = if is_exec_by_magic_number(&downloaded_file) {
