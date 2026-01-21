@@ -91,8 +91,9 @@ fn process_install(
             .with_context(|| format!("Failed to install executable {}", asset_name))?;
     } else {
         // extract executables
-        archives::extract_to_dir(downloaded_file, download_to).unwrap();
-        debug!("Extracted to: {}", download_to.display());
+        archives::extract_to_dir(downloaded_file, download_to)
+            .with_context(|| format!("Failed to extract archive {}", asset_name))?;
+        debug!("Extracted {} to {}", asset_name, download_to.display());
 
         // install executables
         install_binaries(downloaded_file, install_dir).with_context(|| {

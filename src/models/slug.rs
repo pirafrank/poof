@@ -2,10 +2,10 @@
 pub struct Slug(pub String);
 
 // allowing dead code for the sake of having a complete set
-// of function available for the Binary struct.
+// of function available for the Slug struct.
 #[allow(dead_code)]
 impl Slug {
-    // Create a new RepoString from a String
+    // Create a new Slug from a String
     pub fn new(s: impl Into<String>) -> Self {
         Self(s.into())
     }
@@ -23,19 +23,25 @@ impl Slug {
     /// Returns the username of repo, which is the first part of the RepoString
     /// before the first '/'
     pub fn get_username(&self) -> Option<String> {
-        let parts: Vec<&str> = self.0.split('/').collect();
-        Some(parts[0].to_string())
+        if let Some((username, _)) = self.0.split_once('/') {
+            Some(username.to_string())
+        } else {
+            None
+        }
     }
 
-    /// Returns the repository name, which is the second part of the RepoString
+    /// Returns the repository name, which is the second part of the Slug
     /// after the first '/'
     pub fn get_reponame(&self) -> Option<String> {
-        let parts: Vec<&str> = self.0.split('/').collect();
-        Some(parts[1].to_string())
+        if let Some((_, reponame)) = self.0.split_once('/') {
+            Some(reponame.to_string())
+        } else {
+            None
+        }
     }
 }
 
-// Return a String representation of RepoString.
+// Return a String representation of Slug.
 impl std::fmt::Display for Slug {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)

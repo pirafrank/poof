@@ -31,6 +31,8 @@ impl Ord for Spell {
 impl Spell {
     /// Creates a new Spell instance with the given name and versions.
     pub fn new(name: String, versions: Vec<Version>) -> Self {
+        let mut versions = versions;
+        versions.sort();
         Self {
             name: Slug(name),
             versions,
@@ -47,7 +49,7 @@ impl Spell {
         }
     }
 
-    /// Creates a new Spell instance with the given name and an empty version list.
+    /// Returns a reference to the name of the spell.
     pub fn get_name(&self) -> &String {
         &self.name
     }
@@ -65,6 +67,7 @@ impl Spell {
     /// Sets the vector of versions.
     pub fn set_versions(&mut self, versions: Vec<Version>) {
         self.versions = versions;
+        self.versions.sort();
     }
 
     /// Adds a version to the vector of versions.
@@ -80,11 +83,11 @@ impl Spell {
     /// If the version already exists, it will not be added again.
     pub fn add_version_as_string(&mut self, version_str: &str) {
         let stripped = version_str.to_string().strip_v();
-        let version = stripped.to_version().unwrap();
-        if !self.versions.contains(&version) {
-            self.versions.push(version);
-            self.versions.sort();
-        }
+        let version = match stripped.to_version() {
+            Some(v) => v,
+            None => return,
+        };
+        self.add_version(version);
     }
 
     /// Removes a version from the vector of versions.
@@ -98,8 +101,10 @@ impl Spell {
     /// not exist, nothing happens.
     pub fn remove_version_as_string(&mut self, version_str: &str) {
         let stripped = version_str.to_string().strip_v();
-        let version = stripped.to_version().unwrap();
-        self.versions.retain(|v| v != &version);
+        // don't panic if the version string is invalid
+        if let Some(version) = stripped.to_version() {
+            self.remove_version(version)
+        }
     }
 
     /// Removes all versions from the vector of versions.
@@ -126,11 +131,11 @@ impl Spell {
 
     /// Checks if the vector of versions contains a specific version
     pub fn contains_version(&self, version_str: &str) -> bool {
-        let version = match Version::parse(version_str) {
-            Ok(v) => v,
-            Err(_) => return false, // Invalid version string, do nothing
-        };
-        self.versions.contains(&version)
+        let stripped = version_str.to_string().strip_v();
+        match stripped.to_version() {
+            Some(v) => self.versions.contains(&v),
+            None => false, // invalid version string, do nothing
+        }
     }
 
     /// Sort the vector of versions in ascending order.
@@ -151,17 +156,5 @@ impl std::fmt::Display for Spell {
             .collect::<Vec<String>>()
             .join(", ");
         write!(f, "{}: {}", self.name, versions_str)
-    }
-}
-
-pub trait VecSpells {
-    /// Sorts the vector of Spell instances in place based on their names.
-    fn sort(&mut self);
-}
-
-impl VecSpells for Vec<Spell> {
-    /// Sorts the vector of Spell instances in place based on their names.
-    fn sort(&mut self) {
-        self[..].sort();
     }
 }

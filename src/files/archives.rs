@@ -4,13 +4,15 @@ use crate::models::binary_container::BinaryContainer;
 
 use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
-use log::{debug, error};
+use log::debug;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use tar::Archive;
 use xz2::read::XzDecoder;
 use zip::read::ZipArchive;
+
+use anyhow::{bail, Context, Result};
 
 // Fallback directory name for extracted files
 const OUTPUT_DIR: &str = "output";
@@ -147,20 +149,13 @@ fn get_archive_format_from_extension(archive_path: &Path) -> BinaryContainer {
 /// - The function is intentionally conservative: ambiguous cases result in `Unknown`
 /// - TAR magic bytes are located at offset 257 in the file (POSIX ustar format)
 ///
-pub fn get_validated_archive_format(
-    archive_path: &Path,
-) -> Result<BinaryContainer, Box<dyn std::error::Error>> {
+pub fn get_validated_archive_format(archive_path: &Path) -> Result<BinaryContainer> {
     let format_from_extension = get_archive_format_from_extension(archive_path);
 
     if format_from_extension == BinaryContainer::Unknown
         || !validate_format_against_magic_bytes(archive_path, &format_from_extension)
     {
-        let msg: &str = "Unsupported file extension or file is corrupted";
-        error!("{}", msg);
-        Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            msg,
-        )))
+        bail!("Unsupported file extension or file is corrupted");
     } else {
         debug!(
             "Archive format {:?} is valid for file {}",
@@ -184,19 +179,14 @@ pub fn get_validated_archive_format(
 /// * `Err(Box<dyn std::error::Error>)` if there was an error during extraction.
 /// * `Err(std::process::exit(109))` if the archive format is unknown.
 ///
-pub fn extract_to_dir(
-    archive_path: &PathBuf,
-    extract_to: &PathBuf,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let archive_format: BinaryContainer = get_validated_archive_format(archive_path)
-        .unwrap_or_else(|e| {
-            error!(
-                "Error while validating archive format of {}: {}",
-                archive_path.display(),
-                e
-            );
-            std::process::exit(109);
-        });
+pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
+    let archive_format: BinaryContainer =
+        get_validated_archive_format(archive_path).with_context(|| {
+            format!(
+                "Error while validating archive format of {}",
+                archive_path.display()
+            )
+        })?;
 
     match archive_format {
         BinaryContainer::Zip => {
@@ -317,9 +307,7 @@ pub fn extract_to_dir(
                 extract_to.display()
             );
         }
-        BinaryContainer::Unknown => {
-            std::process::exit(109);
-        }
+        _ => bail!("Unsupported archive format: {:?}", archive_format),
     }
     Ok(())
 }

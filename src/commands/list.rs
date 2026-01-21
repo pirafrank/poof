@@ -5,9 +5,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
+
 use crate::files::datadirs::get_data_dir;
 use crate::models::spell::Spell;
-use crate::models::spell::VecSpells;
 
 pub fn list_installed_spells() -> Vec<Spell> {
     // List all files in the bin directory.
@@ -22,7 +23,9 @@ pub fn list_installed_spells() -> Vec<Spell> {
     // speed up the process. We wont' need
     // to use a mutex because each thread will be working on a different
     // directory, with data aggregated sequentially at the end.
-    let data_dir: PathBuf = get_data_dir().unwrap();
+    let data_dir: PathBuf = get_data_dir()
+        .ok_or_else(|| anyhow!("Failed to get data directory"))
+        .unwrap();
 
     // Look through each subdirectory in data_dir for any installed spells.
     // Read user directories in parallel.
