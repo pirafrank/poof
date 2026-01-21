@@ -241,7 +241,6 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
         // using the new version. This is a UX feature to save the user from having to
         // manually set the default version after installation (most cases).
         let symlink_path = bin_dir.join(exec_stem);
-        let _ = filesys::create_symlink(&installed_exec, &symlink_path, true);
         if let Err(e) = filesys::create_symlink(&installed_exec, &symlink_path, true) {
             warn!(
                     "Failed to create symlink for {}: {}. You may need to manually set the default version.",
