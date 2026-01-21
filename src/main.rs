@@ -17,7 +17,6 @@ mod utils;
 
 use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
-use github::client::{get_asset, get_release};
 use utils::semver::SemverStringConversion;
 
 // Constants
@@ -175,19 +174,23 @@ fn run() -> Result<()> {
                 std::env::current_dir().context("Failed to determine current directory")?;
             debug!("Working directory: {}", current_dir.display());
 
-            let release = get_release(&args.repo, args.tag.as_deref())
-                .with_context(|| format!("Failed to get release info for {}", args.repo))?;
-            let binary = get_asset(&release).with_context(|| {
-                format!(
-                    "Failed to find compatible asset for release {}",
-                    release.tag_name()
+            let (_, assets) = commands::install::select_assets(&args.repo, args.tag.as_deref())?;
+
+            for asset in assets {
+                commands::download::download_asset(
+                    asset.name(),
+                    asset.browser_download_url(),
+                    &current_dir,
                 )
-            })?;
-            commands::download::download_binary(
-                binary.name(),
-                binary.browser_download_url(),
-                &current_dir,
-            )?;
+                .with_context(|| {
+                    format!(
+                        "Failed to download asset for {} version {}",
+                        args.repo,
+                        args.tag.as_deref().unwrap_or("(latest)")
+                    )
+                })?;
+            }
+            info!("All done.");
         }
         Cmd::Install(args) => {
             info!(
@@ -210,7 +213,7 @@ fn run() -> Result<()> {
             info!("Version '{}' set as default.", version);
         }
         Cmd::List => {
-            let list = commands::list::list_installed_assets();
+            let list = commands::list::list_installed_spells();
             if list.is_empty() {
                 info!("No installed binaries found.");
             } else {

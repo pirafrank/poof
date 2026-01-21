@@ -4,7 +4,7 @@ use crate::models::binary_container::BinaryContainer;
 
 use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
-use log::{debug, error};
+use log::debug;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -12,10 +12,47 @@ use tar::Archive;
 use xz2::read::XzDecoder;
 use zip::read::ZipArchive;
 
+use anyhow::{bail, Context, Result};
+
 // Fallback directory name for extracted files
 const OUTPUT_DIR: &str = "output";
 
-/// Validate archive format by checking magic bytes against expected format
+/// Validates an archive file's magic bytes against its expected format.
+///
+/// This function reads the first 512 bytes of a file and checks whether the magic bytes
+/// (file signature) match the expected archive format. This validation is crucial for
+/// detecting file corruption, format spoofing, or misnamed files.
+///
+/// # Arguments
+///
+/// * `archive_path` - Path to the archive file to validate
+/// * `expected_format` - The expected archive format to validate against
+///
+/// # Returns
+///
+/// * `true` if the magic bytes match the expected format
+/// * `false` if:
+///   - The file cannot be opened or read
+///   - The file is too small (less than 4 bytes)
+///   - The magic bytes don't match the expected format
+///   - The expected format is `BinaryContainer::Unknown`
+///
+/// # Magic Byte Validation
+///
+/// Different archive formats are validated as follows:
+/// - **ZIP**: Checks for "PK" signature at the start
+/// - **GZIP** (GZ, TAR.GZ): Checks for GZIP magic bytes at the start
+/// - **XZ** (XZ, TAR.XZ): Checks for XZ magic bytes at the start
+/// - **BZIP2** (BZ2, TAR.BZ2): Checks for BZIP2 magic bytes at the start
+/// - **TAR**: Checks for "ustar" signature at offset 257 (POSIX tar format)
+/// - **7Z**: Checks for 7-Zip signature at the start
+///
+/// # Notes
+///
+/// - Reads up to 512 bytes to accommodate TAR magic bytes at offset 257
+/// - Does not perform complete file validation, only checks magic bytes
+/// - This is an internal helper function used by `get_validated_archive_format`
+///
 fn validate_format_against_magic_bytes(
     archive_path: &Path,
     expected_format: &BinaryContainer,
@@ -51,7 +88,42 @@ fn validate_format_against_magic_bytes(
     }
 }
 
-/// Determine archive format from file extension
+/// Determines the archive format based on the file's extension.
+///
+/// This function performs case-insensitive matching of file extensions to identify
+/// the archive format. It correctly handles both simple extensions (e.g., `.zip`) and
+/// multi-part extensions (e.g., `.tar.gz`).
+///
+/// # Arguments
+///
+/// * `archive_path` - Path to the archive file whose format should be determined
+///
+/// # Returns
+///
+/// Returns a `BinaryContainer` enum variant representing the detected archive format:
+/// - `BinaryContainer::Zip` for `.zip` files
+/// - `BinaryContainer::TarGz` for `.tar.gz` or `.tgz` files
+/// - `BinaryContainer::TarXz` for `.tar.xz` or `.txz` files
+/// - `BinaryContainer::TarBz2` for `.tar.bz2`, `.tbz`, or `.tbz2` files
+/// - `BinaryContainer::Gz` for standalone `.gz` files
+/// - `BinaryContainer::Xz` for standalone `.xz` files
+/// - `BinaryContainer::Bz2` for standalone `.bz2` files
+/// - `BinaryContainer::Tar` for `.tar` files
+/// - `BinaryContainer::SevenZ` for `.7z` files
+/// - `BinaryContainer::Unknown` for unrecognized extensions
+///
+/// # Extension Handling
+///
+/// - **Case Insensitive**: Extensions are converted to lowercase before matching
+/// - **Multi-part Extensions**: Recognized before single extensions (e.g., `.tar.gz` takes precedence)
+/// - **Common Abbreviations**: Supports standard abbreviations (`.tgz`, `.txz`, `.tbz`, `.tbz2`)
+///
+/// # Notes
+///
+/// - This function only performs extension-based detection without validating the file content
+/// - For production use, combine with `validate_format_against_magic_bytes` to prevent spoofing
+/// - The function uses the `get_file_extension` utility for extraction
+///
 fn get_archive_format_from_extension(archive_path: &Path) -> BinaryContainer {
     let extension: String = get_file_extension(archive_path).to_lowercase();
     match extension.as_str() {
@@ -127,40 +199,51 @@ fn get_archive_format_from_extension(archive_path: &Path) -> BinaryContainer {
 ///   - The magic bytes don't match the expected format (possible corruption or format spoofing)
 ///   - The file is too small to contain valid magic bytes
 ///
-/// # Error Handling and Logging
+/// # Errors
 ///
-/// * `Err(Box<dyn std::error::Error>)` if the archive format is unknown.
-/// * `Err(std::process::exit(109))` if the archive format is unknown.
+/// Returns an error in the following cases:
+/// - The file extension is not recognized as a supported archive format
+/// - The file's magic bytes don't match the expected format (indicating corruption or spoofing)
+/// - The file cannot be opened or read during validation
+/// - The file is too small to contain valid magic bytes
 ///
 /// # Performance Considerations
 ///
-/// - **I/O Operations**: This function performs file I/O to read magic bytes (up to 512 bytes),
-///   which may add latency for network-mounted filesystems.
+/// - **I/O Operations**: Performs file I/O to read magic bytes (up to 512 bytes),
+///   which may add latency for network-mounted filesystems
 /// - **Buffered Reading**: Only reads the minimum bytes necessary for validation (512 bytes
-///   maximum) to minimize overhead.
-/// - **Early Exit**: Returns immediately for unrecognized extensions without file I/O.
+///   maximum) to minimize overhead
+/// - **Early Exit**: Returns immediately for unrecognized extensions without file I/O
+///
+/// # Examples
+///
+/// ```no_run
+/// use std::path::Path;
+/// use crate::files::archives::get_validated_archive_format;
+/// use crate::models::binary_container::BinaryContainer;
+///
+/// let archive_path = Path::new("/path/to/archive.tar.gz");
+/// match get_validated_archive_format(archive_path) {
+///     Ok(BinaryContainer::TarGz) => println!("Valid tar.gz archive"),
+///     Ok(format) => println!("Archive format: {:?}", format),
+///     Err(e) => eprintln!("Validation failed: {}", e),
+/// }
+/// ```
 ///
 /// # Notes
 ///
 /// - Multi-part extensions (e.g., `.tar.gz`) are recognized and handled correctly
 /// - Case-insensitive extension matching is performed
-/// - The function is intentionally conservative: ambiguous cases result in `Unknown`
+/// - The function is intentionally conservative: ambiguous cases result in errors
 /// - TAR magic bytes are located at offset 257 in the file (POSIX ustar format)
 ///
-pub fn get_validated_archive_format(
-    archive_path: &Path,
-) -> Result<BinaryContainer, Box<dyn std::error::Error>> {
+pub fn get_validated_archive_format(archive_path: &Path) -> Result<BinaryContainer> {
     let format_from_extension = get_archive_format_from_extension(archive_path);
 
     if format_from_extension == BinaryContainer::Unknown
         || !validate_format_against_magic_bytes(archive_path, &format_from_extension)
     {
-        let msg: &str = "Unsupported file extension or file is corrupted";
-        error!("{}", msg);
-        Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            msg,
-        )))
+        bail!("Unsupported file extension or file is corrupted");
     } else {
         debug!(
             "Archive format {:?} is valid for file {}",
@@ -171,32 +254,102 @@ pub fn get_validated_archive_format(
     }
 }
 
-/// Extracts an archive to a specified directory based on validated file extension.
-/// Supports zip, tar.gz, tar.xz, tar.bz2, and other common archive formats.
-/// The format is determined by file extension and validated against magic bytes.
+/// Extracts an archive file to a specified directory with format validation.
+///
+/// This function provides a unified interface for extracting various archive formats.
+/// It automatically detects the archive format based on file extension and validates
+/// it against magic bytes before extraction, ensuring security and preventing corruption.
+///
+/// # Supported Archive Formats
+///
+/// The function supports the following archive formats with their respective handlers:
+///
+/// - **ZIP** (`.zip`): Uses the `zip` crate for extraction
+/// - **TAR** (`.tar`): Uncompressed TAR archives using the `tar` crate
+/// - **TAR.GZ/TGZ** (`.tar.gz`, `.tgz`): GZip-compressed TAR archives
+/// - **TAR.XZ/TXZ** (`.tar.xz`, `.txz`): XZ-compressed TAR archives
+/// - **TAR.BZ2/TBZ/TBZ2** (`.tar.bz2`, `.tbz`, `.tbz2`): BZip2-compressed TAR archives
+/// - **GZ** (`.gz`): Standalone GZip-compressed files (uncommon for distribution)
+/// - **XZ** (`.xz`): Standalone XZ-compressed files (uncommon for distribution)
+/// - **BZ2** (`.bz2`): Standalone BZip2-compressed files (uncommon for distribution)
+/// - **7Z** (`.7z`): 7-Zip archives using the `sevenz-rust2` crate
 ///
 /// # Arguments
-/// * `archive_path` - The path to the archive file.
-/// * `extract_to` - The directory where the archive will be extracted.
+///
+/// * `archive_path` - Path to the archive file to extract. The file must exist and be readable.
+/// * `extract_to` - Target directory where the archive contents will be extracted. The directory
+///   will be created if it doesn't exist (for standalone compressed files).
 ///
 /// # Returns
-/// * `Ok(())` if the extraction was successful.
-/// * `Err(Box<dyn std::error::Error>)` if there was an error during extraction.
-/// * `Err(std::process::exit(109))` if the archive format is unknown.
 ///
-pub fn extract_to_dir(
-    archive_path: &PathBuf,
-    extract_to: &PathBuf,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let archive_format: BinaryContainer = get_validated_archive_format(archive_path)
-        .unwrap_or_else(|e| {
-            error!(
-                "Error while validating archive format of {}: {}",
-                archive_path.display(),
-                e
-            );
-            std::process::exit(109);
-        });
+/// * `Ok(())` if the extraction completed successfully
+/// * `Err(anyhow::Error)` if an error occurred during:
+///   - Archive format validation
+///   - File opening or reading
+///   - Archive extraction
+///   - Directory creation
+///
+/// # Errors
+///
+/// This function can return errors in the following cases:
+/// - **Unsupported Format**: The file extension is not recognized or magic bytes don't match
+/// - **File Not Found**: The archive file doesn't exist or isn't readable
+/// - **Extraction Failure**: The archive is corrupted or incomplete
+/// - **Permission Denied**: Insufficient permissions to read the archive or write to the target
+/// - **I/O Errors**: Disk full, filesystem errors, etc.
+///
+/// # Behavior Details
+///
+/// ## Directory Creation
+/// - For TAR and ZIP archives, the target directory should exist or be creatable
+/// - For standalone compressed files (GZ, XZ, BZ2), the function creates the target directory
+///
+/// ## Output File Naming
+/// - **TAR/ZIP archives**: Preserves the internal directory structure
+/// - **Standalone compressed files**: Creates a file in the target directory using the archive's
+///   stem name (e.g., `file.txt.gz` → `file.txt` in the target directory)
+/// - **Fallback**: If the stem name cannot be determined, uses `OUTPUT_DIR` constant
+///
+/// ## Logging
+/// - Debug logs are emitted before and after extraction for each format
+/// - Logs include the archive path and extraction target for traceability
+///
+/// # Security Considerations
+///
+/// - **Format Validation**: All archives are validated via `get_validated_archive_format`
+///   before extraction to prevent format spoofing attacks
+/// - **Magic Byte Verification**: Ensures the file content matches its claimed format
+/// - **Path Traversal**: Archive extraction libraries handle path traversal protection
+///
+/// # Examples
+///
+/// ```no_run
+/// use std::path::PathBuf;
+/// use crate::files::archives::extract_to_dir;
+///
+/// let archive = PathBuf::from("/downloads/release.tar.gz");
+/// let target = PathBuf::from("/tmp/extracted");
+///
+/// match extract_to_dir(&archive, &target) {
+///     Ok(()) => println!("Extraction successful"),
+///     Err(e) => eprintln!("Extraction failed: {}", e),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - The 7Z extraction uses `expect("complete")` which will panic on failure
+/// - Standalone compressed files (GZ, XZ, BZ2) are rarely used for software distribution
+/// - Multi-part extensions (e.g., `.tar.gz`) are correctly identified before single extensions
+///
+pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
+    let archive_format: BinaryContainer =
+        get_validated_archive_format(archive_path).with_context(|| {
+            format!(
+                "Error while validating archive format of {}",
+                archive_path.display()
+            )
+        })?;
 
     match archive_format {
         BinaryContainer::Zip => {
@@ -317,9 +470,7 @@ pub fn extract_to_dir(
                 extract_to.display()
             );
         }
-        BinaryContainer::Unknown => {
-            std::process::exit(109);
-        }
+        _ => bail!("Unsupported archive format: {:?}", archive_format),
     }
     Ok(())
 }

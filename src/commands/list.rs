@@ -5,15 +5,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::files::datadirs::get_data_dir;
-use crate::models::asset::Asset;
-use crate::models::asset::VecAssets;
+use anyhow::anyhow;
 
-pub fn list_installed_assets() -> Vec<Asset> {
+use crate::files::datadirs::get_data_dir;
+use crate::models::spell::Spell;
+
+pub fn list_installed_spells() -> Vec<Spell> {
     // List all files in the bin directory.
     // Making this iterative for clarity and performance,
     // data dir as a known structure with fixed number of levels.
-    // we traverse the directory tree to find all installed assets
+    // we traverse the directory tree to find all installed spells
     // and their versions without needing to recursively search through
     // the entire directory structure.
     // This is a performance optimization for the case as the data directory
@@ -22,9 +23,11 @@ pub fn list_installed_assets() -> Vec<Asset> {
     // speed up the process. We wont' need
     // to use a mutex because each thread will be working on a different
     // directory, with data aggregated sequentially at the end.
-    let data_dir: PathBuf = get_data_dir().unwrap();
+    let data_dir: PathBuf = get_data_dir()
+        .ok_or_else(|| anyhow!("Failed to get data directory"))
+        .unwrap();
 
-    // Look through each subdirectory in data_dir for any installed assets.
+    // Look through each subdirectory in data_dir for any installed spells.
     // Read user directories in parallel.
 
     let entries = match fs::read_dir(&data_dir) {
@@ -32,7 +35,7 @@ pub fn list_installed_assets() -> Vec<Asset> {
         Err(_) => return Vec::new(),
     };
 
-    let assets: Vec<(String, String)> = entries
+    let spells: Vec<(String, String)> = entries
         .into_par_iter()
         .filter(|user| user.path().is_dir())
         .flat_map(|user| {
@@ -73,13 +76,13 @@ pub fn list_installed_assets() -> Vec<Asset> {
         .collect();
 
     let mut versions_map: HashMap<String, Vec<String>> = HashMap::new();
-    for (slug, version) in assets {
+    for (slug, version) in spells {
         versions_map.entry(slug).or_default().push(version);
     }
 
-    let mut result: Vec<Asset> = versions_map
+    let mut result: Vec<Spell> = versions_map
         .into_iter()
-        .map(|(slug, versions)| Asset::new_as_string(slug, versions))
+        .map(|(slug, versions)| Spell::new_as_string(slug, versions))
         .collect();
     result.sort();
     result

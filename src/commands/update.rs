@@ -1,12 +1,12 @@
 use crate::{
-    commands::{self, download::download_binary, list::list_installed_assets},
+    commands::{self, download::download_asset, list::list_installed_spells},
     constants::APP_NAME,
     files::{
         archives::extract_to_dir, filesys::find_exec_files_from_extracted_archive,
         magic::is_exec_by_magic_number, utils::get_stem_name_trimmed_at_first_separator,
     },
-    github::client::{get_asset, get_release},
-    models::asset::Asset,
+    github::client::{get_assets, get_release},
+    models::spell::Spell,
     utils::semver::{SemverStringPrefix, Version},
     UpdateArgs,
 };
@@ -19,7 +19,7 @@ fn update_single_repo(repo: &str) -> Result<()> {
     info!("Checking for updates for {}", repo);
 
     // 1. get all installed assets
-    let installed_assets: Vec<Asset> = list_installed_assets();
+    let installed_assets: Vec<Spell> = list_installed_spells();
 
     if installed_assets.is_empty() {
         info!("No binaries installed yet. Nothing to update.");
@@ -29,7 +29,7 @@ fn update_single_repo(repo: &str) -> Result<()> {
     // find the specific asset for the requested repo
     let target_asset = installed_assets
         .iter()
-        .find(|asset| asset.get_name() == repo);
+        .find(|asset: &&Spell| asset.get_name() == repo);
 
     // handle the None case first by returning early
     let Some(asset) = target_asset else {
@@ -43,7 +43,7 @@ fn update_single_repo(repo: &str) -> Result<()> {
     // we know asset exists, extract the latest version string using ?
     let highest_installed_str = asset.get_latest_version().ok_or_else(|| {
         anyhow!(
-            "Asset {} found but has no versions listed (internal error)",
+            "Spell {} found but has no versions listed (internal error)",
             repo
         )
     })?;
@@ -82,7 +82,7 @@ fn update_single_repo(repo: &str) -> Result<()> {
             latest_version, repo, highest_installed
         );
         // 4. call process_install for the latest tag
-        commands::install::install_update(repo, Some(latest_version_str)).with_context(|| {
+        commands::install::install(repo, Some(latest_version_str)).with_context(|| {
             format!(
                 "Failed to install version {} as the default for {}",
                 latest_version_str, repo
@@ -107,7 +107,7 @@ fn update_all_repos() -> Result<()> {
     info!("Checking for updates for all installed binaries...");
 
     // 1. get all installed assets
-    let installed_assets: Vec<Asset> = list_installed_assets();
+    let installed_assets: Vec<Spell> = list_installed_spells();
 
     if installed_assets.is_empty() {
         info!("No binaries installed yet. Nothing to update.");
@@ -199,12 +199,16 @@ fn update_self() -> Result<()> {
     );
 
     // Find compatible asset
-    let binary = get_asset(&latest_release).with_context(|| {
+    let assets = get_assets(&latest_release).with_context(|| {
         format!(
             "Failed to find compatible asset for release {}",
             latest_version_str
         )
     })?;
+    // for self-update, we only need the first asset since we are pretty sure for poof there only will be one.
+    let binary = assets
+        .first()
+        .ok_or_else(|| anyhow!("No compatible asset found"))?;
 
     // Create a temporary directory for downloading
     let temp_dir = std::env::temp_dir().join(format!("poof-update-{}", latest_version_str));
@@ -216,14 +220,12 @@ fn update_self() -> Result<()> {
     })?;
 
     // Download the binary
-    download_binary(binary.name(), binary.browser_download_url(), &temp_dir).with_context(
-        || {
-            format!(
-                "Failed to download binary for version {}",
-                latest_version_str
-            )
-        },
-    )?;
+    download_asset(binary.name(), binary.browser_download_url(), &temp_dir).with_context(|| {
+        format!(
+            "Failed to download binary for version {}",
+            latest_version_str
+        )
+    })?;
 
     let downloaded_file = temp_dir.join(binary.name());
     let new_binary_path = if is_exec_by_magic_number(&downloaded_file) {

@@ -1,52 +1,55 @@
 //! An installed binary having a repo name (in the format <USER>/<REPO>)
-//! and a list of versions is an 'asset'.
+//! and a list of versions is a 'spell'.
 
 use crate::utils::semver::*;
 use std::cmp::Ordering;
 
-use super::repostring::RepoString;
+use super::slug::Slug;
 
 #[derive(PartialEq, Eq)]
-pub struct Asset {
-    name: RepoString,
+pub struct Spell {
+    name: Slug,
     versions: Vec<Version>,
 }
 
-impl PartialOrd for Asset {
+impl PartialOrd for Spell {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Asset {
+impl Ord for Spell {
     fn cmp(&self, other: &Self) -> Ordering {
         self.name.cmp(&other.name)
     }
 }
 
+/// Spell struct representing a spell with a name and a list of versions.
 // allowing dead code for the sake of having a complete set
-// of function available for the Asset struct.
+// of function available for the Spell struct.
 #[allow(dead_code)]
-impl Asset {
-    /// Creates a new Asset instance with the given name and versions.
+impl Spell {
+    /// Creates a new Spell instance with the given name and versions.
     pub fn new(name: String, versions: Vec<Version>) -> Self {
+        let mut versions = versions;
+        versions.sort();
         Self {
-            name: RepoString(name),
+            name: Slug(name),
             versions,
         }
     }
 
-    /// Creates a new Asset instance with the given name and versions as strings.
+    /// Creates a new Spell instance with the given name and versions as strings.
     pub fn new_as_string(name: String, versions_str: Vec<String>) -> Self {
         let mut versions = versions_str.strip_v().to_version();
         versions.sort();
         Self {
-            name: RepoString(name),
+            name: Slug(name),
             versions,
         }
     }
 
-    /// Creates a new Asset instance with the given name and an empty version list.
+    /// Returns a reference to the name of the spell.
     pub fn get_name(&self) -> &String {
         &self.name
     }
@@ -56,14 +59,15 @@ impl Asset {
         &self.versions
     }
 
-    /// Sets the name of the asset.
+    /// Sets the name of the spell.
     pub fn set_name(&mut self, name: String) {
-        self.name = RepoString(name);
+        self.name = Slug(name);
     }
 
     /// Sets the vector of versions.
     pub fn set_versions(&mut self, versions: Vec<Version>) {
         self.versions = versions;
+        self.versions.sort();
     }
 
     /// Adds a version to the vector of versions.
@@ -79,11 +83,11 @@ impl Asset {
     /// If the version already exists, it will not be added again.
     pub fn add_version_as_string(&mut self, version_str: &str) {
         let stripped = version_str.to_string().strip_v();
-        let version = stripped.to_version().unwrap();
-        if !self.versions.contains(&version) {
-            self.versions.push(version);
-            self.versions.sort();
-        }
+        let version = match stripped.to_version() {
+            Some(v) => v,
+            None => return,
+        };
+        self.add_version(version);
     }
 
     /// Removes a version from the vector of versions.
@@ -97,8 +101,10 @@ impl Asset {
     /// not exist, nothing happens.
     pub fn remove_version_as_string(&mut self, version_str: &str) {
         let stripped = version_str.to_string().strip_v();
-        let version = stripped.to_version().unwrap();
-        self.versions.retain(|v| v != &version);
+        // don't panic if the version string is invalid
+        if let Some(version) = stripped.to_version() {
+            self.remove_version(version)
+        }
     }
 
     /// Removes all versions from the vector of versions.
@@ -125,11 +131,11 @@ impl Asset {
 
     /// Checks if the vector of versions contains a specific version
     pub fn contains_version(&self, version_str: &str) -> bool {
-        let version = match Version::parse(version_str) {
-            Ok(v) => v,
-            Err(_) => return false, // Invalid version string, do nothing
-        };
-        self.versions.contains(&version)
+        let stripped = version_str.to_string().strip_v();
+        match stripped.to_version() {
+            Some(v) => self.versions.contains(&v),
+            None => false, // invalid version string, do nothing
+        }
     }
 
     /// Sort the vector of versions in ascending order.
@@ -140,8 +146,8 @@ impl Asset {
     }
 }
 
-/// Return a String representation of Asset.
-impl std::fmt::Display for Asset {
+/// Return a String representation of Spell.
+impl std::fmt::Display for Spell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let versions_str = self
             .versions
@@ -150,17 +156,5 @@ impl std::fmt::Display for Asset {
             .collect::<Vec<String>>()
             .join(", ");
         write!(f, "{}: {}", self.name, versions_str)
-    }
-}
-
-pub trait VecAssets {
-    /// Sorts the vector of Asset instances in place based on their names.
-    fn sort(&mut self);
-}
-
-impl VecAssets for Vec<Asset> {
-    /// Sorts the vector of Asset instances in place based on their names.
-    fn sort(&mut self) {
-        self[..].sort();
     }
 }
