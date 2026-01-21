@@ -15,6 +15,7 @@ use crate::{
         client::{get_assets, get_release},
         models::{Release, ReleaseAsset},
     },
+    models::slug::Slug,
     utils::semver::SemverStringPrefix,
 };
 use anyhow::{anyhow, bail, Context, Result};
@@ -35,6 +36,9 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         // installation should proceed, prepare install directory
         prepare_install_dir(&install_dir)?;
     }
+
+    // create slug from repo and version
+    let slug = Slug::new(repo, &version.to_string());
 
     // get cache directory as temporary download directory
     let cache_dir: PathBuf =
@@ -60,8 +64,14 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
             };
         i += 1;
 
-        process_install(&downloaded_file, &download_to, &install_dir, asset.name())
-            .with_context(|| format!("Failed to install {} version {}", repo, version))?;
+        process_install(
+            &slug,
+            &downloaded_file,
+            &download_to,
+            &install_dir,
+            asset.name(),
+        )
+        .with_context(|| format!("Failed to install {} version {}", repo, version))?;
 
         if clean_cache_dir(&download_to, &cache_dir)? {
             debug!("Cleaned up cache directory: {}", download_to.display());
@@ -75,6 +85,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
 }
 
 fn process_install(
+    slug: &Slug,
     downloaded_file: &PathBuf,
     download_to: &PathBuf,
     install_dir: &Path,
@@ -91,7 +102,7 @@ fn process_install(
         // This is useful to avoid installing files with names like "mytool-1.0.0" or "mytool-linux-x86_64"
         // and instead use just "mytool", which is how the binary will be used when in PATH.
         let exec_name = get_stem_name_trimmed_at_first_separator(file_name);
-        install_binary(downloaded_file, install_dir, &exec_name)
+        install_binary(slug, downloaded_file, install_dir, &exec_name)
             .with_context(|| format!("Failed to install executable {}", asset_name))?;
     } else {
         // extract executables
@@ -100,7 +111,7 @@ fn process_install(
         debug!("Extracted {} to {}", asset_name, download_to.display());
 
         // install executables
-        install_binaries(downloaded_file, install_dir).with_context(|| {
+        install_binaries(slug, downloaded_file, install_dir).with_context(|| {
             format!("Failed to extract executables from archive {}", asset_name)
         })?;
     }
@@ -147,7 +158,7 @@ fn prepare_install_dir(install_dir: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-/// Check if the requested software is already installed.
+/// Check if the requested software is already installed to data directory.
 /// Returns true if the software is already installed, false if it should be installed.
 /// Returns an error if the installation directory cannot be checked.
 fn check_if_installed(install_dir: &Path) -> Result<bool> {
@@ -193,7 +204,7 @@ fn check_if_installed(install_dir: &Path) -> Result<bool> {
     }
 }
 
-fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
+fn install_binaries(slug: &Slug, archive_path: &Path, install_dir: &Path) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
     let execs_to_install: Vec<PathBuf> =
@@ -211,14 +222,21 @@ fn install_binaries(archive_path: &Path, install_dir: &Path) -> Result<()> {
         let exec_name = exec
             .file_name()
             .ok_or_else(|| anyhow!("Failed to get filename from {}", exec.display()))?;
-        install_binary(&exec, install_dir, &OsString::from(exec_name))
+        install_binary(slug, &exec, install_dir, &OsString::from(exec_name))
             .with_context(|| format!("Failed to install executable {}", exec.display()))?;
     }
     Ok(())
 }
 
-fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> Result<()> {
-    let installed_exec = install_dir.join(exec_stem);
+/// Install a binary to the install directory.
+/// Returns an error if the binary cannot be installed.
+fn install_binary(
+    slug: &Slug,
+    exec: &PathBuf,
+    install_dir: &Path,
+    exec_name: &OsString,
+) -> Result<()> {
+    let installed_exec = install_dir.join(exec_name);
 
     // copy the executable files to the install directory
     filesys::copy_file(exec, &installed_exec).map_err(|e| {
@@ -231,6 +249,10 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
     })?;
 
     let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
+    let symlink_path = bin_dir.join(exec_name);
+
+    check_for_same_named_binary_in_bin_dir(slug, &symlink_path, install_dir)?;
+    //check_for_same_named_binary_in_path(slug, &exec_name, bin_dir)?;
 
     // make them executable
     // Set executable permissions, platform-specific
@@ -244,11 +266,10 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
         // Create a symlink in the bin directory, overwriting existing to default
         // using the new version. This is a UX feature to save the user from having to
         // manually set the default version after installation (most cases).
-        let symlink_path = bin_dir.join(exec_stem);
         if let Err(e) = filesys::create_symlink(&installed_exec, &symlink_path, true) {
             warn!(
                     "Failed to create symlink for {}: {}. You may need to manually set the default version.",
-                    exec_stem.to_string_lossy(),
+                    exec_name.to_string_lossy(),
                     e
                 );
         }
@@ -279,6 +300,38 @@ fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
             debug!("Failed to delete cache directory {}: {}", dir.display(), e);
             Ok(false)
         }
+    }
+}
+
+fn check_for_same_named_binary_in_bin_dir(
+    slug: &Slug,
+    exec_in_bin: &Path,
+    install_dir: &Path,
+) -> Result<()> {
+    if exec_in_bin.exists() {
+        if exec_in_bin.is_symlink() {
+            // we have a symlink and we need to check what the target is.
+            let symlink_target = std::fs::read_link(exec_in_bin)?;
+            // if it's a symlink we check that the target contains the same slug of the requested software.
+            // convert it to string first.
+            let symlink_target = symlink_target.to_string_lossy();
+            let exec_in_bin = exec_in_bin.to_string_lossy().to_string();
+            let install_dir = install_dir.to_string_lossy().to_string();
+
+            if symlink_target.contains(&slug.to_string()) && symlink_target.contains(&install_dir) {
+                // the symlink target contains the same slug of the requested software,
+                // so it's either a version change or an upgrade.
+                Ok(())
+            } else {
+                bail!("A binary named '{}' is already installed and points to {}. Installation aborted.", exec_in_bin, symlink_target);
+            }
+        } else {
+            // it's not a symlink, so it's likely a foreign binary
+            bail!("A binary named '{}' not managed by poof found in bin directory. Please remove it and try again.", exec_in_bin.to_string_lossy());
+        }
+    } else {
+        // no file with the same name found in bin directory, so we can proceed.
+        Ok(())
     }
 }
 

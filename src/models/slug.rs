@@ -5,8 +5,13 @@ pub struct Slug(pub String);
 // of function available for the Slug struct.
 #[allow(dead_code)]
 impl Slug {
+    // Create a new Slug from a repo and a version
+    pub fn new(repo: &str, version: &str) -> Self {
+        Self(format!("{}/{}", repo.trim(), version.trim()))
+    }
+
     // Create a new Slug from a String
-    pub fn new(s: impl Into<String>) -> Self {
+    pub fn new_from_string(s: impl Into<String>) -> Self {
         Self(s.into())
     }
 
