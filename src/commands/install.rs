@@ -62,6 +62,9 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
 
         process_install(&downloaded_file, &download_to, &install_dir, asset.name())
             .with_context(|| format!("Failed to install {} version {}", repo, version))?;
+
+        clean_cache_dir(&download_to)?;
+        debug!("Cleaned up cache directory: {}", download_to.display());
     }
     info!("{} {} installed successfully.", repo, &version);
 
@@ -250,4 +253,13 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
         }
     }
     Ok(())
+}
+
+fn clean_cache_dir(dir: &PathBuf) -> Result<()> {
+    let result = std::fs::remove_dir_all(dir);
+    // best effort to clean up the cache directory
+    if result.is_err() {
+        debug!("Failed to delete cache directory: {}", dir.display());
+    }
+    Ok(()) // return Ok even if the directory was not deleted
 }
