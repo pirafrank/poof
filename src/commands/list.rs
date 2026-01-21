@@ -35,7 +35,7 @@ pub fn list_installed_spells() -> Vec<Spell> {
         Err(_) => return Vec::new(),
     };
 
-    let assets: Vec<(String, String)> = entries
+    let spells: Vec<(String, String)> = entries
         .into_par_iter()
         .filter(|user| user.path().is_dir())
         .flat_map(|user| {
@@ -76,7 +76,7 @@ pub fn list_installed_spells() -> Vec<Spell> {
         .collect();
 
     let mut versions_map: HashMap<String, Vec<String>> = HashMap::new();
-    for (slug, version) in assets {
+    for (slug, version) in spells {
         versions_map.entry(slug).or_default().push(version);
     }
 

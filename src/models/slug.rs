@@ -20,7 +20,7 @@ impl Slug {
         &self.0
     }
 
-    /// Returns the username of repo, which is the first part of the RepoString
+    /// Returns the username of repo, which is the first part of the Slug
     /// before the first '/'
     pub fn get_username(&self) -> Option<String> {
         if let Some((username, _)) = self.0.split_once('/') {

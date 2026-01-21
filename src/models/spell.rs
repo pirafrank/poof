@@ -26,7 +26,7 @@ impl Ord for Spell {
 
 /// Spell struct representing a spell with a name and a list of versions.
 // allowing dead code for the sake of having a complete set
-// of function available for the Asset struct.
+// of function available for the Spell struct.
 #[allow(dead_code)]
 impl Spell {
     /// Creates a new Spell instance with the given name and versions.
