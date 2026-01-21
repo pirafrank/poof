@@ -5,6 +5,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use which::which;
+
 use crate::{
     commands::{self, download::download_asset},
     files::{
@@ -252,7 +254,7 @@ fn install_binary(
     let symlink_path = bin_dir.join(exec_name);
 
     check_for_same_named_binary_in_bin_dir(slug, &symlink_path, install_dir)?;
-    //check_for_same_named_binary_in_path(slug, &exec_name, bin_dir)?;
+    check_for_same_named_binary_in_path(exec_name, &bin_dir)?;
 
     // make them executable
     // Set executable permissions, platform-specific
@@ -303,6 +305,9 @@ fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
     }
 }
 
+/// Check if a binary with the same name is in the bin directory and it's not something managed by poof.
+/// Returns an error if the binary is already installed in the bin directory or if something not managed by poof is found in its bin directory.
+/// Returns Ok(()) otherwise.
 fn check_for_same_named_binary_in_bin_dir(
     slug: &Slug,
     exec_in_bin: &Path,
@@ -327,12 +332,35 @@ fn check_for_same_named_binary_in_bin_dir(
             }
         } else {
             // it's not a symlink, so it's likely a foreign binary
-            bail!("A binary named '{}' not managed by poof found in bin directory. Please remove it and try again.", exec_in_bin.to_string_lossy());
+            bail!("An unrecognized binary named '{}' found in bin directory. Please remove it and try again.", exec_in_bin.to_string_lossy());
         }
     } else {
         // no file with the same name found in bin directory, so we can proceed.
         Ok(())
     }
+}
+
+/// Check if a binary with the same name is in PATH and it's not something managed by poof.
+/// This to avoid shadowing some other binary or being shadowed by it.
+/// Returns an error if the binary is already installed in PATH and it's not something managed by poof.
+/// Returns Ok(()) if the binary is not installed in PATH or it's something managed by poof.
+fn check_for_same_named_binary_in_path(exec_name: &OsString, bin_dir: &Path) -> Result<()> {
+    // Check if exec_name is in PATH and it's not something managed by poof.
+    // This to avoid shadowing some other binary or being shadowed by it.
+    if let Ok(path) = which(exec_name) {
+        // Avoid false positives by checking if the path starts with the bin directory.
+        // If it does, it's a binary by poof itself and we can proceed,
+        // otherwise it's a foreign binary and we need to abort the installation.
+        if !path.starts_with(bin_dir.display().to_string()) {
+            bail!(
+                "A third-party managed binary named '{}' is already installed in PATH. Installation would shadow it. Please check your PATH.",
+                exec_name.to_string_lossy()
+            );
+        } else {
+            return Ok(());
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
