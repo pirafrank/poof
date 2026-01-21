@@ -1,52 +1,53 @@
 //! An installed binary having a repo name (in the format <USER>/<REPO>)
-//! and a list of versions is an 'asset'.
+//! and a list of versions is a 'spell'.
 
 use crate::utils::semver::*;
 use std::cmp::Ordering;
 
-use super::repostring::RepoString;
+use super::slug::Slug;
 
 #[derive(PartialEq, Eq)]
-pub struct Asset {
-    name: RepoString,
+pub struct Spell {
+    name: Slug,
     versions: Vec<Version>,
 }
 
-impl PartialOrd for Asset {
+impl PartialOrd for Spell {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Asset {
+impl Ord for Spell {
     fn cmp(&self, other: &Self) -> Ordering {
         self.name.cmp(&other.name)
     }
 }
 
+/// Spell struct representing a spell with a name and a list of versions.
 // allowing dead code for the sake of having a complete set
 // of function available for the Asset struct.
 #[allow(dead_code)]
-impl Asset {
-    /// Creates a new Asset instance with the given name and versions.
+impl Spell {
+    /// Creates a new Spell instance with the given name and versions.
     pub fn new(name: String, versions: Vec<Version>) -> Self {
         Self {
-            name: RepoString(name),
+            name: Slug(name),
             versions,
         }
     }
 
-    /// Creates a new Asset instance with the given name and versions as strings.
+    /// Creates a new Spell instance with the given name and versions as strings.
     pub fn new_as_string(name: String, versions_str: Vec<String>) -> Self {
         let mut versions = versions_str.strip_v().to_version();
         versions.sort();
         Self {
-            name: RepoString(name),
+            name: Slug(name),
             versions,
         }
     }
 
-    /// Creates a new Asset instance with the given name and an empty version list.
+    /// Creates a new Spell instance with the given name and an empty version list.
     pub fn get_name(&self) -> &String {
         &self.name
     }
@@ -56,9 +57,9 @@ impl Asset {
         &self.versions
     }
 
-    /// Sets the name of the asset.
+    /// Sets the name of the spell.
     pub fn set_name(&mut self, name: String) {
-        self.name = RepoString(name);
+        self.name = Slug(name);
     }
 
     /// Sets the vector of versions.
@@ -140,8 +141,8 @@ impl Asset {
     }
 }
 
-/// Return a String representation of Asset.
-impl std::fmt::Display for Asset {
+/// Return a String representation of Spell.
+impl std::fmt::Display for Spell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let versions_str = self
             .versions
@@ -153,13 +154,13 @@ impl std::fmt::Display for Asset {
     }
 }
 
-pub trait VecAssets {
-    /// Sorts the vector of Asset instances in place based on their names.
+pub trait VecSpells {
+    /// Sorts the vector of Spell instances in place based on their names.
     fn sort(&mut self);
 }
 
-impl VecAssets for Vec<Asset> {
-    /// Sorts the vector of Asset instances in place based on their names.
+impl VecSpells for Vec<Spell> {
+    /// Sorts the vector of Spell instances in place based on their names.
     fn sort(&mut self) {
         self[..].sort();
     }

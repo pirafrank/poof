@@ -213,7 +213,7 @@ fn run() -> Result<()> {
             info!("Version '{}' set as default.", version);
         }
         Cmd::List => {
-            let list = commands::list::list_installed_assets();
+            let list = commands::list::list_installed_spells();
             if list.is_empty() {
                 info!("No installed binaries found.");
             } else {

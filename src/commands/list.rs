@@ -6,14 +6,14 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::files::datadirs::get_data_dir;
-use crate::models::asset::Asset;
-use crate::models::asset::VecAssets;
+use crate::models::spell::Spell;
+use crate::models::spell::VecSpells;
 
-pub fn list_installed_assets() -> Vec<Asset> {
+pub fn list_installed_spells() -> Vec<Spell> {
     // List all files in the bin directory.
     // Making this iterative for clarity and performance,
     // data dir as a known structure with fixed number of levels.
-    // we traverse the directory tree to find all installed assets
+    // we traverse the directory tree to find all installed spells
     // and their versions without needing to recursively search through
     // the entire directory structure.
     // This is a performance optimization for the case as the data directory
@@ -24,7 +24,7 @@ pub fn list_installed_assets() -> Vec<Asset> {
     // directory, with data aggregated sequentially at the end.
     let data_dir: PathBuf = get_data_dir().unwrap();
 
-    // Look through each subdirectory in data_dir for any installed assets.
+    // Look through each subdirectory in data_dir for any installed spells.
     // Read user directories in parallel.
 
     let entries = match fs::read_dir(&data_dir) {
@@ -77,9 +77,9 @@ pub fn list_installed_assets() -> Vec<Asset> {
         versions_map.entry(slug).or_default().push(version);
     }
 
-    let mut result: Vec<Asset> = versions_map
+    let mut result: Vec<Spell> = versions_map
         .into_iter()
-        .map(|(slug, versions)| Asset::new_as_string(slug, versions))
+        .map(|(slug, versions)| Spell::new_as_string(slug, versions))
         .collect();
     result.sort();
     result
