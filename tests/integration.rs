@@ -8,6 +8,8 @@ mod common;
 mod check;
 #[path = "integration/command_handling/claps.rs"]
 mod claps;
+#[path = "integration/commands/clean.rs"]
+mod clean;
 #[path = "integration/commands/help.rs"]
 mod help;
 #[path = "integration/commands/info.rs"]
