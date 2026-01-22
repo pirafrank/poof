@@ -58,3 +58,7 @@ data/*
 
 # easily exclude files and directories
 **/*.ignore
+
+# direnv
+.envrc
+
