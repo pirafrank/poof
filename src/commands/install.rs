@@ -258,21 +258,16 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
 
 /// Best effort clean up of cache directory.
 /// Returns true if the cache directory was deleted, false if it was not.
-fn clean_cache_dir(dir: &Path, cache_root: &PathBuf) -> Result<bool> {
+pub(super) fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
     // Resolve and ensure we only delete stuff within the cache directory.
-    let dir = match dir.canonicalize() {
-        Ok(p) => p,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            debug!("Cache directory does not exist: {}", dir.display());
-            return Ok(false);
-        }
-        Err(e) => {
-            debug!("Failed to resolve cache dir {}: {}", dir.display(), e);
-            return Ok(false);
-        }
-    };
+    // Canonicalize both paths to handle symlinked temp paths consistently.
+    // Fall back to original paths if canonicalization fails.
+    let dir = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
+    let cache_root = cache_root
+        .canonicalize()
+        .unwrap_or_else(|_| cache_root.to_path_buf());
 
-    if !dir.starts_with(cache_root) {
+    if !dir.starts_with(&cache_root) {
         debug!("Refusing to delete non-cache path: {}", dir.display());
         return Ok(false);
     }
