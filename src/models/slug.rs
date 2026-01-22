@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Slug(pub String);
 
 // allowing dead code for the sake of having a complete set
@@ -8,11 +8,6 @@ impl Slug {
     // Create a new Slug from a String
     pub fn new(s: impl Into<String>) -> Self {
         Self(s.into())
-    }
-
-    // Example method: count the number of specific characters
-    pub fn count_char(&self, c: char) -> usize {
-        self.0.chars().filter(|&ch| ch == c).count()
     }
 
     // Get the underlying String
@@ -73,5 +68,82 @@ impl std::ops::Deref for Slug {
 impl std::ops::DerefMut for Slug {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_slug_new() {
+        let slug = Slug::new("user/repo");
+        assert_eq!(slug.0, "user/repo");
+    }
+
+    #[test]
+    fn test_slug_as_str() {
+        let slug = Slug::new("user/repo");
+        assert_eq!(slug.as_str(), "user/repo");
+    }
+
+    #[test]
+    fn test_slug_get_username() {
+        let slug = Slug::new("user/repo");
+        assert_eq!(slug.get_username(), Some("user".to_string()));
+
+        let no_slash = Slug::new("userrepo");
+        assert_eq!(no_slash.get_username(), None);
+    }
+
+    #[test]
+    fn test_slug_get_reponame() {
+        let slug = Slug::new("user/repo");
+        assert_eq!(slug.get_reponame(), Some("repo".to_string()));
+
+        let no_slash = Slug::new("userrepo");
+        assert_eq!(no_slash.get_reponame(), None);
+    }
+
+    #[test]
+    fn test_slug_display() {
+        let slug = Slug::new("user/repo");
+        assert_eq!(format!("{}", slug), "user/repo");
+    }
+
+    #[test]
+    fn test_slug_from_string() {
+        let s = "user/repo".to_string();
+        let slug = Slug::from(s);
+        assert_eq!(slug.0, "user/repo");
+    }
+
+    #[test]
+    fn test_slug_from_str() {
+        let slug = Slug::from("user/repo");
+        assert_eq!(slug.0, "user/repo");
+    }
+
+    #[test]
+    fn test_slug_deref() {
+        let slug = Slug::new("user/repo");
+        assert_eq!(slug.len(), 9);
+        assert!(slug.contains("user"));
+    }
+
+    #[test]
+    fn test_slug_deref_mut() {
+        let mut slug = Slug::new("user/repo");
+        slug.push_str("/extra");
+        assert_eq!(slug.0, "user/repo/extra");
+    }
+
+    #[test]
+    fn test_slug_partial_eq() {
+        let slug1 = Slug::new("user/repo");
+        let slug2 = Slug::new("user/repo");
+        let slug3 = Slug::new("other/repo");
+        assert_eq!(slug1, slug2);
+        assert_ne!(slug1, slug3);
     }
 }
