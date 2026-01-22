@@ -63,8 +63,9 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         process_install(&downloaded_file, &download_to, &install_dir, asset.name())
             .with_context(|| format!("Failed to install {} version {}", repo, version))?;
 
-        clean_cache_dir(&download_to)?;
-        debug!("Cleaned up cache directory: {}", download_to.display());
+        if clean_cache_dir(&download_to, &cache_dir)? {
+            debug!("Cleaned up cache directory: {}", download_to.display());
+        }
     }
     info!("{} {} installed successfully.", repo, &version);
 
@@ -255,11 +256,33 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
     Ok(())
 }
 
-fn clean_cache_dir(dir: &PathBuf) -> Result<()> {
-    let result = std::fs::remove_dir_all(dir);
-    // best effort to clean up the cache directory
-    if result.is_err() {
-        debug!("Failed to delete cache directory: {}", dir.display());
+/// Best effort clean up of cache directory.
+/// Returns true if the cache directory was deleted, false if it was not.
+fn clean_cache_dir(dir: &Path, cache_root: &PathBuf) -> Result<bool> {
+    // Resolve and ensure we only delete stuff within the cache directory.
+    let dir = match dir.canonicalize() {
+        Ok(p) => p,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            debug!("Cache directory does not exist: {}", dir.display());
+            return Ok(false);
+        }
+        Err(e) => {
+            debug!("Failed to resolve cache dir {}: {}", dir.display(), e);
+            return Ok(false);
+        }
+    };
+
+    if !dir.starts_with(cache_root) {
+        debug!("Refusing to delete non-cache path: {}", dir.display());
+        return Ok(false);
     }
-    Ok(()) // return Ok even if the directory was not deleted
+
+    // Best effort to clean up the cache directory.
+    match std::fs::remove_dir_all(&dir) {
+        Ok(()) => Ok(true),
+        Err(e) => {
+            debug!("Failed to delete cache directory {}: {}", dir.display(), e);
+            Ok(false)
+        }
+    }
 }
