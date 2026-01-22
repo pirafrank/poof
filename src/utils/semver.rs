@@ -67,7 +67,12 @@ impl RawVersion {
     /// the signature of Version::parse to allow drop-in replacement,
     /// while using a more lenient parsing.
     pub fn parse(s: &str) -> Result<Self, semver::Error> {
-        Ok(Self::new(s.to_string()))
+        let rv = Self::new(s.to_string());
+        if rv.version.is_none() {
+            // we use semver::Version::parse to get a valid semver error
+            return Err(semver::Version::parse("invalid").unwrap_err());
+        }
+        Ok(rv)
     }
 }
 
