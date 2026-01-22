@@ -258,7 +258,7 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
 
 /// Best effort clean up of cache directory.
 /// Returns true if the cache directory was deleted, false if it was not.
-pub(super) fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
+fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
     // Resolve and ensure we only delete stuff within the cache directory.
     // Canonicalize both paths to handle symlinked temp paths consistently.
     // Fall back to original paths if canonicalization fails.
@@ -281,3 +281,6 @@ pub(super) fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
