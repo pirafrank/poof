@@ -7,3 +7,6 @@ pub mod install;
 pub mod list;
 pub mod make_default;
 pub mod update;
+
+#[cfg(test)]
+mod tests;

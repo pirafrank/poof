@@ -62,6 +62,10 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
 
         process_install(&downloaded_file, &download_to, &install_dir, asset.name())
             .with_context(|| format!("Failed to install {} version {}", repo, version))?;
+
+        if clean_cache_dir(&download_to, &cache_dir)? {
+            debug!("Cleaned up cache directory: {}", download_to.display());
+        }
     }
     info!("{} {} installed successfully.", repo, &version);
 
@@ -250,4 +254,30 @@ fn install_binary(exec: &PathBuf, install_dir: &Path, exec_stem: &OsString) -> R
         }
     }
     Ok(())
+}
+
+/// Best effort clean up of cache directory.
+/// Returns true if the cache directory was deleted, false if it was not.
+pub(super) fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
+    // Resolve and ensure we only delete stuff within the cache directory.
+    // Canonicalize both paths to handle symlinked temp paths consistently.
+    // Fall back to original paths if canonicalization fails.
+    let dir = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
+    let cache_root = cache_root
+        .canonicalize()
+        .unwrap_or_else(|_| cache_root.to_path_buf());
+
+    if !dir.starts_with(&cache_root) {
+        debug!("Refusing to delete non-cache path: {}", dir.display());
+        return Ok(false);
+    }
+
+    // Best effort to clean up the cache directory.
+    match std::fs::remove_dir_all(&dir) {
+        Ok(()) => Ok(true),
+        Err(e) => {
+            debug!("Failed to delete cache directory {}: {}", dir.display(), e);
+            Ok(false)
+        }
+    }
 }
