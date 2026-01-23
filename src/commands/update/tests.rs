@@ -178,6 +178,77 @@ fn test_update_single_repo_up_to_date() -> Result<()> {
 }
 
 #[test]
+fn test_update_single_repo_on_error_with_newer_version() -> Result<()> {
+    let test_env = setup_test_env()?;
+
+    // Create fake installation with older version
+    create_fake_installation(test_env.data_dir.as_path(), "testuser/testrepo", "1.0.0")?;
+
+    let mut server = Server::new();
+    // Mock GitHub API to return newer version
+    let _m = mock_release_response(&mut server, "testuser/testrepo", "v2.0.0", 200);
+
+    let server_url = server.url();
+    let mut env_vars: Vec<(&str, Option<&str>)> = test_env
+        .env_vars
+        .iter()
+        .map(|(k, v)| (*k, Some(v.as_str())))
+        .collect();
+    env_vars.push(("POOF_GITHUB_API_URL", Some(server_url.as_str())));
+
+    temp_env::with_vars(env_vars, || {
+        let result = update_single_repo("testuser/testrepo");
+        // install() should fail since we haven't mocked download assets
+        assert!(result.is_err(), "Expected error when install() fails");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("install") || err_msg.contains("Failed"),
+            "Expected error about installation, got: {}",
+            err_msg
+        );
+    });
+
+    Ok(())
+}
+
+#[test]
+fn test_update_all_repos_with_multiple_installations() -> Result<()> {
+    let test_env = setup_test_env()?;
+
+    // Create multiple fake installations
+    create_fake_installation(test_env.data_dir.as_path(), "user1/repo1", "1.0.0")?;
+    create_fake_installation(test_env.data_dir.as_path(), "user2/repo2", "1.0.0")?;
+    create_fake_installation(test_env.data_dir.as_path(), "user3/repo3", "1.0.0")?;
+
+    let mut server = Server::new();
+    // Mock successful responses for repo1 and repo2
+    let _m1 = mock_release_response(&mut server, "user1/repo1", "v1.0.0", 200);
+    let _m2 = mock_release_response(&mut server, "user2/repo2", "v1.0.0", 200);
+    // Mock failure for repo3
+    let _m3 = mock_release_response(&mut server, "user3/repo3", "v1.0.0", 500);
+
+    let server_url = server.url();
+    let mut env_vars: Vec<(&str, Option<&str>)> = test_env
+        .env_vars
+        .iter()
+        .map(|(k, v)| (*k, Some(v.as_str())))
+        .collect();
+    env_vars.push(("POOF_GITHUB_API_URL", Some(server_url.as_str())));
+
+    temp_env::with_vars(env_vars, || {
+        let result = update_all_repos();
+        // Should fail because repo3 failed
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        // Should mention the failed repo
+        assert!(err_msg.contains("user3/repo3"));
+        assert!(err_msg.contains("Update --all finished with errors"));
+    });
+
+    Ok(())
+}
+
+#[test]
 fn test_update_self_up_to_date() -> Result<()> {
     let mut server = Server::new();
     let current_version = env!("CARGO_PKG_VERSION");
@@ -203,48 +274,6 @@ fn test_update_self_up_to_date() -> Result<()> {
         let result = update_self();
         // Should succeed and report up-to-date
         assert!(result.is_ok());
-    });
-
-    Ok(())
-}
-
-#[test]
-fn test_update_self_newer_version_available() -> Result<()> {
-    let mut server = Server::new();
-
-    // Mock response with a much newer version
-    let _m = server
-        .mock("GET", "/pirafrank/poof/releases/latest")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(
-            json!({
-                "tag_name": "v999.999.999",
-                "published_at": "2024-01-01T00:00:00Z",
-                "assets": [{
-                    "name": "poof-test-binary",
-                    "browser_download_url": format!("{}/fake-download", server.url()),
-                    "content_type": "application/octet-stream"
-                }]
-            })
-            .to_string(),
-        )
-        .create();
-
-    // Mock the download endpoint (it will fail, but we're testing version detection)
-    let _m2 = server
-        .mock("GET", "/fake-download")
-        .with_status(200)
-        .with_body("fake binary content")
-        .create();
-
-    // Set environment to use mock GitHub API
-    temp_env::with_var("POOF_GITHUB_API_URL", Some(server.url().as_str()), || {
-        let result = update_self();
-        // Will fail during actual update process (download/replace), but should detect newer version
-        // The function will fail at some point during the update process, not during version check
-        assert!(result.is_err() || result.is_ok());
-        // Either way, the version detection logic was exercised
     });
 
     Ok(())
@@ -409,6 +438,78 @@ fn test_update_self_github_api_failure() -> Result<()> {
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Failed to get latest release") || err_msg.contains("404"));
+    });
+
+    Ok(())
+}
+
+#[test]
+fn test_process_update_with_no_arguments() -> Result<()> {
+    use crate::UpdateArgs;
+
+    let args = UpdateArgs {
+        repo: None,
+        all: false,
+        update_self: false,
+    };
+
+    let result = process_update(&args);
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(err_msg.contains("No repository specified"));
+
+    Ok(())
+}
+
+#[test]
+fn test_process_update_with_all_flag() -> Result<()> {
+    use crate::UpdateArgs;
+
+    let test_env = setup_test_env()?;
+
+    let args = UpdateArgs {
+        repo: None,
+        all: true,
+        update_self: false,
+    };
+
+    let env_vars: Vec<(&str, Option<&str>)> = test_env
+        .env_vars
+        .iter()
+        .map(|(k, v)| (*k, Some(v.as_str())))
+        .collect();
+
+    temp_env::with_vars(env_vars, || {
+        // With empty installation, should succeed
+        let result = process_update(&args);
+        assert!(result.is_ok());
+    });
+
+    Ok(())
+}
+
+#[test]
+fn test_process_update_with_repo_name() -> Result<()> {
+    use crate::UpdateArgs;
+
+    let test_env = setup_test_env()?;
+
+    let args = UpdateArgs {
+        repo: Some("user/repo".to_string()),
+        all: false,
+        update_self: false,
+    };
+
+    let env_vars: Vec<(&str, Option<&str>)> = test_env
+        .env_vars
+        .iter()
+        .map(|(k, v)| (*k, Some(v.as_str())))
+        .collect();
+
+    temp_env::with_vars(env_vars, || {
+        // Repo not installed, should succeed with message
+        let result = process_update(&args);
+        assert!(result.is_ok());
     });
 
     Ok(())
