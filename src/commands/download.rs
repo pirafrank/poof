@@ -53,3 +53,6 @@ pub fn download_asset(
         // also, we have context added via `?` to trace the origin :)
     }
 }
+
+#[cfg(test)]
+mod tests;

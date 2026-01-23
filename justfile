@@ -144,13 +144,17 @@ licenses:
 # Run CI checks
 ci: clean fmt-check lint build test
 
-# Run compliance checks
-# Run compliance checks (audit and license validation)
+# Run compliance checks (audit and license)
 compliance: audit licenses
 
 # Run code coverage
 coverage:
   cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+
+# Browse coverage report
+browse-coverage: coverage
+  cargo llvm-cov report --html
+  python3 -m http.server --directory ./target/llvm-cov/html 8888
 
 # Assumes you have the `browse` command in PATH
 # see https://github.com/pirafrank/dotfiles/blob/main/bin/browse
@@ -161,5 +165,5 @@ issues:
 # Assumes you have the `browse` command in PATH
 # see https://github.com/pirafrank/dotfiles/blob/main/bin/browse
 # Browse coverage report on Codecov
-browse-coverage:
+codecov:
   browse "https://app.codecov.io/github/pirafrank/poof"

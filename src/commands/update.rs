@@ -304,3 +304,6 @@ pub fn process_update(args: &UpdateArgs) -> Result<()> {
         bail!("No repository specified, and neither --all nor --self flags were provided.");
     }
 }
+
+#[cfg(test)]
+mod tests;

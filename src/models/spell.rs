@@ -6,7 +6,7 @@ use std::cmp::Ordering;
 
 use super::slug::Slug;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Spell {
     name: Slug,
     versions: Vec<Version>,
@@ -156,5 +156,111 @@ impl std::fmt::Display for Spell {
             .collect::<Vec<String>>()
             .join(", ");
         write!(f, "{}: {}", self.name, versions_str)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_spell_new() {
+        let versions = vec![
+            Version::parse("1.0.0").unwrap(),
+            Version::parse("0.1.0").unwrap(),
+        ];
+        let spell = Spell::new("user/repo".to_string(), versions);
+        assert_eq!(spell.get_name(), "user/repo");
+        assert_eq!(spell.get_versions().len(), 2);
+        assert_eq!(spell.get_versions()[0].to_string(), "0.1.0");
+        assert_eq!(spell.get_versions()[1].to_string(), "1.0.0");
+    }
+
+    #[test]
+    fn test_spell_new_as_string() {
+        let versions = vec!["v1.0.0".to_string(), "0.1.0".to_string()];
+        let spell = Spell::new_as_string("user/repo".to_string(), versions);
+        assert_eq!(spell.get_name(), "user/repo");
+        assert_eq!(spell.get_versions().len(), 2);
+        assert_eq!(spell.get_versions()[0].to_string(), "0.1.0");
+        assert_eq!(spell.get_versions()[1].to_string(), "1.0.0");
+    }
+
+    #[test]
+    fn test_spell_setters() {
+        let mut spell = Spell::new("user/repo".to_string(), vec![]);
+        spell.set_name("other/repo".to_string());
+        assert_eq!(spell.get_name(), "other/repo");
+
+        let versions = vec![Version::parse("1.0.0").unwrap()];
+        spell.set_versions(versions);
+        assert_eq!(spell.get_versions().len(), 1);
+    }
+
+    #[test]
+    fn test_spell_add_version() {
+        let mut spell = Spell::new("user/repo".to_string(), vec![]);
+        let v1 = Version::parse("1.0.0").unwrap();
+        spell.add_version(v1.clone());
+        assert_eq!(spell.get_versions().len(), 1);
+
+        // Add same version again
+        spell.add_version(v1);
+        assert_eq!(spell.get_versions().len(), 1);
+
+        spell.add_version_as_string("v2.0.0");
+        assert_eq!(spell.get_versions().len(), 2);
+        assert_eq!(spell.get_latest_version(), Some("2.0.0".to_string()));
+    }
+
+    #[test]
+    fn test_spell_remove_version() {
+        let mut spell = Spell::new_as_string(
+            "user/repo".to_string(),
+            vec!["1.0.0".to_string(), "2.0.0".to_string()],
+        );
+        assert_eq!(spell.get_versions().len(), 2);
+
+        let v1 = Version::parse("1.0.0").unwrap();
+        spell.remove_version(v1);
+        assert_eq!(spell.get_versions().len(), 1);
+        assert_eq!(spell.get_versions()[0].to_string(), "2.0.0");
+
+        spell.remove_version_as_string("2.0.0");
+        assert!(spell.is_empty());
+    }
+
+    #[test]
+    fn test_spell_clear_is_empty() {
+        let mut spell = Spell::new_as_string("user/repo".to_string(), vec!["1.0.0".to_string()]);
+        assert!(!spell.is_empty());
+        spell.clear_versions();
+        assert!(spell.is_empty());
+    }
+
+    #[test]
+    fn test_spell_contains_version() {
+        let spell = Spell::new_as_string("user/repo".to_string(), vec!["1.0.0".to_string()]);
+        assert!(spell.contains_version("1.0.0"));
+        assert!(spell.contains_version("v1.0.0"));
+        assert!(!spell.contains_version("2.0.0"));
+        assert!(!spell.contains_version("invalid"));
+    }
+
+    #[test]
+    fn test_spell_display() {
+        let spell = Spell::new_as_string(
+            "user/repo".to_string(),
+            vec!["1.0.0".to_string(), "0.1.0".to_string()],
+        );
+        assert_eq!(format!("{}", spell), "user/repo: 0.1.0, 1.0.0");
+    }
+
+    #[test]
+    fn test_spell_ordering() {
+        let s1 = Spell::new("a/repo".to_string(), vec![]);
+        let s2 = Spell::new("b/repo".to_string(), vec![]);
+        assert!(s1 < s2);
+        assert_eq!(s1.partial_cmp(&s2), Some(Ordering::Less));
     }
 }
