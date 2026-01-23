@@ -35,7 +35,7 @@ impl TestEnv {
     }
 
     /// Helper to create a mock executable file
-    fn create_mock_executable(&self, path: &Path) -> anyhow::Result<()> {
+    fn create_mock_executable(&self, path: &Path) -> Result<()> {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -53,7 +53,7 @@ impl TestEnv {
     }
 
     /// Helper to create a platform-specific executable file with proper magic numbers
-    fn create_platform_executable(&self, path: &Path) -> anyhow::Result<()> {
+    fn create_platform_executable(&self, path: &Path) -> Result<()> {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -74,7 +74,7 @@ impl TestEnv {
         {
             use std::io::Write;
             // Write Mach-O magic number (64-bit little-endian)
-            file.write_all(&[0xFE, 0xED, 0xFA, 0xCF])?;
+            file.write_all(&magic::MACHO_MAGIC_NUMBERS[1])?;
             // Write some dummy content
             file.write_all(b"Mach-O dummy content for testing")?;
         }
@@ -183,7 +183,7 @@ mod check_if_installed_tests {
     use super::*;
 
     #[test]
-    fn test_check_if_installed_not_exists() -> anyhow::Result<()> {
+    fn test_check_if_installed_not_exists() -> Result<()> {
         let env = TestEnv::new()?;
         let install_dir = env.home_dir.join("nonexistent");
 
@@ -194,7 +194,7 @@ mod check_if_installed_tests {
     }
 
     #[test]
-    fn test_check_if_installed_empty_dir() -> anyhow::Result<()> {
+    fn test_check_if_installed_empty_dir() -> Result<()> {
         let env = TestEnv::new()?;
         let install_dir = env.create_dir("empty_install")?;
 
@@ -205,7 +205,7 @@ mod check_if_installed_tests {
     }
 
     #[test]
-    fn test_check_if_installed_not_empty() -> anyhow::Result<()> {
+    fn test_check_if_installed_not_empty() -> Result<()> {
         let env = TestEnv::new()?;
         let install_dir = env.create_dir("non_empty_install")?;
 
@@ -219,7 +219,7 @@ mod check_if_installed_tests {
     }
 
     #[test]
-    fn test_check_if_installed_is_file() -> anyhow::Result<()> {
+    fn test_check_if_installed_is_file() -> Result<()> {
         let env = TestEnv::new()?;
         let install_path = env.home_dir.join("is_a_file");
         fs::write(&install_path, b"content")?;
@@ -231,7 +231,7 @@ mod check_if_installed_tests {
     }
 
     #[test]
-    fn test_check_if_installed_with_multiple_files() -> anyhow::Result<()> {
+    fn test_check_if_installed_with_multiple_files() -> Result<()> {
         let env = TestEnv::new()?;
         let install_dir = env.create_dir("multi_file_install")?;
 
@@ -258,7 +258,7 @@ mod prepare_install_dir_tests {
     use super::*;
 
     #[test]
-    fn test_prepare_install_dir_creates_directory() -> anyhow::Result<()> {
+    fn test_prepare_install_dir_creates_directory() -> Result<()> {
         let env = TestEnv::new()?;
         let install_dir = env.home_dir.join("new_install");
 
@@ -279,7 +279,7 @@ mod prepare_install_dir_tests {
     }
 
     #[test]
-    fn test_prepare_install_dir_nested_path() -> anyhow::Result<()> {
+    fn test_prepare_install_dir_nested_path() -> Result<()> {
         let env = TestEnv::new()?;
         let install_dir = env.create_dir("owner/repo/1.0.0")?;
 
@@ -291,7 +291,7 @@ mod prepare_install_dir_tests {
     }
 
     #[test]
-    fn test_prepare_install_dir_already_exists() -> anyhow::Result<()> {
+    fn test_prepare_install_dir_already_exists() -> Result<()> {
         let env = TestEnv::new()?;
         let install_dir = env.create_dir("existing_install")?;
 
@@ -390,7 +390,7 @@ mod install_binary_tests {
     use super::*;
 
     #[test]
-    fn test_install_binary_basic() -> anyhow::Result<()> {
+    fn test_install_binary_basic() -> Result<()> {
         let env = TestEnv::new()?;
         let source_exec = env.home_dir.join("source/mybinary");
         let install_dir = env.create_dir("install")?;
@@ -423,7 +423,7 @@ mod install_binary_tests {
     }
 
     #[test]
-    fn test_install_binary_preserves_content() -> anyhow::Result<()> {
+    fn test_install_binary_preserves_content() -> Result<()> {
         let env = TestEnv::new()?;
         let source_exec = env.home_dir.join("source/tool");
         let install_dir = env.create_dir("install")?;
@@ -458,7 +458,7 @@ mod install_binary_tests {
 
     #[test]
     #[cfg(not(target_os = "windows"))]
-    fn test_install_binary_sets_executable_permissions() -> anyhow::Result<()> {
+    fn test_install_binary_sets_executable_permissions() -> Result<()> {
         use std::os::unix::fs::PermissionsExt;
 
         let env = TestEnv::new()?;
@@ -601,7 +601,7 @@ mod process_install_tests {
     use super::*;
 
     #[test]
-    fn test_process_install_executable_path() -> anyhow::Result<()> {
+    fn test_process_install_executable_path() -> Result<()> {
         let env = TestEnv::new()?;
         let downloaded_file = env.home_dir.join("downloaded/mybin-linux-x86_64");
         let download_to = env.create_dir("download")?;
@@ -641,7 +641,7 @@ mod process_install_tests {
     }
 
     #[test]
-    fn test_process_install_archive_path() -> anyhow::Result<()> {
+    fn test_process_install_archive_path() -> Result<()> {
         let env = TestEnv::new()?;
         let temp_extract = TempDir::new()?;
 
@@ -699,7 +699,7 @@ mod install_binaries_tests {
     use super::*;
 
     #[test]
-    fn test_install_binaries_success() -> anyhow::Result<()> {
+    fn test_install_binaries_success() -> Result<()> {
         let env = TestEnv::new()?;
         let temp_extract = TempDir::new()?;
         let install_dir = env.create_dir("install")?;
@@ -753,7 +753,7 @@ mod install_binaries_tests {
     }
 
     #[test]
-    fn test_install_binaries_no_executables() -> anyhow::Result<()> {
+    fn test_install_binaries_no_executables() -> Result<()> {
         let env = TestEnv::new()?;
         let temp_extract = TempDir::new()?;
         let install_dir = env.create_dir("install")?;
@@ -796,7 +796,7 @@ mod select_assets_success_tests {
     use super::*;
 
     #[test]
-    fn test_select_assets_success_with_mock() -> anyhow::Result<()> {
+    fn test_select_assets_success_with_mock() -> Result<()> {
         // Use mockito to mock GitHub API responses
         use mockito::Server;
         use serde_json::json;
@@ -871,7 +871,7 @@ mod install_already_installed_tests {
     use super::*;
 
     #[test]
-    fn test_install_already_installed_skips() -> anyhow::Result<()> {
+    fn test_install_already_installed_skips() -> Result<()> {
         // This test requires mocking select_assets and download_asset
         // For now, we'll test the check_if_installed path indirectly
         // by verifying that when an installation exists, install would skip
