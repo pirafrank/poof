@@ -1,4 +1,5 @@
 use super::*;
+use anyhow::Result;
 use mockito::Server;
 use std::fs;
 use tempfile::tempdir;
@@ -53,8 +54,8 @@ fn test_download_asset_http_error() -> Result<()> {
 }
 
 #[test]
-fn test_download_asset_invalid_url() {
-    let tmp_dir = tempdir().unwrap();
+fn test_download_asset_invalid_url() -> Result<()> {
+    let tmp_dir = tempdir()?;
     let download_to = tmp_dir.path().to_path_buf();
     let filename = "invalid-url.bin".to_string();
     let download_url = "http://invalid.url.that.does.not.exist.local".to_string();
@@ -66,6 +67,8 @@ fn test_download_asset_invalid_url() {
         .unwrap_err()
         .to_string()
         .contains("Failed to initiate download"));
+
+    Ok(())
 }
 
 #[test]

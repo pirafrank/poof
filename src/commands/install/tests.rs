@@ -409,7 +409,10 @@ mod install_binary_tests {
         // If bin_dir cannot be determined, skip the assertion
         if let Err(e) = &result {
             if format!("{:?}", e).contains("Failed to determine") {
-                eprintln!("Skipping assertion: bin_dir unavailable in test environment");
+                eprintln!(
+                    "Skipping test_install_binary_basic: bin_dir unavailable in CI/sandboxed environment. \
+                    This is expected when HOME or XDG dirs are not properly configured."
+                );
                 return Ok(());
             }
         }
@@ -615,7 +618,6 @@ mod process_install_tests {
         let downloaded_file = env.home_dir.join("downloaded/mybin-linux-x86_64");
         let download_to = env.create_dir("download")?;
         let install_dir = env.create_dir("install")?;
-        fs::create_dir_all(&install_dir)?;
 
         // Create a platform-specific executable file
         env.create_platform_executable(&downloaded_file)?;
