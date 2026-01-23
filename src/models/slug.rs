@@ -82,72 +82,72 @@ mod tests {
 
     #[test]
     fn test_slug_new() {
-        let slug = Slug::new("user/repo");
-        assert_eq!(slug.0, "user/repo");
+        let slug = Slug::new("user/repo", "1.0.0");
+        assert_eq!(slug.0, "user/repo/1.0.0");
     }
 
     #[test]
     fn test_slug_as_str() {
-        let slug = Slug::new("user/repo");
-        assert_eq!(slug.as_str(), "user/repo");
+        let slug = Slug::new("user/repo", "1.0.0");
+        assert_eq!(slug.as_str(), "user/repo/1.0.0");
     }
 
     #[test]
     fn test_slug_get_username() {
-        let slug = Slug::new("user/repo");
+        let slug = Slug::new("user/repo", "1.0.0");
         assert_eq!(slug.get_username(), Some("user".to_string()));
 
-        let no_slash = Slug::new("userrepo");
-        assert_eq!(no_slash.get_username(), None);
+        let no_slash = Slug::new("userrepo", "1.0.0");
+        assert_eq!(no_slash.get_username(), Some("userrepo".to_string()));
     }
 
     #[test]
     fn test_slug_get_reponame() {
-        let slug = Slug::new("user/repo");
-        assert_eq!(slug.get_reponame(), Some("repo".to_string()));
+        let slug = Slug::new("user/repo", "1.0.0");
+        assert_eq!(slug.get_reponame(), Some("repo/1.0.0".to_string()));
 
-        let no_slash = Slug::new("userrepo");
-        assert_eq!(no_slash.get_reponame(), None);
+        let no_slash = Slug::new("userrepo", "1.0.0");
+        assert_eq!(no_slash.get_reponame(), Some("1.0.0".to_string()));
     }
 
     #[test]
     fn test_slug_display() {
-        let slug = Slug::new("user/repo");
-        assert_eq!(format!("{}", slug), "user/repo");
+        let slug = Slug::new("user/repo", "1.0.0");
+        assert_eq!(format!("{}", slug), "user/repo/1.0.0");
     }
 
     #[test]
     fn test_slug_from_string() {
-        let s = "user/repo".to_string();
+        let s = "user/repo/1.0.0".to_string();
         let slug = Slug::from(s);
-        assert_eq!(slug.0, "user/repo");
+        assert_eq!(slug.0, "user/repo/1.0.0");
     }
 
     #[test]
     fn test_slug_from_str() {
-        let slug = Slug::from("user/repo");
-        assert_eq!(slug.0, "user/repo");
+        let slug = Slug::from("user/repo/1.0.0");
+        assert_eq!(slug.0, "user/repo/1.0.0");
     }
 
     #[test]
     fn test_slug_deref() {
-        let slug = Slug::new("user/repo");
-        assert_eq!(slug.len(), 9);
+        let slug = Slug::new("user/repo", "1.0.0");
+        assert_eq!(slug.len(), 15);
         assert!(slug.contains("user"));
     }
 
     #[test]
     fn test_slug_deref_mut() {
-        let mut slug = Slug::new("user/repo");
+        let mut slug = Slug::new("user/repo", "1.0.0");
         slug.push_str("/extra");
-        assert_eq!(slug.0, "user/repo/extra");
+        assert_eq!(slug.0, "user/repo/1.0.0/extra");
     }
 
     #[test]
     fn test_slug_partial_eq() {
-        let slug1 = Slug::new("user/repo");
-        let slug2 = Slug::new("user/repo");
-        let slug3 = Slug::new("other/repo");
+        let slug1 = Slug::new("user/repo", "1.0.0");
+        let slug2 = Slug::new("user/repo", "1.0.0");
+        let slug3 = Slug::new("other/repo", "1.0.0");
         assert_eq!(slug1, slug2);
         assert_ne!(slug1, slug3);
     }

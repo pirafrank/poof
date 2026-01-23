@@ -404,8 +404,9 @@ mod install_binary_tests {
         // Create a mock executable
         env.create_mock_executable(&source_exec)?;
 
+        let slug = Slug::new("testuser/testrepo", "1.0.0");
         let exec_stem = OsString::from("mybinary");
-        let result = install_binary(&source_exec, &install_dir, &exec_stem);
+        let result = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
         // If bin_dir cannot be determined, skip the assertion
         if let Err(e) = &result {
             if format!("{:?}", e).contains("Failed to determine") {
@@ -449,9 +450,10 @@ mod install_binary_tests {
             perms.set_mode(0o755);
             fs::set_permissions(&source_exec, perms)?;
         }
+        let slug = Slug::new("testuser/testrepo", "1.0.0");
         let exec_stem = OsString::from("tool");
         // Handle expected failures due to bin_dir issues in test environment
-        if let Err(e) = install_binary(&source_exec, &install_dir, &exec_stem) {
+        if let Err(e) = install_binary(&slug, &source_exec, &install_dir, &exec_stem) {
             if !format!("{:?}", e).contains("Failed to determine") {
                 return Err(e);
             } else {
@@ -480,8 +482,9 @@ mod install_binary_tests {
 
         env.create_mock_executable(&source_exec)?;
 
+        let slug = Slug::new("testuser/testrepo", "1.0.0");
         let exec_stem = OsString::from("executable");
-        let _ = install_binary(&source_exec, &install_dir, &exec_stem);
+        let _ = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
 
         let installed = install_dir.join("executable");
         if installed.exists() {
@@ -622,8 +625,15 @@ mod process_install_tests {
         // Create a platform-specific executable file
         env.create_platform_executable(&downloaded_file)?;
 
+        let slug = Slug::new("testuser/testrepo", "1.0.0");
         let asset_name = String::from("mybin-linux-x86_64");
-        let result = process_install(&downloaded_file, &download_to, &install_dir, &asset_name);
+        let result = process_install(
+            &slug,
+            &downloaded_file,
+            &download_to,
+            &install_dir,
+            &asset_name,
+        );
 
         // Note: This may fail if bin_dir cannot be created, but the copy should work
         match result {
@@ -674,8 +684,15 @@ mod process_install_tests {
         let install_dir = env.create_dir("install")?;
         fs::create_dir_all(&install_dir)?;
 
+        let slug = Slug::new("testuser/testrepo", "1.0.0");
         let asset_name = String::from("archive.zip");
-        let result = process_install(&downloaded_file, &download_to, &install_dir, &asset_name);
+        let result = process_install(
+            &slug,
+            &downloaded_file,
+            &download_to,
+            &install_dir,
+            &asset_name,
+        );
 
         // The archive should be extracted and executables installed
         // Note: The archive fixture may not contain executables, so this might fail
@@ -732,7 +749,8 @@ mod install_binaries_tests {
         // Create the archive file (just a placeholder, won't be read)
         fs::write(&archive_path, b"dummy archive")?;
 
-        let result = install_binaries(&archive_path, &install_dir);
+        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let result = install_binaries(&slug, &archive_path, &install_dir);
 
         // Note: This may fail if bin_dir cannot be created
         match result {
@@ -781,7 +799,8 @@ mod install_binaries_tests {
         // Create the archive file (just a placeholder)
         fs::write(&archive_path, b"dummy archive")?;
 
-        let result = install_binaries(&archive_path, &install_dir);
+        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let result = install_binaries(&slug, &archive_path, &install_dir);
 
         assert!(
             result.is_err(),
