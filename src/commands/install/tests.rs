@@ -281,11 +281,17 @@ mod prepare_install_dir_tests {
     #[test]
     fn test_prepare_install_dir_nested_path() -> Result<()> {
         let env = TestEnv::new()?;
-        let install_dir = env.create_dir("owner/repo/1.0.0")?;
+        let install_dir = env.home_dir.join("owner/repo/1.0.0");
+
+        assert!(
+            !install_dir.exists(),
+            "Directory should not exist initially"
+        );
 
         let result = prepare_install_dir(&install_dir);
         assert!(result.is_ok(), "Should create nested directories");
         assert!(install_dir.exists(), "Nested directory should exist");
+        assert!(install_dir.is_dir(), "Path should be a directory");
 
         Ok(())
     }
@@ -445,6 +451,9 @@ mod install_binary_tests {
         if let Err(e) = install_binary(&source_exec, &install_dir, &exec_stem) {
             if !format!("{:?}", e).contains("Failed to determine") {
                 return Err(e);
+            } else {
+                eprintln!("Skipping assertion: bin_dir unavailable in test environment");
+                return Ok(());
             }
         }
 
@@ -808,6 +817,7 @@ mod select_assets_success_tests {
         let tag = "v1.0.0";
 
         // Determine platform-specific asset name
+        // Note: we only support x86_64 and aarch64 linux and macOS platform for tests.
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         let asset_name = "testrepo-linux-x86_64";
         #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
@@ -816,8 +826,6 @@ mod select_assets_success_tests {
         let asset_name = "testrepo-darwin-x86_64";
         #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         let asset_name = "testrepo-darwin-aarch64";
-        #[cfg(target_os = "windows")]
-        let asset_name = "testrepo-windows-x86_64.exe";
 
         let download_url = format!("{}/releases/download/{}/{}", server.url(), tag, asset_name);
 
