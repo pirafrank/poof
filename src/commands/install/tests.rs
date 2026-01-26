@@ -18,6 +18,11 @@ struct TestEnv {
 }
 
 impl TestEnv {
+    // Test constants to reduce magic strings
+    const DEFAULT_TEST_SLUG: &'static str = "testuser/testrepo";
+    const DEFAULT_BINARY_NAME: &'static str = "testrepo";
+    const BIN_DIR_NAME: &'static str = "bin";
+
     fn new() -> Result<Self> {
         let temp_dir = TempDir::new()?;
         let home = temp_dir.path().canonicalize().unwrap().to_path_buf();
@@ -28,10 +33,26 @@ impl TestEnv {
         })
     }
 
+    /// Helper to create a test slug
+    fn test_slug() -> Slug {
+        Slug::new(Self::DEFAULT_TEST_SLUG).expect("test slug should be valid")
+    }
+
     fn create_dir(&self, name: &str) -> Result<PathBuf> {
         let path = self.home_dir.join(name);
         fs::create_dir_all(&path)?;
         Ok(path.canonicalize()?)
+    }
+
+    /// Create the bin directory
+    fn create_bin_dir(&self) -> Result<PathBuf> {
+        self.create_dir(Self::BIN_DIR_NAME)
+    }
+
+    /// Get or create bin directory and return symlink path for binary
+    fn get_symlink_path(&self, binary_name: &str) -> Result<PathBuf> {
+        let bin_dir = self.create_bin_dir()?;
+        Ok(bin_dir.join(binary_name))
     }
 
     /// Helper to create a mock executable file
@@ -97,6 +118,74 @@ impl TestEnv {
         }
 
         Ok(())
+    }
+
+    /// Run closure with test environment variables set (HOME, XDG_DATA_HOME)
+    fn with_test_env<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce() -> R,
+    {
+        temp_env::with_vars(
+            vec![
+                ("HOME", Some(self.home_dir.to_str().unwrap())),
+                #[cfg(target_os = "linux")]
+                (
+                    "XDG_DATA_HOME",
+                    Some(self.home_dir.join(".local/share").to_str().unwrap()),
+                ),
+            ],
+            f,
+        )
+    }
+
+    /// Create a complete mock installation with data dir structure, binary, and optional symlink
+    fn create_mock_installation_with_slug(
+        &self,
+        slug: &str,
+        version: &str,
+        binary_name: &str,
+        create_symlink: bool,
+    ) -> Result<PathBuf> {
+        self.with_test_env(|| {
+            let data_dir = datadirs::get_data_dir().unwrap();
+            let install_dir = data_dir.join(slug).join(version);
+            fs::create_dir_all(&install_dir).unwrap();
+
+            let target_binary = install_dir.join(binary_name);
+            self.create_mock_executable(&target_binary).unwrap();
+
+            if create_symlink {
+                let bin_dir = self.create_bin_dir().unwrap();
+                let symlink_path = bin_dir.join(binary_name);
+                #[cfg(not(target_os = "windows"))]
+                std::os::unix::fs::symlink(&target_binary, &symlink_path).unwrap();
+            }
+
+            Ok(install_dir)
+        })
+    }
+
+    /// Create a Unix symlink (no-op on Windows in tests)
+    #[cfg(not(target_os = "windows"))]
+    #[allow(dead_code)]
+    fn create_unix_symlink(&self, target: &Path, link: &Path) -> Result<()> {
+        std::os::unix::fs::symlink(target, link)?;
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    fn create_unix_symlink(&self, _target: &Path, _link: &Path) -> Result<()> {
+        Ok(()) // No-op on Windows
+    }
+
+    /// Run closure with additional directory prepended to PATH
+    fn with_path_extended<F, R>(&self, additional_dir: &Path, f: F) -> R
+    where
+        F: FnOnce() -> R,
+    {
+        let original_path = std::env::var("PATH").unwrap_or_default();
+        let new_path = format!("{}:{}", additional_dir.display(), original_path);
+        temp_env::with_var("PATH", Some(&new_path), f)
     }
 }
 
@@ -404,8 +493,9 @@ mod install_binary_tests {
         // Create a mock executable
         env.create_mock_executable(&source_exec)?;
 
+        let slug = TestEnv::test_slug();
         let exec_stem = OsString::from("mybinary");
-        let result = install_binary(&source_exec, &install_dir, &exec_stem);
+        let result = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
         // If bin_dir cannot be determined, skip the assertion
         if let Err(e) = &result {
             if format!("{:?}", e).contains("Failed to determine") {
@@ -449,9 +539,10 @@ mod install_binary_tests {
             perms.set_mode(0o755);
             fs::set_permissions(&source_exec, perms)?;
         }
+        let slug = TestEnv::test_slug();
         let exec_stem = OsString::from("tool");
         // Handle expected failures due to bin_dir issues in test environment
-        if let Err(e) = install_binary(&source_exec, &install_dir, &exec_stem) {
+        if let Err(e) = install_binary(&slug, &source_exec, &install_dir, &exec_stem) {
             if !format!("{:?}", e).contains("Failed to determine") {
                 return Err(e);
             } else {
@@ -480,8 +571,9 @@ mod install_binary_tests {
 
         env.create_mock_executable(&source_exec)?;
 
+        let slug = TestEnv::test_slug();
         let exec_stem = OsString::from("executable");
-        let _ = install_binary(&source_exec, &install_dir, &exec_stem);
+        let _ = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
 
         let installed = install_dir.join("executable");
         if installed.exists() {
@@ -622,8 +714,15 @@ mod process_install_tests {
         // Create a platform-specific executable file
         env.create_platform_executable(&downloaded_file)?;
 
+        let slug = TestEnv::test_slug();
         let asset_name = String::from("mybin-linux-x86_64");
-        let result = process_install(&downloaded_file, &download_to, &install_dir, &asset_name);
+        let result = process_install(
+            &slug,
+            &downloaded_file,
+            &download_to,
+            &install_dir,
+            &asset_name,
+        );
 
         // Note: This may fail if bin_dir cannot be created, but the copy should work
         match result {
@@ -674,8 +773,15 @@ mod process_install_tests {
         let install_dir = env.create_dir("install")?;
         fs::create_dir_all(&install_dir)?;
 
+        let slug = TestEnv::test_slug();
         let asset_name = String::from("archive.zip");
-        let result = process_install(&downloaded_file, &download_to, &install_dir, &asset_name);
+        let result = process_install(
+            &slug,
+            &downloaded_file,
+            &download_to,
+            &install_dir,
+            &asset_name,
+        );
 
         // The archive should be extracted and executables installed
         // Note: The archive fixture may not contain executables, so this might fail
@@ -732,7 +838,8 @@ mod install_binaries_tests {
         // Create the archive file (just a placeholder, won't be read)
         fs::write(&archive_path, b"dummy archive")?;
 
-        let result = install_binaries(&archive_path, &install_dir);
+        let slug = TestEnv::test_slug();
+        let result = install_binaries(&slug, &archive_path, &install_dir);
 
         // Note: This may fail if bin_dir cannot be created
         match result {
@@ -781,7 +888,8 @@ mod install_binaries_tests {
         // Create the archive file (just a placeholder)
         fs::write(&archive_path, b"dummy archive")?;
 
-        let result = install_binaries(&archive_path, &install_dir);
+        let slug = TestEnv::test_slug();
+        let result = install_binaries(&slug, &archive_path, &install_dir);
 
         assert!(
             result.is_err(),
@@ -923,6 +1031,314 @@ mod install_already_installed_tests {
                 // that causes the early return
             },
         );
+
+        Ok(())
+    }
+}
+
+// =============================================================================
+// Tests for check_for_same_named_binary_in_bin_dir
+// =============================================================================
+
+#[cfg(test)]
+mod check_for_same_named_binary_in_bin_dir_tests {
+    use super::*;
+
+    #[test]
+    fn test_no_existing_file() -> Result<()> {
+        let env = TestEnv::new()?;
+        let slug = TestEnv::test_slug();
+        let bin_dir = env.create_bin_dir()?;
+        let exec_path = bin_dir.join("nonexistent");
+
+        let result = check_for_same_named_binary_in_bin_dir(&slug, &exec_path);
+        assert!(result.is_ok(), "Should return Ok when no file exists");
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_symlink_to_same_slug_version_upgrade() -> Result<()> {
+        let env = TestEnv::new()?;
+        let slug = TestEnv::test_slug();
+
+        env.with_test_env(|| {
+            // Create installation with symlink
+            let _install_dir = env
+                .create_mock_installation_with_slug(
+                    TestEnv::DEFAULT_TEST_SLUG,
+                    "1.0.0",
+                    TestEnv::DEFAULT_BINARY_NAME,
+                    true,
+                )
+                .unwrap();
+
+            // Get the symlink path
+            let symlink_path = env.get_symlink_path(TestEnv::DEFAULT_BINARY_NAME).unwrap();
+
+            // Check should pass for same slug (version upgrade scenario)
+            let result = check_for_same_named_binary_in_bin_dir(&slug, &symlink_path);
+            assert!(
+                result.is_ok(),
+                "Should return Ok for symlink to same slug: {:?}",
+                result
+            );
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_symlink_to_different_slug() -> Result<()> {
+        let env = TestEnv::new()?;
+        let slug = TestEnv::test_slug(); // testuser/testrepo
+
+        env.with_test_env(|| {
+            // Create installation for different slug with symlink
+            env.create_mock_installation_with_slug(
+                "otheruser/othertool",
+                "1.0.0",
+                TestEnv::DEFAULT_BINARY_NAME,
+                true,
+            )
+            .unwrap();
+
+            // Get the symlink path
+            let symlink_path = env.get_symlink_path(TestEnv::DEFAULT_BINARY_NAME).unwrap();
+
+            // Check should fail for different slug
+            let result = check_for_same_named_binary_in_bin_dir(&slug, &symlink_path);
+            assert!(
+                result.is_err(),
+                "Should return Err for symlink to different slug"
+            );
+
+            let err_msg = format!("{:?}", result.unwrap_err());
+            assert!(
+                err_msg.contains("already installed"),
+                "Error should mention already installed: {}",
+                err_msg
+            );
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_non_symlink_file_foreign_binary() -> Result<()> {
+        let env = TestEnv::new()?;
+        let slug = TestEnv::test_slug();
+        let bin_dir = env.create_bin_dir()?;
+        let exec_path = bin_dir.join(TestEnv::DEFAULT_BINARY_NAME);
+
+        // Create a regular file (not a symlink)
+        fs::write(&exec_path, b"#!/bin/sh\necho 'foreign binary'")?;
+
+        let result = check_for_same_named_binary_in_bin_dir(&slug, &exec_path);
+        assert!(
+            result.is_err(),
+            "Should return Err for non-symlink file (foreign binary)"
+        );
+
+        let err_msg = format!("{:?}", result.unwrap_err());
+        assert!(
+            err_msg.contains("unrecognized"),
+            "Error should mention unrecognized binary: {}",
+            err_msg
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_symlink_with_data_dir_in_path() -> Result<()> {
+        let env = TestEnv::new()?;
+        let slug = TestEnv::test_slug();
+
+        env.with_test_env(|| {
+            // Create installation with symlink (version 2.0.0 this time)
+            env.create_mock_installation_with_slug(
+                TestEnv::DEFAULT_TEST_SLUG,
+                "2.0.0",
+                TestEnv::DEFAULT_BINARY_NAME,
+                true,
+            )
+            .unwrap();
+
+            // Get the symlink path
+            let symlink_path = env.get_symlink_path(TestEnv::DEFAULT_BINARY_NAME).unwrap();
+
+            // Verify path matching logic works correctly
+            let result = check_for_same_named_binary_in_bin_dir(&slug, &symlink_path);
+            assert!(
+                result.is_ok(),
+                "Should correctly match when data_dir and slug are in symlink target path"
+            );
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_broken_symlink() -> Result<()> {
+        let env = TestEnv::new()?;
+        let slug = TestEnv::test_slug();
+        let bin_dir = env.create_bin_dir()?;
+        let symlink_path = bin_dir.join(TestEnv::DEFAULT_BINARY_NAME);
+
+        // Create a symlink to a non-existent target
+        let nonexistent_target = env.home_dir.join("does_not_exist");
+        std::os::unix::fs::symlink(&nonexistent_target, &symlink_path)?;
+
+        // The check reads the symlink target but doesn't require it to exist
+        // It should handle this gracefully
+        let result = check_for_same_named_binary_in_bin_dir(&slug, &symlink_path);
+
+        // The function should handle this - either Ok or Err is acceptable
+        // as long as it doesn't panic
+        match result {
+            Ok(_) => {
+                // It's Ok because the target doesn't contain data_dir or slug
+            }
+            Err(e) => {
+                // Should error saying it points to wrong location
+                let err_msg = format!("{:?}", e);
+                assert!(
+                    err_msg.contains("already installed") || err_msg.contains("points to"),
+                    "Error should be about incorrect target: {}",
+                    err_msg
+                );
+            }
+        }
+
+        Ok(())
+    }
+}
+
+// =============================================================================
+// Tests for check_for_same_named_binary_in_path
+// =============================================================================
+
+#[cfg(test)]
+mod check_for_same_named_binary_in_path_tests {
+    use super::*;
+
+    #[test]
+    fn test_binary_not_in_path() -> Result<()> {
+        let env = TestEnv::new()?;
+        let bin_dir = env.create_bin_dir()?;
+
+        // Use a very unlikely binary name that shouldn't be in PATH
+        let exec_name = OsString::from("extremely_unlikely_binary_name_12345");
+
+        let result = check_for_same_named_binary_in_path(&exec_name, &bin_dir);
+        assert!(
+            result.is_ok(),
+            "Should return Ok when binary is not in PATH"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_binary_in_path_within_poof_bin_dir() -> Result<()> {
+        let env = TestEnv::new()?;
+
+        env.with_test_env(|| {
+            // Create bin directory
+            let bin_dir = env.create_dir("poof_bin").unwrap();
+
+            // Create a binary in the bin directory
+            let binary_path = bin_dir.join("mytool");
+            env.create_mock_executable(&binary_path).unwrap();
+
+            // Test with PATH extended
+            env.with_path_extended(&bin_dir, || {
+                let exec_name = OsString::from("mytool");
+                let result = check_for_same_named_binary_in_path(&exec_name, &bin_dir);
+
+                assert!(
+                    result.is_ok(),
+                    "Should return Ok when binary is in PATH within poof's bin dir (self-reference)"
+                );
+            });
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_binary_in_path_outside_poof_bin_dir() -> Result<()> {
+        let env = TestEnv::new()?;
+
+        env.with_test_env(|| {
+            // Create two directories: one for poof bin, one for third-party
+            let poof_bin_dir = env.create_dir("poof_bin").unwrap();
+            let third_party_dir = env.create_dir("third_party").unwrap();
+
+            // Create a binary in the third-party directory
+            let binary_path = third_party_dir.join("mytool");
+            env.create_mock_executable(&binary_path).unwrap();
+
+            // Test with third-party dir in PATH
+            env.with_path_extended(&third_party_dir, || {
+                let exec_name = OsString::from("mytool");
+                let result = check_for_same_named_binary_in_path(&exec_name, &poof_bin_dir);
+
+                assert!(
+                    result.is_err(),
+                    "Should return Err when binary is in PATH outside poof's bin dir"
+                );
+
+                let err_msg = format!("{:?}", result.unwrap_err());
+                assert!(
+                    err_msg.contains("third-party") || err_msg.contains("already installed"),
+                    "Error should mention third-party or shadow warning: {}",
+                    err_msg
+                );
+            });
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_path_manipulation_detection() -> Result<()> {
+        let env = TestEnv::new()?;
+
+        env.with_test_env(|| {
+            // Create a temporary directory and add it to PATH
+            let temp_bin = env.create_dir("temp_bin").unwrap();
+            let poof_bin = env.create_dir("poof_bin").unwrap();
+
+            // Create executable in temp_bin
+            let exec_name = "test_collision_tool";
+            let binary_path = temp_bin.join(exec_name);
+            env.create_mock_executable(&binary_path).unwrap();
+
+            // Test with temp_bin in PATH
+            env.with_path_extended(&temp_bin, || {
+                // Verify the binary can be found by which
+                let found_path = which::which(exec_name);
+                assert!(found_path.is_ok(), "Binary should be found in PATH");
+
+                // Now check our function
+                let exec_osstring = OsString::from(exec_name);
+                let result = check_for_same_named_binary_in_path(&exec_osstring, &poof_bin);
+
+                assert!(
+                    result.is_err(),
+                    "Should detect binary in PATH outside poof bin dir"
+                );
+            });
+        });
 
         Ok(())
     }

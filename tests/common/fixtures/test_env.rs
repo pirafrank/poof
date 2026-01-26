@@ -147,6 +147,21 @@ impl TestFixture {
         Ok(())
     }
 
+    /// Create an executable file with proper permissions (Unix-only helper)
+    #[cfg(not(target_os = "windows"))]
+    pub fn create_executable_with_perms(
+        &self,
+        path: &Path,
+        content: &[u8],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::write(path, content)?;
+        let mut perms = std::fs::metadata(path)?.permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(path, perms)?;
+        Ok(())
+    }
+
     /// Get the path to a specific binary installation
     pub fn get_install_path(&self, repo: &str, version: &str) -> PathBuf {
         let separator = std::path::MAIN_SEPARATOR.to_string();
