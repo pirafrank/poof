@@ -175,10 +175,12 @@ fn test_install_with_same_named_binary_in_path() -> Result<(), Box<dyn std::erro
         third_party_binary.exists(),
         "Third-party binary should exist"
     );
-    assert!(
-        which::which("mytool").is_ok() || new_path.contains("third_party_bin"),
-        "Setup should be ready for PATH detection"
-    );
+    temp_env::with_var("PATH", Some(&new_path), || {
+        assert!(
+            which::which("mytool").is_ok(),
+            "Binary should be discoverable in PATH"
+        );
+    });
 
     Ok(())
 }

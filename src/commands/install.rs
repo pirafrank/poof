@@ -5,6 +5,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
+// we use which::which in place of which::which_all, as it's up to the user
+// to order `PATH` data according to its preferences.
+// So only the first entry actually matters.
 use which::which;
 
 use crate::{

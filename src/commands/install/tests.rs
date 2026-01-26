@@ -148,7 +148,7 @@ impl TestEnv {
     ) -> Result<PathBuf> {
         self.with_test_env(|| {
             let data_dir = datadirs::get_data_dir().unwrap();
-            let install_dir = data_dir.join("github.com").join(slug).join(version);
+            let install_dir = data_dir.join(slug).join(version);
             fs::create_dir_all(&install_dir).unwrap();
 
             let target_binary = install_dir.join(binary_name);
