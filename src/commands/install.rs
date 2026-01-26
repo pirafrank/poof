@@ -374,7 +374,7 @@ fn check_for_same_named_binary_in_path(exec_name: &OsString, bin_dir: &Path) -> 
         // Avoid false positives by checking if the path starts with the bin directory.
         // If it does, it's a binary by poof itself and we can proceed,
         // otherwise it's a foreign binary and we need to abort the installation.
-        if !path.starts_with(bin_dir.display().to_string()) {
+        if !path.starts_with(bin_dir) {
             bail!(
                 "A third-party managed binary named '{}' is already installed in PATH. Installation would shadow it. Please check your PATH.",
                 exec_name.to_string_lossy()

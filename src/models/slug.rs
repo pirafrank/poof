@@ -154,6 +154,14 @@ mod tests {
 
     #[test]
     fn test_slug_trimming() {
+        // Whitespace-only parts should be rejected
+        assert!(Slug::new(" / ").is_err());
+        assert!(Slug::new("user/   ").is_err());
+        assert!(Slug::new("   /repo").is_err());
+        assert!(Slug::from_parts(" ", "repo").is_err());
+        assert!(Slug::from_parts("user", " ").is_err());
+
+        // Valid slug with whitespace should be accepted and cleaned up
         let slug = Slug::new("  user  /  repo  ").unwrap();
         assert_eq!(slug.as_str(), "user/repo");
     }
