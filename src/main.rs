@@ -2,6 +2,7 @@ use std::io::Write;
 
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
+use clap_complete::Shell;
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
@@ -77,6 +78,14 @@ struct UpdateArgs {
     update_self: bool,
 }
 
+// Structure for the completions command
+#[derive(Parser, Clone)]
+struct CompletionsArgs {
+    /// Shell type to generate completions for
+    #[arg(long, short, value_enum)]
+    shell: Shell,
+}
+
 // Command line interface
 #[derive(Subcommand, Clone)]
 enum Cmd {
@@ -113,6 +122,9 @@ enum Cmd {
     /// Show debug information
     #[command(hide = true)]
     Debug,
+
+    /// Generate shell completions to stdout
+    Completions(CompletionsArgs),
 }
 
 #[derive(Parser)]
@@ -254,6 +266,9 @@ fn run() -> Result<()> {
         }
         Cmd::Clean => {
             commands::clean::run_clean()?;
+        }
+        Cmd::Completions(args) => {
+            commands::completions::generate_completions(args.shell);
         }
     }
     Ok(())

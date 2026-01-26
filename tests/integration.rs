@@ -10,6 +10,8 @@ mod check;
 mod claps;
 #[path = "integration/commands/clean.rs"]
 mod clean;
+#[path = "integration/commands/completions.rs"]
+mod completions;
 #[path = "integration/commands/help.rs"]
 mod help;
 #[path = "integration/commands/info.rs"]
