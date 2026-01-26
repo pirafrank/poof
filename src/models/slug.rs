@@ -12,20 +12,19 @@ impl Slug {
     pub fn new(repo_slug: &str) -> Result<Self, Error> {
         let mut parts = repo_slug.split('/');
         match (parts.next(), parts.next(), parts.next()) {
-            (Some(user), Some(repo), None) if !user.is_empty() && !repo.is_empty() => {
-                Ok(Slug(format!("{}/{}", user.trim(), repo.trim())))
-            }
+            (Some(user), Some(repo), None) => Ok(Slug::from_parts(user, repo)?),
             _ => bail!("Invalid slug format: {}", repo_slug),
         }
     }
 
     // Create a new Slug from separate username and repository name
     pub fn from_parts(user: &str, repo: &str) -> Result<Self, Error> {
-        if !user.is_empty() && !repo.is_empty() {
-            Ok(Slug(format!("{}/{}", user.trim(), repo.trim())))
-        } else {
-            bail!("Invalid slug format: {}/{}", user.trim(), repo.trim())
+        let user = user.trim();
+        let repo = repo.trim();
+        if user.is_empty() || repo.is_empty() {
+            bail!("Invalid slug format: {}/{}", user, repo)
         }
+        Ok(Slug(format!("{}/{}", user, repo)))
     }
 
     // Get the underlying String

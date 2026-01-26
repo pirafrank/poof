@@ -240,14 +240,14 @@ fn install_binary(
 ) -> Result<()> {
     let installed_exec = install_dir.join(exec_name);
 
-    let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
+    let bin_dir: PathBuf = datadirs::get_bin_dir().context("Failed to determine bin directory")?;
     let symlink_path = bin_dir.join(exec_name);
 
     // none of these checks should bail, they should only warn
     // if the binary is already installed and points to the wrong place, we warn the user
     // and proceed with the installation.
     let mut skip_symlink = false;
-    if let Err(e) = check_for_same_named_binary_in_bin_dir(slug, &symlink_path, install_dir) {
+    if let Err(e) = check_for_same_named_binary_in_bin_dir(slug, &symlink_path) {
         warn!("{}", e);
         skip_symlink = true;
     } else if let Err(e) = check_for_same_named_binary_in_path(exec_name, &bin_dir) {
@@ -329,11 +329,7 @@ fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
 /// Check if a binary with the same name is in the bin directory and it's not something managed by poof.
 /// Returns an error if the binary is already installed in the bin directory or if something not managed by poof is found in its bin directory.
 /// Returns Ok(()) otherwise.
-fn check_for_same_named_binary_in_bin_dir(
-    slug: &Slug,
-    exec_in_bin: &Path,
-    install_dir: &Path,
-) -> Result<()> {
+fn check_for_same_named_binary_in_bin_dir(slug: &Slug, exec_in_bin: &Path) -> Result<()> {
     if exec_in_bin.exists() {
         if exec_in_bin.is_symlink() {
             // we have a symlink and we need to check what the target is.
@@ -342,9 +338,11 @@ fn check_for_same_named_binary_in_bin_dir(
             // convert it to string first.
             let symlink_target = symlink_target.to_string_lossy();
             let exec_in_bin = exec_in_bin.to_string_lossy().to_string();
-            let install_dir = install_dir.to_string_lossy().to_string();
+            let data_dir = datadirs::get_data_dir()
+                .map(|d| d.to_string_lossy().to_string())
+                .unwrap_or_default();
 
-            if symlink_target.contains(&slug.to_string()) && symlink_target.contains(&install_dir) {
+            if symlink_target.contains(&data_dir) && symlink_target.contains(&slug.to_string()) {
                 // the symlink target contains the same slug of the requested software,
                 // so it's either a version change or an upgrade.
                 Ok(())
