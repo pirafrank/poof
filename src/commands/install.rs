@@ -39,8 +39,8 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         prepare_install_dir(&install_dir)?;
     }
 
-    // create slug from repo and version
-    let slug = Slug::new(repo, &version.to_string());
+    // create slug from repo
+    let slug = Slug::new(repo)?;
 
     // get cache directory as temporary download directory
     let cache_dir: PathBuf =

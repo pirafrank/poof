@@ -404,7 +404,7 @@ mod install_binary_tests {
         // Create a mock executable
         env.create_mock_executable(&source_exec)?;
 
-        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let slug = Slug::new("testuser/testrepo").unwrap();
         let exec_stem = OsString::from("mybinary");
         let result = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
         // If bin_dir cannot be determined, skip the assertion
@@ -450,7 +450,7 @@ mod install_binary_tests {
             perms.set_mode(0o755);
             fs::set_permissions(&source_exec, perms)?;
         }
-        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let slug = Slug::new("testuser/testrepo").unwrap();
         let exec_stem = OsString::from("tool");
         // Handle expected failures due to bin_dir issues in test environment
         if let Err(e) = install_binary(&slug, &source_exec, &install_dir, &exec_stem) {
@@ -482,7 +482,7 @@ mod install_binary_tests {
 
         env.create_mock_executable(&source_exec)?;
 
-        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let slug = Slug::new("testuser/testrepo").unwrap();
         let exec_stem = OsString::from("executable");
         let _ = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
 
@@ -625,7 +625,7 @@ mod process_install_tests {
         // Create a platform-specific executable file
         env.create_platform_executable(&downloaded_file)?;
 
-        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let slug = Slug::new("testuser/testrepo").unwrap();
         let asset_name = String::from("mybin-linux-x86_64");
         let result = process_install(
             &slug,
@@ -684,7 +684,7 @@ mod process_install_tests {
         let install_dir = env.create_dir("install")?;
         fs::create_dir_all(&install_dir)?;
 
-        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let slug = Slug::new("testuser/testrepo").unwrap();
         let asset_name = String::from("archive.zip");
         let result = process_install(
             &slug,
@@ -749,7 +749,7 @@ mod install_binaries_tests {
         // Create the archive file (just a placeholder, won't be read)
         fs::write(&archive_path, b"dummy archive")?;
 
-        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let slug = Slug::new("testuser/testrepo").unwrap();
         let result = install_binaries(&slug, &archive_path, &install_dir);
 
         // Note: This may fail if bin_dir cannot be created
@@ -799,7 +799,7 @@ mod install_binaries_tests {
         // Create the archive file (just a placeholder)
         fs::write(&archive_path, b"dummy archive")?;
 
-        let slug = Slug::new("testuser/testrepo", "1.0.0");
+        let slug = Slug::new("testuser/testrepo").unwrap();
         let result = install_binaries(&slug, &archive_path, &install_dir);
 
         assert!(
