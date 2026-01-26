@@ -240,6 +240,21 @@ fn install_binary(
 ) -> Result<()> {
     let installed_exec = install_dir.join(exec_name);
 
+    let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
+    let symlink_path = bin_dir.join(exec_name);
+
+    // none of these checks should bail, they should only warn
+    // if the binary is already installed and points to the wrong place, we warn the user
+    // and proceed with the installation.
+    let mut skip_symlink = false;
+    if let Err(e) = check_for_same_named_binary_in_bin_dir(slug, &symlink_path, install_dir) {
+        warn!("{}", e);
+        skip_symlink = true;
+    } else if let Err(e) = check_for_same_named_binary_in_path(exec_name, &bin_dir) {
+        warn!("{}", e);
+        skip_symlink = true;
+    }
+
     // copy the executable files to the install directory
     filesys::copy_file(exec, &installed_exec).map_err(|e| {
         anyhow!(
@@ -250,11 +265,17 @@ fn install_binary(
         )
     })?;
 
-    let bin_dir: PathBuf = datadirs::get_bin_dir().unwrap();
-    let symlink_path = bin_dir.join(exec_name);
-
-    check_for_same_named_binary_in_bin_dir(slug, &symlink_path, install_dir)?;
-    check_for_same_named_binary_in_path(exec_name, &bin_dir)?;
+    // We skip symlink creation in bin dir (where files are added in PATH) if a
+    // binary with the same name is already installed in bin dir or if the user has
+    // a binary with the same name in PATH. We warn the user to force
+    if skip_symlink {
+        warn!(
+            "Skipping creation of symlink '{}' -> '{}'.",
+            exec_name.to_string_lossy(),
+            installed_exec.display()
+        );
+        return Ok(());
+    }
 
     // make them executable
     // Set executable permissions, platform-specific
@@ -328,7 +349,11 @@ fn check_for_same_named_binary_in_bin_dir(
                 // so it's either a version change or an upgrade.
                 Ok(())
             } else {
-                bail!("A binary named '{}' is already installed and points to {}. Installation aborted.", exec_in_bin, symlink_target);
+                bail!(
+                    "A binary named '{}' is already installed and points to {}.",
+                    exec_in_bin,
+                    symlink_target
+                );
             }
         } else {
             // it's not a symlink, so it's likely a foreign binary
