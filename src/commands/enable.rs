@@ -1,15 +1,141 @@
-//! sibellavia: persistently add poof's bin directory to PATH
-//! we can evaluate using `anyhow` instead!
-//! Also, for now we are not considering Windows.
-//! TODO: add support for Windows.
+//! Persistently add poof's bin directory to PATH
+//! Supports all shells: bash, zsh, fish, elvish, nushell, powershell, xonsh
 
-use std::{fs::OpenOptions, io::Write, path::PathBuf};
+use std::path::Path;
+use std::{fs, io::Write, path::PathBuf};
 
 use log::{error, info};
 
 use crate::files::datadirs::get_bin_dir;
+use crate::models::supported_shells::SupportedShell;
 
-pub fn run() {
+/// Get the configuration file path for a given shell
+fn get_config_path(shell: SupportedShell, home: &Path) -> PathBuf {
+    match shell {
+        SupportedShell::Bash => home.join(".bashrc"),
+        SupportedShell::Zsh => home.join(".zshrc"),
+        SupportedShell::Fish => home.join(".config").join("fish").join("config.fish"),
+        SupportedShell::Elvish => home.join(".config").join("elvish").join("rc.elv"),
+        SupportedShell::Nushell => home.join(".config").join("nushell").join("env.nu"),
+        SupportedShell::PowerShell => {
+            // On Linux/macOS: ~/.config/powershell/Microsoft.PowerShell_profile.ps1
+            home.join(".config")
+                .join("powershell")
+                .join("Microsoft.PowerShell_profile.ps1")
+        }
+        SupportedShell::Xonsh => home.join(".xonshrc"),
+    }
+}
+
+/// Get the shell name as a string for display purposes
+fn shell_name(shell: SupportedShell) -> &'static str {
+    match shell {
+        SupportedShell::Bash => "bash",
+        SupportedShell::Zsh => "zsh",
+        SupportedShell::Fish => "fish",
+        SupportedShell::Elvish => "elvish",
+        SupportedShell::Nushell => "nushell",
+        SupportedShell::PowerShell => "powershell",
+        SupportedShell::Xonsh => "xonsh",
+    }
+}
+
+/// Generate the content to add to the shell configuration file
+fn generate_config_content(shell: SupportedShell, bin_dir: &str) -> String {
+    match shell {
+        SupportedShell::Bash | SupportedShell::Zsh | SupportedShell::Elvish => {
+            // For eval-based shells, use dynamic approach
+            format!(
+                "\n# added by poof\neval \"$(poof init --shell {})\"",
+                shell_name(shell)
+            )
+        }
+        SupportedShell::PowerShell => {
+            // PowerShell uses Invoke-Expression
+            "\n# added by poof\nInvoke-Expression (& poof init --shell powershell)".to_string()
+        }
+        SupportedShell::Fish => {
+            // Fish uses direct command
+            format!("\n# added by poof\nfish_add_path -p \"{}\"", bin_dir)
+        }
+        SupportedShell::Nushell => {
+            // Nushell uses direct assignment
+            format!(
+                "\n# added by poof\n$env.PATH = ($env.PATH | prepend \"{}\")",
+                bin_dir
+            )
+        }
+        SupportedShell::Xonsh => {
+            // Xonsh uses Python-like syntax
+            format!("\n# added by poof\n$PATH.insert(0, \"{}\")", bin_dir)
+        }
+    }
+}
+
+/// Check if poof is already enabled in the config file
+fn is_already_enabled(config_path: &PathBuf, shell: SupportedShell) -> bool {
+    if let Ok(text) = fs::read_to_string(config_path) {
+        // Check for the marker comment
+        if text.contains("# added by poof") {
+            return true;
+        }
+
+        // Also check for shell-specific patterns
+        match shell {
+            SupportedShell::Bash | SupportedShell::Zsh | SupportedShell::Elvish => {
+                // Check for eval pattern
+                if text.contains(&format!("poof init --shell {}", shell_name(shell))) {
+                    return true;
+                }
+            }
+            SupportedShell::PowerShell => {
+                if text.contains("poof init --shell powershell") {
+                    return true;
+                }
+            }
+            SupportedShell::Fish => {
+                if text.contains("fish_add_path") && text.contains("poof") {
+                    return true;
+                }
+            }
+            SupportedShell::Nushell => {
+                if text.contains("$env.PATH") && text.contains("poof") {
+                    return true;
+                }
+            }
+            SupportedShell::Xonsh => {
+                if text.contains("$PATH.insert") && text.contains("poof") {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Get the reload instruction for a given shell
+fn get_reload_instruction(shell: SupportedShell, config_path: &Path) -> String {
+    match shell {
+        SupportedShell::Bash | SupportedShell::Zsh => {
+            format!("source {}", config_path.display())
+        }
+        SupportedShell::Fish => {
+            format!("source {}", config_path.display())
+        }
+        SupportedShell::Elvish => "use rc; rc:reload".to_string(),
+        SupportedShell::Nushell => {
+            format!("source {}", config_path.display())
+        }
+        SupportedShell::PowerShell => {
+            format!(". {}", config_path.display())
+        }
+        SupportedShell::Xonsh => {
+            format!("source {}", config_path.display())
+        }
+    }
+}
+
+pub fn run(shell: SupportedShell) {
     /* 1 ─ get the directory that holds poof's executables */
     let bin_dir = match get_bin_dir() {
         Some(p) => p,
@@ -20,7 +146,7 @@ pub fn run() {
     };
     let bin = bin_dir.to_string_lossy();
 
-    /* 2 ─ pick which startup script (.bashrc or .zshrc) to modify */
+    /* 2 ─ get HOME directory */
     let home = match dirs::home_dir() {
         Some(h) => h,
         None => {
@@ -29,272 +155,190 @@ pub fn run() {
         }
     };
 
-    let shell = std::env::var("SHELL").unwrap_or_default();
-    let rc: PathBuf = if shell.ends_with("zsh") {
-        home.join(".zshrc")
-    } else {
-        home.join(".bashrc")
-    };
+    let config_path = get_config_path(shell, &home);
 
-    /* 3 ─ if the PATH line is already there, do nothing */
-    if let Ok(text) = std::fs::read_to_string(&rc) {
-        if text.contains(bin.as_ref()) {
-            info!("poof already enabled in {}", rc.display());
-            return;
-        }
-    }
-
-    /* 4 ─ append the export line */
-    let mut file = match OpenOptions::new().create(true).append(true).open(&rc) {
-        Ok(f) => f,
-        Err(e) => {
-            error!("Cannot open {}: {}", rc.display(), e);
-            return;
-        }
-    };
-
-    if writeln!(file, "\n# added by poof\nexport PATH=\"{}:$PATH\"", bin).is_err() {
-        error!("Could not write to {}", rc.display());
+    /* 3 ─ if poof is already enabled, do nothing */
+    if is_already_enabled(&config_path, shell) {
+        info!("poof already enabled in {}", config_path.display());
         return;
     }
 
+    /* 4 ─ create parent directories if needed */
+    if let Some(parent) = config_path.parent() {
+        if !parent.exists() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                error!("Cannot create directory {}: {}", parent.display(), e);
+                return;
+            }
+        }
+    }
+
+    /* 5 ─ append the configuration content */
+    let content = generate_config_content(shell, &bin);
+
+    let mut file = match fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&config_path)
+    {
+        Ok(f) => f,
+        Err(e) => {
+            error!("Cannot open {}: {}", config_path.display(), e);
+            return;
+        }
+    };
+
+    if writeln!(file, "{}", content).is_err() {
+        error!("Could not write to {}", config_path.display());
+        return;
+    }
+
+    let reload_cmd = get_reload_instruction(shell, &config_path);
     info!(
-        "🪄 Added poof to {}.\n   Run `source {0}` or open a new terminal.",
-        rc.display()
+        "🪄 Added poof to {}. Run `{}` to reload your shell or open a new terminal.",
+        config_path.display(),
+        reload_cmd
     );
 }
 
 // ------------------------------------------------------------------
 //                       unit‑tests
-// I'm not sure a test suite is provided, I couldn't find one
-// so for now I'm just dropping some unit tests here
 // ------------------------------------------------------------------
 #[cfg(test)]
 mod tests {
-    use super::run;
-    use crate::files::datadirs::get_bin_dir;
-    use std::fs;
-    use tempfile::TempDir;
-
-    /// prepare HOME and XDG_DATA_HOME, then create the real bin dir
-    /// Returns the bin directory path
-    fn create_fake_bin(home: &TempDir) -> std::path::PathBuf {
-        // point datadirs::get_bin_dir() at our temp dir
-        temp_env::with_vars(
-            [
-                ("HOME", Some(home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(home.path().to_str().unwrap())),
-            ],
-            || {
-                // now this is "<temp>/poof/bin"
-                let bin = get_bin_dir().unwrap();
-                fs::create_dir_all(&bin).unwrap();
-                bin
-            },
-        )
-    }
-
-    /// read the contents of the given rc‐file
-    fn get_rc_contents(rc: &std::path::Path) -> String {
-        fs::read_to_string(rc).unwrap_or_default()
-    }
+    use super::*;
 
     #[test]
-    /// test that bashrc is written to and running twice doesn't duplicate
-    fn bashrc_idempotent() {
-        let temp_home = TempDir::new().unwrap();
-        let _bin = create_fake_bin(&temp_home);
+    fn test_get_config_path_for_all_shells() {
+        let home = PathBuf::from("/home/user");
 
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-                ("SHELL", Some("/bin/bash")),
-            ],
-            || {
-                // run twice for idempotence
-                run();
-                run();
-            },
+        assert_eq!(
+            get_config_path(SupportedShell::Bash, &home),
+            home.join(".bashrc")
         );
-
-        let rc_path = temp_home.path().join(".bashrc");
-        let contents = get_rc_contents(&rc_path);
-
-        // Build the exact expected export from the same helper
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-            ],
-            || {
-                let binding = get_bin_dir().unwrap();
-                let bin = binding.to_string_lossy();
-                let expected = format!("export PATH=\"{}:$PATH\"", bin);
-
-                assert_eq!(
-                    contents.matches(&expected).count(),
-                    1,
-                    "export line should appear exactly once"
-                );
-            },
+        assert_eq!(
+            get_config_path(SupportedShell::Zsh, &home),
+            home.join(".zshrc")
+        );
+        assert_eq!(
+            get_config_path(SupportedShell::Fish, &home),
+            home.join(".config/fish/config.fish")
+        );
+        assert_eq!(
+            get_config_path(SupportedShell::Elvish, &home),
+            home.join(".config/elvish/rc.elv")
+        );
+        assert_eq!(
+            get_config_path(SupportedShell::Nushell, &home),
+            home.join(".config/nushell/env.nu")
+        );
+        assert_eq!(
+            get_config_path(SupportedShell::PowerShell, &home),
+            home.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
+        );
+        assert_eq!(
+            get_config_path(SupportedShell::Xonsh, &home),
+            home.join(".xonshrc")
         );
     }
 
     #[test]
-    /// test that zshrc is written to
-    fn writes_to_zshrc() {
-        let temp_home = TempDir::new().unwrap();
-        let _bin = create_fake_bin(&temp_home);
-
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-                ("SHELL", Some("/usr/bin/zsh")),
-            ],
-            || {
-                run();
-            },
-        );
-
-        let rc_path = temp_home.path().join(".zshrc");
-        let contents = get_rc_contents(&rc_path);
-        assert!(
-            contents.contains("export PATH="),
-            ".zshrc should contain an export line"
-        );
+    fn test_shell_name_mapping() {
+        assert_eq!(shell_name(SupportedShell::Bash), "bash");
+        assert_eq!(shell_name(SupportedShell::Zsh), "zsh");
+        assert_eq!(shell_name(SupportedShell::Fish), "fish");
+        assert_eq!(shell_name(SupportedShell::Elvish), "elvish");
+        assert_eq!(shell_name(SupportedShell::Nushell), "nushell");
+        assert_eq!(shell_name(SupportedShell::PowerShell), "powershell");
+        assert_eq!(shell_name(SupportedShell::Xonsh), "xonsh");
     }
 
     #[test]
-    /// test that zshrc is written to and running twice doesn't duplicate
-    fn zsh_idempotent() {
-        let temp_home = TempDir::new().unwrap();
-        let _bin = create_fake_bin(&temp_home);
+    fn test_generate_config_content_eval_shells() {
+        let bin_dir = "/home/user/.local/share/poof/bin";
 
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-                ("SHELL", Some("/usr/bin/zsh")),
-            ],
-            || {
-                run();
-                run();
-            },
-        );
+        // Test bash (eval)
+        let bash_content = generate_config_content(SupportedShell::Bash, bin_dir);
+        assert!(bash_content.contains("# added by poof"));
+        assert!(bash_content.contains("eval \"$(poof init --shell bash)\""));
 
-        let rc_path = temp_home.path().join(".zshrc");
-        let contents = get_rc_contents(&rc_path);
+        // Test zsh (eval)
+        let zsh_content = generate_config_content(SupportedShell::Zsh, bin_dir);
+        assert!(zsh_content.contains("# added by poof"));
+        assert!(zsh_content.contains("eval \"$(poof init --shell zsh)\""));
 
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-            ],
-            || {
-                let binding = get_bin_dir().unwrap();
-                let bin = binding.to_string_lossy();
-                let line = format!("export PATH=\"{}:$PATH\"", bin);
-
-                assert_eq!(
-                    contents.matches(&line).count(),
-                    1,
-                    "zsh idempotence: export line should appear exactly once"
-                );
-            },
-        );
+        // Test elvish (eval)
+        let elvish_content = generate_config_content(SupportedShell::Elvish, bin_dir);
+        assert!(elvish_content.contains("# added by poof"));
+        assert!(elvish_content.contains("eval \"$(poof init --shell elvish)\""));
     }
 
     #[test]
-    /// test that unknown shell defaults to bash
-    fn unknown_shell_defaults_to_bash() {
-        let temp_home = TempDir::new().unwrap();
-        let _bin = create_fake_bin(&temp_home);
+    fn test_generate_config_content_direct_shells() {
+        let bin_dir = "/home/user/.local/share/poof/bin";
 
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-                ("SHELL", None), // Remove SHELL var
-            ],
-            || {
-                run();
-            },
-        );
+        // Test fish (direct)
+        let fish_content = generate_config_content(SupportedShell::Fish, bin_dir);
+        assert!(fish_content.contains("# added by poof"));
+        assert!(fish_content.contains("fish_add_path -p"));
+        assert!(fish_content.contains(bin_dir));
 
-        let contents = get_rc_contents(&temp_home.path().join(".bashrc"));
-        assert!(
-            contents.contains("export PATH="),
-            "unknown-shell fallback should write to .bashrc"
-        );
+        // Test nushell (direct)
+        let nushell_content = generate_config_content(SupportedShell::Nushell, bin_dir);
+        assert!(nushell_content.contains("# added by poof"));
+        assert!(nushell_content.contains("$env.PATH"));
+        assert!(nushell_content.contains("prepend"));
+        assert!(nushell_content.contains(bin_dir));
+
+        // Test xonsh (direct)
+        let xonsh_content = generate_config_content(SupportedShell::Xonsh, bin_dir);
+        assert!(xonsh_content.contains("# added by poof"));
+        assert!(xonsh_content.contains("$PATH.insert"));
+        assert!(xonsh_content.contains(bin_dir));
+
+        // Test powershell (Invoke-Expression)
+        let pwsh_content = generate_config_content(SupportedShell::PowerShell, bin_dir);
+        assert!(pwsh_content.contains("# added by poof"));
+        assert!(pwsh_content.contains("Invoke-Expression"));
+        assert!(pwsh_content.contains("poof init --shell powershell"));
     }
 
     #[test]
-    /// test that existing rc file content is preserved
-    fn preserves_existing_content() {
-        let temp_home = TempDir::new().unwrap();
-        let _bin = create_fake_bin(&temp_home);
+    fn test_get_reload_instruction_for_all_shells() {
+        let home = PathBuf::from("/home/user");
 
-        // Pre-seed .bashrc
-        let rc_path = temp_home.path().join(".bashrc");
-        fs::write(&rc_path, "PRE_EXISTING_LINE\n").unwrap();
+        let bash_config = get_config_path(SupportedShell::Bash, &home);
+        let bash_reload = get_reload_instruction(SupportedShell::Bash, &bash_config);
+        assert!(bash_reload.contains("source"));
+        assert!(bash_reload.contains(".bashrc"));
 
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-                ("SHELL", Some("/bin/bash")),
-            ],
-            || {
-                run();
-            },
-        );
+        let zsh_config = get_config_path(SupportedShell::Zsh, &home);
+        let zsh_reload = get_reload_instruction(SupportedShell::Zsh, &zsh_config);
+        assert!(zsh_reload.contains("source"));
+        assert!(zsh_reload.contains(".zshrc"));
 
-        let contents = get_rc_contents(&rc_path);
+        let fish_config = get_config_path(SupportedShell::Fish, &home);
+        let fish_reload = get_reload_instruction(SupportedShell::Fish, &fish_config);
+        assert!(fish_reload.contains("source"));
+        assert!(fish_reload.contains("config.fish"));
 
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-            ],
-            || {
-                let binding = get_bin_dir().unwrap();
-                let bin = binding.to_string_lossy();
+        let elvish_config = get_config_path(SupportedShell::Elvish, &home);
+        let elvish_reload = get_reload_instruction(SupportedShell::Elvish, &elvish_config);
+        assert!(elvish_reload.contains("rc:reload"));
 
-                assert!(
-                    contents.contains("PRE_EXISTING_LINE"),
-                    "existing content must be preserved"
-                );
-                assert!(
-                    contents.contains(&format!("export PATH=\"{}:$PATH\"", bin)),
-                    "export line must be appended"
-                );
-            },
-        );
-    }
+        let nushell_config = get_config_path(SupportedShell::Nushell, &home);
+        let nushell_reload = get_reload_instruction(SupportedShell::Nushell, &nushell_config);
+        assert!(nushell_reload.contains("source"));
+        assert!(nushell_reload.contains("env.nu"));
 
-    #[test]
-    /// test that comment marker is added to rc file
-    fn adds_comment_marker() {
-        let temp_home = TempDir::new().unwrap();
-        let _bin = create_fake_bin(&temp_home);
+        let pwsh_config = get_config_path(SupportedShell::PowerShell, &home);
+        let pwsh_reload = get_reload_instruction(SupportedShell::PowerShell, &pwsh_config);
+        assert!(pwsh_reload.starts_with("."));
+        assert!(pwsh_reload.contains("Microsoft.PowerShell_profile.ps1"));
 
-        temp_env::with_vars(
-            [
-                ("HOME", Some(temp_home.path().to_str().unwrap())),
-                ("XDG_DATA_HOME", Some(temp_home.path().to_str().unwrap())),
-                ("SHELL", Some("/bin/bash")),
-            ],
-            || {
-                run();
-            },
-        );
-
-        let contents = get_rc_contents(&temp_home.path().join(".bashrc"));
-        assert!(
-            contents.contains("# added by poof"),
-            "comment marker must be present"
-        );
+        let xonsh_config = get_config_path(SupportedShell::Xonsh, &home);
+        let xonsh_reload = get_reload_instruction(SupportedShell::Xonsh, &xonsh_config);
+        assert!(xonsh_reload.contains("source"));
+        assert!(xonsh_reload.contains(".xonshrc"));
     }
 }

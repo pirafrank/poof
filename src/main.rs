@@ -116,6 +116,15 @@ fn parse_init_shell(s: &str) -> Result<SupportedShell, String> {
     })
 }
 
+// Structure for the enable command
+#[derive(Parser, Clone)]
+struct EnableArgs {
+    /// Shell type to configure.
+    /// Possible values: bash, elvish, fish, nushell, powershell, xonsh, zsh
+    #[arg(long, short, value_parser = parse_shell)]
+    shell: SupportedShell,
+}
+
 // Command line interface
 #[derive(Subcommand, Clone)]
 enum Cmd {
@@ -135,7 +144,7 @@ enum Cmd {
     Update(UpdateArgs),
 
     /// Persistently add poof's bin directory to your shell PATH
-    Enable,
+    Enable(EnableArgs),
 
     /// Check if poof's bin directory is in the PATH
     Check,
@@ -294,8 +303,8 @@ fn run() -> Result<()> {
         Cmd::Debug => {
             commands::info::show_info();
         }
-        Cmd::Enable => {
-            commands::enable::run();
+        Cmd::Enable(args) => {
+            commands::enable::run(args.shell);
         }
         Cmd::Clean => {
             commands::clean::run_clean()?;
