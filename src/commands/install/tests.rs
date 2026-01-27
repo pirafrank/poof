@@ -498,7 +498,7 @@ mod install_binary_tests {
         let result = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
         // If bin_dir cannot be determined, skip the assertion
         if let Err(e) = &result {
-            if format!("{:?}", e).contains("Failed to determine") {
+            if format!("{:?}", e).contains("Cannot determine") {
                 eprintln!(
                     "Skipping test_install_binary_basic: bin_dir unavailable in CI/sandboxed environment. \
                     This is expected when HOME or XDG dirs are not properly configured."
@@ -543,7 +543,7 @@ mod install_binary_tests {
         let exec_stem = OsString::from("tool");
         // Handle expected failures due to bin_dir issues in test environment
         if let Err(e) = install_binary(&slug, &source_exec, &install_dir, &exec_stem) {
-            if !format!("{:?}", e).contains("Failed to determine") {
+            if !format!("{:?}", e).contains("Cannot determine") {
                 return Err(e);
             } else {
                 eprintln!("Skipping assertion: bin_dir unavailable in test environment");
@@ -737,7 +737,7 @@ mod process_install_tests {
             Err(e) => {
                 // If it fails, it should be due to bin_dir issues, not the copy itself
                 let err_msg = format!("{:?}", e);
-                if !err_msg.contains("Failed to determine") {
+                if !err_msg.contains("Cannot determine") {
                     let installed = install_dir.join("mybin");
                     assert!(
                         installed.exists(),
@@ -857,7 +857,7 @@ mod install_binaries_tests {
             Err(e) => {
                 // If it fails, it should be due to bin_dir issues, not the copy itself
                 let err_msg = format!("{:?}", e);
-                if !err_msg.contains("Failed to determine") {
+                if !err_msg.contains("Cannot determine") {
                     // At least one should be copied
                     assert!(
                         install_dir.join("tool1").exists() || install_dir.join("tool2").exists(),

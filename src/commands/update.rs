@@ -50,7 +50,7 @@ fn update_single_repo(repo: &str) -> Result<()> {
 
     let highest_installed = Version::parse(&highest_installed_str).with_context(|| {
         format!(
-            "Failed to parse highest installed version '{}' as semver",
+            "Cannot parse highest installed version '{}' as semver",
             highest_installed_str
         )
     })?;
@@ -63,12 +63,12 @@ fn update_single_repo(repo: &str) -> Result<()> {
     // 2. get the latest release tag from GitHub
     // TODO: refactor get_release to return Result
     let latest_release = get_release(repo, None) // None fetches the latest release
-        .with_context(|| format!("Failed to get latest release information for {}", repo))?;
+        .with_context(|| format!("Cannot get latest release information for {}", repo))?;
     let latest_version_str = latest_release.tag_name();
     let latest_version =
         Version::parse(latest_version_str.strip_v().as_str()).with_context(|| {
             format!(
-                "Failed to parse latest release tag '{}' as semver",
+                "Cannot parse latest release tag '{}' as semver",
                 latest_version_str
             )
         })?;
@@ -84,7 +84,7 @@ fn update_single_repo(repo: &str) -> Result<()> {
         // 4. call process_install for the latest tag
         commands::install::install(repo, Some(latest_version_str)).with_context(|| {
             format!(
-                "Failed to install version {} as the default for {}",
+                "Cannot install version {} as the default for {}",
                 latest_version_str, repo
             )
         })?;
@@ -128,7 +128,7 @@ fn update_all_repos() -> Result<()> {
             // call update_single_repo for each asset
             update_single_repo(repo_name)
                 // add context specific to this repo in case of failure
-                .with_context(|| format!("Failed to update {}", repo_name))
+                .with_context(|| format!("Cannot update {}", repo_name))
         })
         .collect(); // collect results
 
@@ -165,19 +165,19 @@ fn update_self() -> Result<()> {
 
     // Get the latest release from GitHub
     let latest_release = get_release(repo, None)
-        .with_context(|| "Failed to get latest release information for poof")?;
+        .with_context(|| "Cannot get latest release information for poof")?;
     let latest_version_str = latest_release.tag_name();
     let latest_version =
         Version::parse(latest_version_str.strip_v().as_str()).with_context(|| {
             format!(
-                "Failed to parse latest release tag '{}' as semver",
+                "Cannot parse latest release tag '{}' as semver",
                 latest_version_str
             )
         })?;
 
     let current_version_parsed = Version::parse(current_version).with_context(|| {
         format!(
-            "Failed to parse current version '{}' as semver",
+            "Cannot parse current version '{}' as semver",
             current_version
         )
     })?;
@@ -201,7 +201,7 @@ fn update_self() -> Result<()> {
     // Find compatible asset
     let assets = get_assets(&latest_release).with_context(|| {
         format!(
-            "Failed to find compatible asset for release {}",
+            "Cannot find any compatible asset from release {} for current platform.",
             latest_version_str
         )
     })?;
@@ -212,20 +212,12 @@ fn update_self() -> Result<()> {
 
     // Create a temporary directory for downloading
     let temp_dir = std::env::temp_dir().join(format!("poof-update-{}", latest_version_str));
-    std::fs::create_dir_all(&temp_dir).with_context(|| {
-        format!(
-            "Failed to create temporary directory {}",
-            temp_dir.display()
-        )
-    })?;
+    std::fs::create_dir_all(&temp_dir)
+        .with_context(|| format!("Cannot create temporary directory {}", temp_dir.display()))?;
 
     // Download the binary
-    download_asset(binary.name(), binary.browser_download_url(), &temp_dir).with_context(|| {
-        format!(
-            "Failed to download binary for version {}",
-            latest_version_str
-        )
-    })?;
+    download_asset(binary.name(), binary.browser_download_url(), &temp_dir)
+        .with_context(|| format!("Cannot download binary for version {}", latest_version_str))?;
 
     let downloaded_file = temp_dir.join(binary.name());
     let new_binary_path = if is_exec_by_magic_number(&downloaded_file) {
@@ -239,7 +231,7 @@ fn update_self() -> Result<()> {
             binary.name()
         );
         extract_to_dir(&downloaded_file, &temp_dir)
-            .map_err(|e| anyhow!("Failed to extract archive: {}", e))?;
+            .map_err(|e| anyhow!("Cannot extract archive: {}", e))?;
 
         let exec_files = find_exec_files_from_extracted_archive(&downloaded_file);
         if exec_files.is_empty() {
@@ -267,7 +259,7 @@ fn update_self() -> Result<()> {
     info!("Replacing current executable with new version...");
     self_replace::self_replace(&new_binary_path).with_context(|| {
         format!(
-            "Failed to replace executable with {}",
+            "Cannot replace executable with {}",
             new_binary_path.display()
         )
     })?;
@@ -275,7 +267,7 @@ fn update_self() -> Result<()> {
     // Clean up temporary directory
     if let Err(e) = std::fs::remove_dir_all(&temp_dir) {
         debug!(
-            "Failed to clean up temporary directory {}: {}",
+            "Cannot clean up temporary directory {}: {}",
             temp_dir.display(),
             e
         );

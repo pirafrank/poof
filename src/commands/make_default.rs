@@ -8,7 +8,7 @@ use crate::files::filesys;
 use crate::files::utils::find_similar_repo;
 
 fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
-    let data_dir = datadirs::get_data_dir().context("Failed to get data directory")?;
+    let data_dir = datadirs::get_data_dir().context("Cannot get data directory")?;
 
     let installed_repo_dir = datadirs::get_versions_nest(&data_dir, repo);
     if !installed_repo_dir.exists() {
@@ -42,7 +42,7 @@ pub fn set_default(repo: &str, version: &str) -> Result<()> {
     // Get the installed directory for the specified repo and version
     let install_dir = get_installed_dir(repo, version)?;
     // Get the bin directory
-    let bin_dir = datadirs::get_bin_dir().context("Failed to get bin directory")?;
+    let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory")?;
 
     // Process each binary in wanted_dir
     for path in filesys::find_exec_files_in_dir(&install_dir) {
@@ -64,7 +64,7 @@ pub fn set_default(repo: &str, version: &str) -> Result<()> {
                 .map_err(anyhow::Error::msg)
                 .with_context(|| {
                     format!(
-                        "Failed to create symlink from {} to {}",
+                        "Cannot create symlink from {} to {}",
                         path.display(),
                         symlink_path.display()
                     )

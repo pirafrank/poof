@@ -26,7 +26,7 @@ fn run_clean_with_input(
         .spawn()?;
 
     {
-        let mut stdin = child.stdin.take().expect("Failed to open stdin");
+        let mut stdin = child.stdin.take().expect("Cannot open stdin");
         stdin.write_all(input)?;
         stdin.flush()?;
     }

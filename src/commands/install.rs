@@ -47,7 +47,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
 
     // get cache directory as temporary download directory
     let cache_dir: PathBuf =
-        datadirs::get_cache_dir().context("Failed to determine cache directory")?;
+        datadirs::get_cache_dir().context("Cannot determine cache directory")?;
     debug!("Cache directory: {}", cache_dir.display());
 
     let mut i = 1;
@@ -59,9 +59,8 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
             datadirs::get_binary_nest(&cache_dir, repo, &version).join(format!("asset_{}", i));
         let downloaded_file =
             match download_asset(asset.name(), asset.browser_download_url(), &download_to)
-                .with_context(|| {
-                    format!("Failed to download asset for {} version {}", repo, version)
-                }) {
+                .with_context(|| format!("Cannot download asset for {} version {}", repo, version))
+            {
                 Ok(file) => file,
                 Err(e) => {
                     bail!(e);
@@ -76,7 +75,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
             &install_dir,
             asset.name(),
         )
-        .with_context(|| format!("Failed to install {} version {}", repo, version))?;
+        .with_context(|| format!("Cannot install {} version {}", repo, version))?;
 
         if clean_cache_dir(&download_to, &cache_dir)? {
             debug!("Cleaned up cache directory: {}", download_to.display());
@@ -102,23 +101,22 @@ fn process_install(
         debug!("Downloaded file {} is an executable binary.", asset_name);
         let file_name = &downloaded_file
             .file_name()
-            .ok_or_else(|| anyhow!("Failed to get filename from {}", downloaded_file.display()))?;
+            .ok_or_else(|| anyhow!("Cannot get filename from {}", downloaded_file.display()))?;
         // Get the stem name trimmed at the first separator for non-archived executable files.
         // This is useful to avoid installing files with names like "mytool-1.0.0" or "mytool-linux-x86_64"
         // and instead use just "mytool", which is how the binary will be used when in PATH.
         let exec_name = get_stem_name_trimmed_at_first_separator(file_name);
         install_binary(slug, downloaded_file, install_dir, &exec_name)
-            .with_context(|| format!("Failed to install executable {}", asset_name))?;
+            .with_context(|| format!("Cannot install executable {}", asset_name))?;
     } else {
         // extract executables
         archives::extract_to_dir(downloaded_file, download_to)
-            .with_context(|| format!("Failed to extract archive {}", asset_name))?;
+            .with_context(|| format!("Cannot extract archive {}", asset_name))?;
         debug!("Extracted {} to {}", asset_name, download_to.display());
 
         // install executables
-        install_binaries(slug, downloaded_file, install_dir).with_context(|| {
-            format!("Failed to extract executables from archive {}", asset_name)
-        })?;
+        install_binaries(slug, downloaded_file, install_dir)
+            .with_context(|| format!("Cannot extract executables from archive {}", asset_name))?;
     }
     Ok(())
 }
@@ -129,10 +127,10 @@ fn process_install(
 pub fn select_assets(repo: &str, tag: Option<&str>) -> Result<(Release, Vec<ReleaseAsset>)> {
     // select assets to download
     let release: Release = get_release(repo, tag)
-        .with_context(|| format!("Failed to get release information for {}", repo))?;
+        .with_context(|| format!("Cannot get release information for {}", repo))?;
     let assets: Vec<ReleaseAsset> = get_assets(&release).with_context(|| {
         format!(
-            "Failed to find compatible asset for release {}",
+            "Cannot find any compatible asset from release {} for current platform.",
             release.tag_name()
         )
     })?;
@@ -142,8 +140,7 @@ pub fn select_assets(repo: &str, tag: Option<&str>) -> Result<(Release, Vec<Rele
 /// Get the installation directory for the requested software.
 /// based on repo slug and version.
 fn get_install_dir(repo: &str, version: &str) -> Result<PathBuf> {
-    let data_dir: PathBuf =
-        datadirs::get_data_dir().context("Failed to determine data directory.")?;
+    let data_dir: PathBuf = datadirs::get_data_dir().context("Cannot determine data directory.")?;
     let install_dir: PathBuf = datadirs::get_binary_nest(&data_dir, repo, version);
     Ok(install_dir)
 }
@@ -155,7 +152,7 @@ fn prepare_install_dir(install_dir: &PathBuf) -> Result<()> {
     debug!("Preparing install directory: {}", install_dir.display());
     std::fs::create_dir_all(install_dir).with_context(|| {
         format!(
-            "Failed to create installation directory {}",
+            "Cannot create installation directory {}",
             install_dir.display()
         )
     })?;
@@ -181,7 +178,7 @@ fn check_if_installed(install_dir: &Path) -> Result<bool> {
             // it's a directory, check if it's empty
             let is_empty = install_dir
                 .read_dir()
-                .with_context(|| format!("Failed to read directory {}", install_dir.display()))?
+                .with_context(|| format!("Cannot read directory {}", install_dir.display()))?
                 .next()
                 .is_none();
 
@@ -226,9 +223,9 @@ fn install_binaries(slug: &Slug, archive_path: &Path, install_dir: &Path) -> Res
         // we assume that to have multiple executables, those were in an archive.
         let exec_name = exec
             .file_name()
-            .ok_or_else(|| anyhow!("Failed to get filename from {}", exec.display()))?;
+            .ok_or_else(|| anyhow!("Cannot get filename from {}", exec.display()))?;
         install_binary(slug, &exec, install_dir, &OsString::from(exec_name))
-            .with_context(|| format!("Failed to install executable {}", exec.display()))?;
+            .with_context(|| format!("Cannot install executable {}", exec.display()))?;
     }
     Ok(())
 }
@@ -243,7 +240,7 @@ fn install_binary(
 ) -> Result<()> {
     let installed_exec = install_dir.join(exec_name);
 
-    let bin_dir: PathBuf = datadirs::get_bin_dir().context("Failed to determine bin directory")?;
+    let bin_dir: PathBuf = datadirs::get_bin_dir().context("Cannot determine bin directory")?;
     let symlink_path = bin_dir.join(exec_name);
 
     // none of these checks should bail, they should only warn
@@ -261,7 +258,7 @@ fn install_binary(
     // copy the executable files to the install directory
     filesys::copy_file(exec, &installed_exec).map_err(|e| {
         anyhow!(
-            "Failed to copy {} to install dir ({}): {}",
+            "Cannot copy {} to install dir ({}): {}",
             exec.display(),
             installed_exec.display(),
             e
@@ -292,12 +289,17 @@ fn install_binary(
         // Create a symlink in the bin directory, overwriting existing to default
         // using the new version. This is a UX feature to save the user from having to
         // manually set the default version after installation (most cases).
-        if let Err(e) = filesys::create_symlink(&installed_exec, &symlink_path, true) {
-            warn!(
-                    "Failed to create symlink for {}: {}. You may need to manually set the default version.",
+        match filesys::create_symlink(&installed_exec, &symlink_path, true) {
+            Ok(()) => {
+                info!("-> '{}' command installed", exec_name.to_string_lossy());
+            }
+            Err(e) => {
+                warn!(
+                    "Cannot create symlink for {}: {}. You may need to manually set the default version.",
                     exec_name.to_string_lossy(),
                     e
                 );
+            }
         }
     }
     Ok(())
@@ -323,7 +325,7 @@ fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
     match std::fs::remove_dir_all(&dir) {
         Ok(()) => Ok(true),
         Err(e) => {
-            debug!("Failed to delete cache directory {}: {}", dir.display(), e);
+            debug!("Cannot delete cache directory {}: {}", dir.display(), e);
             Ok(false)
         }
     }

@@ -24,7 +24,7 @@ pub fn list_installed_spells() -> Vec<Spell> {
     // to use a mutex because each thread will be working on a different
     // directory, with data aggregated sequentially at the end.
     let data_dir: PathBuf = get_data_dir()
-        .ok_or_else(|| anyhow!("Failed to get data directory"))
+        .ok_or_else(|| anyhow!("Cannot get data directory"))
         .unwrap();
 
     // Look through each subdirectory in data_dir for any installed spells.

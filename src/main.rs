@@ -225,7 +225,7 @@ fn run() -> Result<()> {
                 args.tag.as_deref().unwrap_or("(latest)")
             );
             let current_dir =
-                std::env::current_dir().context("Failed to determine current directory")?;
+                std::env::current_dir().context("Cannot determine current directory")?;
             debug!("Working directory: {}", current_dir.display());
 
             let (_, assets) = commands::install::select_assets(&args.repo, args.tag.as_deref())?;
@@ -238,7 +238,7 @@ fn run() -> Result<()> {
                 )
                 .with_context(|| {
                     format!(
-                        "Failed to download asset for {} version {}",
+                        "Cannot download asset for {} version {}",
                         args.repo,
                         args.tag.as_deref().unwrap_or("(latest)")
                     )
@@ -261,7 +261,7 @@ fn run() -> Result<()> {
                 version, &args.repo
             );
             if let Err(e) = commands::make_default::set_default(&args.repo, version) {
-                error!("Failed to set default version: {}", e);
+                error!("Cannot set default version: {}", e);
                 std::process::exit(110);
             }
             info!("Version '{}' set as default.", version);

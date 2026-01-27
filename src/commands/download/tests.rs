@@ -66,7 +66,7 @@ fn test_download_asset_invalid_url() -> Result<()> {
     assert!(result
         .unwrap_err()
         .to_string()
-        .contains("Failed to initiate download"));
+        .contains("Cannot initiate download"));
 
     Ok(())
 }
@@ -105,7 +105,7 @@ fn test_download_asset_fs_error() -> Result<()> {
     assert!(result
         .unwrap_err()
         .to_string()
-        .contains("Failed to create file"));
+        .contains("Cannot create file"));
 
     Ok(())
 }

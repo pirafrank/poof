@@ -64,12 +64,10 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
                         Ok(release)
                     }
                     Err(e) => {
-                        error!("Failed to parse JSON response: {}", e);
+                        error!("Cannot parse JSON response: {}", e);
                         // return Err instead of exit, wrapping the original error
-                        Err(anyhow!(e).context(format!(
-                            "Failed to parse JSON response from {}",
-                            release_url
-                        )))
+                        Err(anyhow!(e)
+                            .context(format!("Cannot parse JSON response from {}", release_url)))
                     }
                 }
             } else {
@@ -77,7 +75,7 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
                 // read body for context if possible
                 let error_body = response
                     .text()
-                    .unwrap_or_else(|_| "Failed to read error response body".to_string());
+                    .unwrap_or_else(|_| "Cannot read error response body".to_string());
                 // return Err instead of exit
                 Err(anyhow!(
                     "Request to {} failed with status: {}. Response: {}",
@@ -88,9 +86,9 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
             }
         }
         Err(e) => {
-            error!("Failed to send request: {}", e);
+            error!("Cannot send request: {}", e);
             // return Err instaed of exit
-            Err(anyhow!(e).context(format!("Failed to send request to {}", release_url)))
+            Err(anyhow!(e).context(format!("Cannot send request to {}", release_url)))
         }
     }
 }

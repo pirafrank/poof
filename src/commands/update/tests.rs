@@ -307,7 +307,7 @@ fn test_update_single_repo_invalid_semver_installed() -> Result<()> {
         let result = update_single_repo("testuser/testrepo");
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Failed to parse") || err_msg.contains("semver"));
+        assert!(err_msg.contains("Cannot parse") || err_msg.contains("semver"));
     });
 
     Ok(())
@@ -350,7 +350,7 @@ fn test_update_single_repo_invalid_semver_from_github() -> Result<()> {
         let result = update_single_repo("testuser/testrepo");
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Failed to parse") || err_msg.contains("semver"));
+        assert!(err_msg.contains("Cannot parse") || err_msg.contains("semver"));
     });
 
     Ok(())
@@ -385,7 +385,7 @@ fn test_update_single_repo_github_api_failure() -> Result<()> {
         let result = update_single_repo("testuser/testrepo");
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Failed to get latest release") || err_msg.contains("500"));
+        assert!(err_msg.contains("Cannot get latest release") || err_msg.contains("500"));
     });
 
     Ok(())
@@ -415,7 +415,7 @@ fn test_update_self_invalid_semver_from_github() -> Result<()> {
         let result = update_self();
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Failed to parse") || err_msg.contains("semver"));
+        assert!(err_msg.contains("Cannot parse") || err_msg.contains("semver"));
     });
 
     Ok(())
@@ -437,7 +437,7 @@ fn test_update_self_github_api_failure() -> Result<()> {
         let result = update_self();
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Failed to get latest release") || err_msg.contains("404"));
+        assert!(err_msg.contains("Cannot get latest release") || err_msg.contains("404"));
     });
 
     Ok(())

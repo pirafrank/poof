@@ -8,8 +8,8 @@ use std::fs;
 fn load_release_fixture() -> Release {
     let fixture_path =
         "tests/fixtures/responses/api.github.com/repos/pirafrank/poof/releases/latest";
-    let json_data = fs::read_to_string(fixture_path).expect("Failed to read fixture file");
-    serde_json::from_str(&json_data).expect("Failed to parse JSON fixture")
+    let json_data = fs::read_to_string(fixture_path).expect("Cannot read fixture file");
+    serde_json::from_str(&json_data).expect("Cannot parse JSON fixture")
 }
 
 mod get_release_url {
@@ -191,7 +191,7 @@ mod integration_with_fixture {
     fn test_fixture_is_valid_json() {
         let fixture_path =
             "tests/fixtures/responses/api.github.com/repos/pirafrank/poof/releases/latest";
-        let json_data = fs::read_to_string(fixture_path).expect("Failed to read fixture file");
+        let json_data = fs::read_to_string(fixture_path).expect("Cannot read fixture file");
         let parsed: serde_json::Value =
             serde_json::from_str(&json_data).expect("Fixture should be valid JSON");
 

@@ -13,27 +13,26 @@ pub fn download_asset(
     info!("Downloading {} from {}", filename, download_url);
 
     let response = reqwest::blocking::get(download_url)
-        .with_context(|| format!("Failed to initiate download from {}", download_url))?;
+        .with_context(|| format!("Cannot initiate download from {}", download_url))?;
 
     let status = response.status(); // for borrowing
     if status.is_success() {
         // Ensure the directory exists
         std::fs::create_dir_all(download_to)
-            .with_context(|| format!("Failed to create directory {}", download_to.display()))?;
+            .with_context(|| format!("Cannot create directory {}", download_to.display()))?;
 
         // Create the file path and open it for writing
         let target_file_path = download_to.join(filename);
         let mut file = File::create(&target_file_path)
-            .with_context(|| format!("Failed to create file {}", target_file_path.display()))?;
+            .with_context(|| format!("Cannot create file {}", target_file_path.display()))?;
 
         debug!("Saving to: {}", target_file_path.display());
 
         // Copy the response body to the file
         let content = response
             .bytes()
-            .context("Failed to read download response bytes")?; // Use context
-        copy(&mut content.as_ref(), &mut file)
-            .context("Failed to write downloaded data to file")?;
+            .context("Cannot read download response bytes")?; // Use context
+        copy(&mut content.as_ref(), &mut file).context("Cannot write downloaded data to file")?;
 
         info!("Download complete.");
         Ok(target_file_path.clone())
@@ -41,7 +40,7 @@ pub fn download_asset(
         // we use anyhow::bail! for errors originating here
         let error_body = response
             .text()
-            .unwrap_or_else(|_| "Failed to read error body".to_string());
+            .unwrap_or_else(|_| "Cannot read error body".to_string());
         anyhow::bail!(
             // with bail! macro we early return with error
             "Download failed! Status: {}. URL: {}. Server response: {}",
