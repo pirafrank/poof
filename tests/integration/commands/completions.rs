@@ -44,6 +44,32 @@ fn test_completions_fish() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn test_completions_elvish() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("completions")
+        .arg("--shell")
+        .arg("elvish")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("edit:completion:arg-completer"))
+        .stdout(predicate::str::contains("poof"));
+    Ok(())
+}
+
+#[test]
+fn test_completions_powershell() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("completions")
+        .arg("--shell")
+        .arg("powershell")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Register-ArgumentCompleter"))
+        .stdout(predicate::str::contains("poof"));
+    Ok(())
+}
+
+#[test]
 fn test_completions_short_flag() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("completions")
