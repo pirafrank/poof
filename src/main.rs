@@ -80,7 +80,8 @@ struct UpdateArgs {
 // Structure for the completions command
 #[derive(Parser, Clone)]
 struct CompletionsArgs {
-    /// Shell type to generate completions for
+    /// Shell type to generate completions for.
+    /// Possible values: bash, elvish, fish, nushell, powershell, xonsh, zsh
     #[arg(long, short, value_parser = parse_shell)]
     shell: commands::completions::SupportedShell,
 }

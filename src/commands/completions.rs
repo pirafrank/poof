@@ -57,6 +57,8 @@ pub fn generate_completions(shell: SupportedShell) {
         SupportedShell::PowerShell => {
             generate(Shell::PowerShell, &mut cmd, &bin_name, &mut io::stdout())
         }
+        // Xonsh can source bash completions via its bash foreign function interface.
+        // Native xonsh completion generation is not available in clap_complete.
         SupportedShell::Xonsh => generate(Shell::Bash, &mut cmd, &bin_name, &mut io::stdout()),
         SupportedShell::Zsh => generate(Shell::Zsh, &mut cmd, &bin_name, &mut io::stdout()),
     }
