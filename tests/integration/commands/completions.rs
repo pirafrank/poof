@@ -1,4 +1,4 @@
-//! Unit tests for the 'completions' command
+//! Integration tests for the 'completions' command
 
 use assert_cmd::{assert::OutputAssertExt, cargo};
 use predicates::prelude::*;

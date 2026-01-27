@@ -5,5 +5,6 @@ use std::io;
 /// Generate shell completions to stdout
 pub fn generate_completions(shell: Shell) {
     let mut cmd = crate::Cli::command();
-    generate(shell, &mut cmd, "poof", &mut io::stdout());
+    let bin_name = cmd.get_name().to_string();
+    generate(shell, &mut cmd, &bin_name, &mut io::stdout());
 }
