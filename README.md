@@ -33,19 +33,29 @@ For more information read below or check the documentation in the wiki. Got an i
 [![GitHub Wiki](https://img.shields.io/badge/GitHub-Wiki-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://github.com/pirafrank/poof/wiki)
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://github.com/pirafrank/poof/discussions)
 
-**Note: this project is actively being developed.** I'm making ongoing improvements to the code while trying to maintain stability and up-to-date documentation. However, things may break. If you encounter some issues during this development phase, please [report them](https://github.com/pirafrank/poof/issues). Thank you!
-
 ## Features
 
-- **🛠️ Zero-config**: Use it straight away, no yaml, no TOML or other boring configuration
-- **📦 Zero-install**: one self-contained binary you just put in `PATH` and `rm` to uninstall
-- **🔗 Zero-dependencies**: It runs standalone, no additional software needed
+- **🚀 Easy to use**: Sensible commands that are easy to remember and type. Just run `poof help` to know more
 - **👤 User-space**: Designed to work in user-space and be portable. No root access needed to manage your tools
-- **🌍 Cross-platform**: Works on Linux and macOS and runs on many popular architectures (FreeBSD support is planned)
-- **🚀 Easy to use**: Sensible commands that are easy to remember and to type. Just run `poof help` to know more
-- **🧠 Smart**: Automatically detects your setup and downloads the right binaries for it
+- **🧠 Smart asset selection**: Automatically detects your OS, architecture, and libc (glibc vs musl) to download the right binary for your configuration. Supports multi-tool releases, multi-binary assets, mono-repos, and repositories not following Semantic Versioning
+- **📦 Archive format support**: Handles 10+ formats including ZIP, TAR, 7z, and all their compressed variants with magic number validation
+- **🔄 Version management**: Install multiple versions of the same tool side-by-side and switch between them instantly with `poof use`
+- **🧹 Clean management**: XDG-compliant directory structure with separate cache, data, and bin directories
+- **🔍 Helpful error handling**: Fuzzy matching for repository names catches typos, conflict detection warns about existing binaries, and error messages always provide context
 
-What's more?
+### Platform Support
+
+- **🌍 Cross-platform**: Works on Linux and macOS (FreeBSD support is planned)
+- **🏗️ Wide architecture support**: 8 architectures on Linux, and both Intel and Apple Silicon on macOS
+- **🐚 Shell integration**: Native support for 7 shells (bash, zsh, fish, elvish, nushell, powershell, xonsh) with auto-completions and one-command PATH setup
+
+### Core Philosophy
+
+- **🛠️ Zero-config**: Use it straight away, no yaml, no TOML or other boring configuration
+- **📦 Zero-install**: One self-contained binary you just put in `PATH` and `rm` to uninstall
+- **🔗 Zero-dependencies**: It runs standalone, no additional software needed
+
+### What's more?
 
 - **⚙️ Written in Rust**: Safe and fast binaries built on reliable dependencies, with linting and formatting applied at commit time
 - **0️⃣ Zero-versioned**: Because major versions are [a thing of the past](https://0ver.org/) (and *poof*, albeit magic, is baby).
@@ -70,26 +80,15 @@ More and more often modern tools are built with languages like C/C++, Rust or Go
 
 ## Quick start
 
-1. Get `poof` using one of the methods below:
-    - **Pre-built binary**: Download the binary from [latest release](https://github.com/pirafrank/poof/releases), and move it to some directory in your `$PATH`.<br/>You may use the one-liner below:
+1. Get `poof` latest stable release using this quick one-liner:
 
     ```sh
     curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh
     ```
 
-    - **binstall**: If you have [binstall](https://github.com/cargo-bins/cargo-binstall), you can get the binary using `cargo` and skip compilation:
+    or via one of other [install methods](https://github.com/pirafrank/poof/wiki/How-to-install).
 
-    ```sh
-    cargo binstall poof
-    ```
-
-    - **cargo**: Build and install latest release on crates.io using `cargo`:
-
-    ```sh
-    cargo install --locked poof
-    ```
-
-2. Add poof's `bin` directory to `$PATH` by running:
+2. Add poof's `bin` directory to `$PATH`:
 
     ```sh
     poof enable
@@ -97,7 +96,7 @@ More and more often modern tools are built with languages like C/C++, Rust or Go
 
     Then reload you shell.
 
-3. **Done!** Now try to install something, for example:
+3. **🎉 Done!** Now try to install something, for example:
 
     ```sh
     poof install pirafrank/vault-conductor
@@ -107,82 +106,51 @@ Additional information about [installation](https://github.com/pirafrank/poof/wi
 
 ## Usage
 
-```txt
+Either run:
 
-poof - magic manager of pre-built software
-
-Usage: poof [OPTIONS] <COMMAND>
-
-Commands:
-  download  Only download binary for the platform in current directory. No install
-  install   Download binary for the platform and install it
-  list      List installed binaries and their versions
-  use       Make an installed version the one to be used by default
-  update    Update installed binaries to their latest versions
-  enable    Persistently add poof's bin directory to your shell PATH
-  check     Check if poof's bin directory is in the PATH
-  clean     Empty cache directory
-  info      Show install and environment information
-  version   Show version information
-  help      Print this message or the help of the given subcommand(s)
-
-Options:
-  -v, --verbose...  Increase logging verbosity
-  -q, --quiet...    Decrease logging verbosity
-  -h, --help        Print help
-  -V, --version     Print version
-
-For more information, visit: https://github.com/pirafrank/poof
-
-If you encounter any issues, please report them at:
-https://github.com/pirafrank/poof/issues
-
+```sh
+poof help
 ```
+
+or read the [Usage](https://github.com/pirafrank/poof/wiki/Usage) page for additional information.
 
 ## About poof's `bin` directory
 
-`poof` installs and symlinks binaries in its own data directory.
+`poof` installs binaries in its own data directory, then symlinks them to its bin directory.
 
-Having a dedicated directory for `poof` binaries is a good practice, as it allows you to:
+You can run `poof info` at any time to know where it does store data.
+
+Having a dedicated directory for `poof` binaries is a good practice, as it allows to:
 
 - keep them separate from other software installed on your system,
-- keep them separate from paths you may manually edit (like `~/.local/bin`),
-- easily temporarily disable `poof` by removing the directory from your `$PATH` (read below).
+- keep them away from paths the user may manually interact to (like `~/.local/bin`),
+- support multiple side-by-side versions of the same software for easy switch,
+- easily temporarily disable `poof` by removing its bin directory from your `$PATH` (read below).
 
 ## Disable
 
 poof's `bin` directory by default is added at the beginning of `$PATH` so that it takes precedence over any other version of same-named binary you may have installed other ways.
 
-If you want to halt this behavior, you can [disable it](https://github.com/pirafrank/poof/wiki/Disable) it temporarily or permanently.
+If you want to halt this behavior, you can either:
+
+- [manually configure](https://github.com/pirafrank/poof/wiki/Configure-your-shell) your shell setup,
+- [disable it](https://github.com/pirafrank/poof/wiki/Disable), temporarily or permanently.
 
 ## Documentation
 
 Updated documentation for the latest release is available in the [Wiki](https://github.com/pirafrank/poof/wiki).
 
-## Project goals
+## Project goals and non-goals
 
-- Fetch and put in `$PATH` pre-built binaries available on Internet
-- Work without requiring buckets, repositories, or registries
-- Work out-of-the-box with no setup or configuration needed
-- Be designed to in user-space
-- Be as cross-platform as possible
-- Be easy to use, with sensible and ergonomic commands and options
-- Have no external dependencies
-
-## Non-goals
-
-- Build software from source code
-- Manage software that doesn't provide pre-built binaries
-- Act as a general package manager
-- Manage software installed by other tools or package managers
-  - Replace or modify binaries installed by other package managers
-  - Manage dependencies required by the software
-  - Handle language-specific package managers (pip, npm, cargo, etc.)
-  - Interface with system package managers (apt, yum, brew, etc.)
+Have a look at [our project goals](https://github.com/pirafrank/poof/wiki/Project-goals).
 
 ## Roadmap
 
-A list of features implemented/to implement is available [in the Wiki](https://github.com/pirafrank/poof/wiki/Features). The list is not final and may change over time.
+A list of features implemented and to implement is available [in the Wiki](https://github.com/pirafrank/poof/wiki/Features). The list is not final and may change over time.
+
+## Feature requests and Bug reporting
+
+Want to suggest a feature? Found a bug? Please [open an issue](https://github.com/pirafrank/poof/issues). Thank you!
 
 ## Contributing
 
