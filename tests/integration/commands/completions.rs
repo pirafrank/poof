@@ -70,6 +70,19 @@ fn test_completions_powershell() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn test_completions_nushell() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("completions")
+        .arg("--shell")
+        .arg("nushell")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("export extern"))
+        .stdout(predicate::str::contains("poof"));
+    Ok(())
+}
+
+#[test]
 fn test_completions_short_flag() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("completions")

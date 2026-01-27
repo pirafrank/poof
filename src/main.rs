@@ -2,7 +2,6 @@ use std::io::Write;
 
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
-use clap_complete::Shell;
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
 use log::{debug, error, info};
@@ -82,8 +81,18 @@ struct UpdateArgs {
 #[derive(Parser, Clone)]
 struct CompletionsArgs {
     /// Shell type to generate completions for
-    #[arg(long, short, value_enum)]
-    shell: Shell,
+    #[arg(long, short, value_parser = parse_shell)]
+    shell: commands::completions::SupportedShell,
+}
+
+fn parse_shell(s: &str) -> Result<commands::completions::SupportedShell, String> {
+    commands::completions::SupportedShell::from_str(s).ok_or_else(|| {
+        format!(
+            "unsupported shell: '{}'. Possible values: {}",
+            s,
+            commands::completions::SupportedShell::possible_values().join(", ")
+        )
+    })
 }
 
 // Command line interface
