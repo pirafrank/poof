@@ -10,10 +10,14 @@ mod check;
 mod claps;
 #[path = "integration/commands/clean.rs"]
 mod clean;
+#[path = "integration/commands/completions.rs"]
+mod completions;
 #[path = "integration/commands/help.rs"]
 mod help;
 #[path = "integration/commands/info.rs"]
 mod info;
+#[path = "integration/commands/init.rs"]
+mod init;
 #[path = "integration/command_handling/verbose_flags.rs"]
 mod verbose_flags;
 #[path = "integration/commands/version.rs"]

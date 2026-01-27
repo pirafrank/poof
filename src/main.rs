@@ -17,6 +17,7 @@ mod utils;
 
 use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
+use crate::models::supported_shells::SupportedShell;
 use utils::semver::SemverStringConversion;
 
 // Constants
@@ -77,6 +78,53 @@ struct UpdateArgs {
     update_self: bool,
 }
 
+// Structure for the completions command
+#[derive(Parser, Clone)]
+struct CompletionsArgs {
+    /// Shell type to generate completions for.
+    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
+    #[arg(long, short, value_parser = parse_shell)]
+    shell: SupportedShell,
+}
+
+fn parse_shell(s: &str) -> Result<SupportedShell, String> {
+    SupportedShell::from_str(s).ok_or_else(|| {
+        format!(
+            "unsupported shell: '{}'. Possible values: {}",
+            s,
+            SupportedShell::possible_values().join(", ")
+        )
+    })
+}
+
+// Structure for the init command
+#[derive(Parser, Clone)]
+struct InitArgs {
+    /// Shell type to generate init script for.
+    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
+    #[arg(long, short, value_parser = parse_init_shell)]
+    shell: SupportedShell,
+}
+
+fn parse_init_shell(s: &str) -> Result<SupportedShell, String> {
+    SupportedShell::from_str(s).ok_or_else(|| {
+        format!(
+            "unsupported shell: '{}'. Possible values: {}",
+            s,
+            SupportedShell::possible_values().join(", ")
+        )
+    })
+}
+
+// Structure for the enable command
+#[derive(Parser, Clone)]
+struct EnableArgs {
+    /// Shell type to configure.
+    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
+    #[arg(long, short, value_parser = parse_shell)]
+    shell: SupportedShell,
+}
+
 // Command line interface
 #[derive(Subcommand, Clone)]
 enum Cmd {
@@ -96,7 +144,7 @@ enum Cmd {
     Update(UpdateArgs),
 
     /// Persistently add poof's bin directory to your shell PATH
-    Enable,
+    Enable(EnableArgs),
 
     /// Check if poof's bin directory is in the PATH
     Check,
@@ -113,6 +161,12 @@ enum Cmd {
     /// Show debug information
     #[command(hide = true)]
     Debug,
+
+    /// Generate shell completions to stdout
+    Completions(CompletionsArgs),
+
+    /// Generate shell-specific init script to add poof bin directory to PATH
+    Init(InitArgs),
 }
 
 #[derive(Parser)]
@@ -249,11 +303,17 @@ fn run() -> Result<()> {
         Cmd::Debug => {
             commands::info::show_info();
         }
-        Cmd::Enable => {
-            commands::enable::run();
+        Cmd::Enable(args) => {
+            commands::enable::run(args.shell);
         }
         Cmd::Clean => {
             commands::clean::run_clean()?;
+        }
+        Cmd::Completions(args) => {
+            commands::completions::generate_completions(args.shell);
+        }
+        Cmd::Init(args) => {
+            commands::init::generate_init_script(args.shell);
         }
     }
     Ok(())
