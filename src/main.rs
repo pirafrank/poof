@@ -82,7 +82,7 @@ struct UpdateArgs {
 #[derive(Parser, Clone)]
 struct CompletionsArgs {
     /// Shell type to generate completions for.
-    /// Possible values: bash, elvish, fish, nushell, powershell, xonsh, zsh
+    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
     #[arg(long, short, value_parser = parse_shell)]
     shell: SupportedShell,
 }
@@ -101,7 +101,7 @@ fn parse_shell(s: &str) -> Result<SupportedShell, String> {
 #[derive(Parser, Clone)]
 struct InitArgs {
     /// Shell type to generate init script for.
-    /// Possible values: bash, elvish, fish, nushell, powershell, xonsh, zsh
+    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
     #[arg(long, short, value_parser = parse_init_shell)]
     shell: SupportedShell,
 }
@@ -120,7 +120,7 @@ fn parse_init_shell(s: &str) -> Result<SupportedShell, String> {
 #[derive(Parser, Clone)]
 struct EnableArgs {
     /// Shell type to configure.
-    /// Possible values: bash, elvish, fish, nushell, powershell, xonsh, zsh
+    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
     #[arg(long, short, value_parser = parse_shell)]
     shell: SupportedShell,
 }

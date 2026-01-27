@@ -1,5 +1,5 @@
 //! Persistently add poof's bin directory to PATH
-//! Supports all shells: bash, zsh, fish, elvish, nushell, powershell, xonsh
+//! Supports all shells: bash, zsh, fish, elvish, nushell (or nu), powershell (or pwsh), xonsh
 
 use std::path::Path;
 use std::{fs, io::Write, path::PathBuf};
@@ -43,10 +43,18 @@ fn shell_name(shell: SupportedShell) -> &'static str {
 /// Generate the content to add to the shell configuration file
 fn generate_config_content(shell: SupportedShell, bin_dir: &str) -> String {
     match shell {
-        SupportedShell::Bash | SupportedShell::Zsh | SupportedShell::Elvish => {
+        SupportedShell::Bash | SupportedShell::Zsh => {
             // For eval-based shells, use dynamic approach
             format!(
                 "\n# added by poof\neval \"$(poof init --shell {})\"",
+                shell_name(shell)
+            )
+        }
+        SupportedShell::Elvish => {
+            // Elvish-native PATH update
+            // Notice the missing '$' before the round brackets
+            format!(
+                "\n# added by poof\neval \"(poof init --shell {})\"",
                 shell_name(shell)
             )
         }
@@ -268,9 +276,10 @@ mod tests {
         assert!(zsh_content.contains("eval \"$(poof init --shell zsh)\""));
 
         // Test elvish (eval)
+        // Notice the missing '$' before the round brackets
         let elvish_content = generate_config_content(SupportedShell::Elvish, bin_dir);
         assert!(elvish_content.contains("# added by poof"));
-        assert!(elvish_content.contains("eval \"$(poof init --shell elvish)\""));
+        assert!(elvish_content.contains("eval \"(poof init --shell elvish)\""));
     }
 
     #[test]

@@ -39,7 +39,12 @@ pub fn generate_init_script(shell: SupportedShell) {
         SupportedShell::PowerShell => {
             // PowerShell syntax
             // docs: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_environment_variables?view=powershell-7.5
-            writeln!(stdout, "$env:PATH = \"{};$env:PATH\"", bin_dir).unwrap();
+            writeln!(
+                stdout,
+                "$env:PATH = \"{}$([System.IO.Path]::PathSeparator)$env:PATH\"",
+                bin_dir
+            )
+            .unwrap();
         }
         SupportedShell::Xonsh => {
             // Xonsh shell (Python-based, uses Python syntax)

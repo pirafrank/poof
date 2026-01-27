@@ -33,7 +33,9 @@ impl SupportedShell {
             "elvish",
             "fish",
             "nushell",
+            "nu",
             "powershell",
+            "pwsh",
             "xonsh",
             "zsh",
         ]

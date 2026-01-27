@@ -243,7 +243,7 @@ fn test_enable_creates_elvish_entry() -> Result<(), Box<dyn std::error::Error>> 
 
     let contents = fs::read_to_string(&elvish_config)?;
     assert!(
-        contents.contains("eval \"$(poof init --shell elvish)\""),
+        contents.contains("eval \"(poof init --shell elvish)\""),
         "elvish config should contain eval line"
     );
     assert!(
