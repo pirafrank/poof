@@ -16,6 +16,8 @@ mod completions;
 mod help;
 #[path = "integration/commands/info.rs"]
 mod info;
+#[path = "integration/commands/init.rs"]
+mod init;
 #[path = "integration/command_handling/verbose_flags.rs"]
 mod verbose_flags;
 #[path = "integration/commands/version.rs"]

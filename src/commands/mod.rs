@@ -4,6 +4,7 @@ pub mod completions;
 pub mod download;
 pub mod enable;
 pub mod info;
+pub mod init;
 pub mod install;
 pub mod list;
 pub mod make_default;

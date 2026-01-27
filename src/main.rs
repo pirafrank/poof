@@ -17,6 +17,7 @@ mod utils;
 
 use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
+use crate::models::supported_shells::SupportedShell;
 use utils::semver::SemverStringConversion;
 
 // Constants
@@ -83,15 +84,34 @@ struct CompletionsArgs {
     /// Shell type to generate completions for.
     /// Possible values: bash, elvish, fish, nushell, powershell, xonsh, zsh
     #[arg(long, short, value_parser = parse_shell)]
-    shell: commands::completions::SupportedShell,
+    shell: SupportedShell,
 }
 
-fn parse_shell(s: &str) -> Result<commands::completions::SupportedShell, String> {
-    commands::completions::SupportedShell::from_str(s).ok_or_else(|| {
+fn parse_shell(s: &str) -> Result<SupportedShell, String> {
+    SupportedShell::from_str(s).ok_or_else(|| {
         format!(
             "unsupported shell: '{}'. Possible values: {}",
             s,
-            commands::completions::SupportedShell::possible_values().join(", ")
+            SupportedShell::possible_values().join(", ")
+        )
+    })
+}
+
+// Structure for the init command
+#[derive(Parser, Clone)]
+struct InitArgs {
+    /// Shell type to generate init script for.
+    /// Possible values: bash, elvish, fish, nushell, powershell, xonsh, zsh
+    #[arg(long, short, value_parser = parse_init_shell)]
+    shell: SupportedShell,
+}
+
+fn parse_init_shell(s: &str) -> Result<SupportedShell, String> {
+    SupportedShell::from_str(s).ok_or_else(|| {
+        format!(
+            "unsupported shell: '{}'. Possible values: {}",
+            s,
+            SupportedShell::possible_values().join(", ")
         )
     })
 }
@@ -135,6 +155,9 @@ enum Cmd {
 
     /// Generate shell completions to stdout
     Completions(CompletionsArgs),
+
+    /// Generate shell-specific init script to add poof bin directory to PATH
+    Init(InitArgs),
 }
 
 #[derive(Parser)]
@@ -279,6 +302,9 @@ fn run() -> Result<()> {
         }
         Cmd::Completions(args) => {
             commands::completions::generate_completions(args.shell);
+        }
+        Cmd::Init(args) => {
+            commands::init::generate_init_script(args.shell);
         }
     }
     Ok(())
