@@ -83,6 +83,19 @@ fn test_completions_nushell() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn test_completions_xonsh() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("completions")
+        .arg("--shell")
+        .arg("xonsh")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("complete"))
+        .stdout(predicate::str::contains("poof"));
+    Ok(())
+}
+
+#[test]
 fn test_completions_short_flag() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("completions")

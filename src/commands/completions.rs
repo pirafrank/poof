@@ -11,6 +11,7 @@ pub enum SupportedShell {
     Fish,
     Nushell,
     PowerShell,
+    Xonsh,
     Zsh,
 }
 
@@ -23,6 +24,7 @@ impl SupportedShell {
             "fish" => Some(Self::Fish),
             "nushell" | "nu" => Some(Self::Nushell),
             "powershell" | "pwsh" => Some(Self::PowerShell),
+            "xonsh" => Some(Self::Xonsh),
             "zsh" => Some(Self::Zsh),
             _ => None,
         }
@@ -30,7 +32,15 @@ impl SupportedShell {
 
     /// Get all possible shell values for clap
     pub fn possible_values() -> Vec<&'static str> {
-        vec!["bash", "elvish", "fish", "nushell", "powershell", "zsh"]
+        vec![
+            "bash",
+            "elvish",
+            "fish",
+            "nushell",
+            "powershell",
+            "xonsh",
+            "zsh",
+        ]
     }
 }
 
@@ -47,6 +57,7 @@ pub fn generate_completions(shell: SupportedShell) {
         SupportedShell::PowerShell => {
             generate(Shell::PowerShell, &mut cmd, &bin_name, &mut io::stdout())
         }
+        SupportedShell::Xonsh => generate(Shell::Bash, &mut cmd, &bin_name, &mut io::stdout()),
         SupportedShell::Zsh => generate(Shell::Zsh, &mut cmd, &bin_name, &mut io::stdout()),
     }
 }
