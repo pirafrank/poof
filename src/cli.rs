@@ -52,7 +52,7 @@ pub struct CmdArgs {
 // Specific structure for the update command
 #[derive(Parser, Clone)]
 pub struct UpdateArgs {
-    /// Github slug
+    /// Github slug in the format USERNAME/REPO
     #[arg(value_parser = validate_repo_format, required_unless_present_any = ["all", "update_self"])]
     pub repo: Option<String>,
 
@@ -60,7 +60,9 @@ pub struct UpdateArgs {
     #[arg(long, conflicts_with_all = ["repo", "update_self"])]
     pub all: bool,
 
-    /// Update poof itself
+    /// Update poof itself to the latest version.
+    /// It works only if the binary has not been installed from a package manager.
+    /// If you installed poof from a package manager, update via that package manager instead.
     #[arg(long = "self", conflicts_with_all = ["repo", "all"])]
     pub update_self: bool,
 }
@@ -115,19 +117,19 @@ pub struct EnableArgs {
 // Command line interface
 #[derive(Subcommand, Clone)]
 pub enum Cmd {
-    /// Only download binary for the platform in current directory. No install.
+    /// Only download binary for the platform in current directory. Do not perform installation.
     Download(CmdArgs),
 
     /// Download binary for the platform and install it
     Install(CmdArgs),
 
-    /// List installed binaries and their versions
+    /// List all installed binaries and their versions
     List,
 
-    /// Make an installed version the one to be used by default
+    /// Set an installed version of a slug as the default one
     Use(UseArgs),
 
-    /// Update installed binaries to their latest versions
+    /// Update installed binaries of a slug or all installed binaries to their latest versions
     Update(UpdateArgs),
 
     /// Persistently add poof's bin directory to your shell PATH
@@ -136,7 +138,13 @@ pub enum Cmd {
     /// Check if poof's bin directory is in the PATH
     Check,
 
-    /// Empty cache directory
+    /// Generate shell completions to stdout
+    Completions(CompletionsArgs),
+
+    /// Generate shell-specific init script to add poof bin directory to PATH
+    Init(InitArgs),
+
+    /// Empty the cache directory
     Clean,
 
     /// Show install and environment information
@@ -148,12 +156,6 @@ pub enum Cmd {
     /// Show debug information
     #[command(hide = true)]
     Debug,
-
-    /// Generate shell completions to stdout
-    Completions(CompletionsArgs),
-
-    /// Generate shell-specific init script to add poof bin directory to PATH
-    Init(InitArgs),
 }
 
 #[derive(Parser)]

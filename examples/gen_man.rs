@@ -164,6 +164,9 @@ fn main() -> Result<()> {
     writeln!(&mut buffer, ".TP")?;
     writeln!(&mut buffer, "\\fB-h\\fR, \\fB--help\\fR")?;
     writeln!(&mut buffer, "Print help")?;
+    writeln!(&mut buffer, ".TP")?;
+    writeln!(&mut buffer, "\\fB-V\\fR, \\fB--version\\fR")?;
+    writeln!(&mut buffer, "Print version")?;
 
     // Append our custom detailed subcommands section
     writeln!(&mut buffer, ".SH \"SUBCOMMANDS\"")?;

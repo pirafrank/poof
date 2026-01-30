@@ -43,8 +43,9 @@ jobs:
     steps:
       - name: Clone repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Setup just runner
         uses: extractions/setup-just@v2

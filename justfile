@@ -70,7 +70,7 @@ better: fmt lint
 pre-commit: fmt-check lint
 
 # Run pre-push checks
-pre-push: build test
+pre-push: check test
 
 # Run pre-push checks with tags
 pre-push-tag:
