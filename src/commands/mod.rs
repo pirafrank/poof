@@ -8,4 +8,6 @@ pub mod init;
 pub mod install;
 pub mod list;
 pub mod make_default;
+pub mod uninstall;
+pub mod unlink;
 pub mod update;

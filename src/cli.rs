@@ -2,7 +2,7 @@ use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
 use crate::models::supported_shells::SupportedShell;
 
-use clap::{Parser, Subcommand};
+use clap::{ArgGroup, Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -11,6 +11,7 @@ use regex::Regex;
 
 lazy_static! {
     static ref REPO_REGEX: Regex = Regex::new(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$").unwrap();
+    static ref BINARY_NAME_REGEX: Regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
 }
 
 fn validate_repo_format(s: &str) -> Result<String, String> {
@@ -19,6 +20,17 @@ fn validate_repo_format(s: &str) -> Result<String, String> {
     } else {
         Err(format!(
             "Repository must be in the format USERNAME/REPO, got: {}",
+            s
+        ))
+    }
+}
+
+fn validate_binary_name(s: &str) -> Result<String, String> {
+    if BINARY_NAME_REGEX.is_match(s) {
+        Ok(s.to_string())
+    } else {
+        Err(format!(
+            "Binary name must contain only letters, numbers, and hyphens, got: {}",
             s
         ))
     }
@@ -104,10 +116,43 @@ pub struct EnableArgs {
     pub shell: SupportedShell,
 }
 
+// Structure for the unlink command
+#[derive(Parser, Clone)]
+pub struct UnlinkArgs {
+    /// Name of the binary to unlink from the bin directory
+    #[arg(required = true, value_parser = validate_binary_name)]
+    pub binary_name: String,
+
+    /// Skip confirmation prompt
+    #[arg(short, long)]
+    pub yes: bool,
+}
+
+// Structure for the uninstall command
+#[derive(Parser, Clone)]
+#[command(group(ArgGroup::new("what_to_uninstall").required(true).args(["version", "all"])))]
+pub struct UninstallArgs {
+    /// GitHub user and repository in the format USERNAME/REPO
+    #[arg(required = true, value_parser = validate_repo_format)]
+    pub repo: String,
+
+    /// Version to uninstall
+    #[arg(long, group = "what_to_uninstall")]
+    pub version: Option<String>,
+
+    /// Uninstall all versions of the slug
+    #[arg(long, group = "what_to_uninstall")]
+    pub all: bool,
+
+    /// Skip confirmation prompt
+    #[arg(short, long)]
+    pub yes: bool,
+}
+
 // Command line interface
 #[derive(Subcommand, Clone)]
 pub enum Cmd {
-    /// Only download binary for the platform in current directory. Do not perform installation.
+    /// Only perform download for the platform in current directory. Do not install.
     Download(CmdArgs),
 
     /// Download binary for the platform and install it
@@ -121,6 +166,12 @@ pub enum Cmd {
 
     /// Update installed binaries of a slug or all installed binaries to their latest versions
     Update(UpdateArgs),
+
+    /// Remove binary from PATH. Use 'poof use' to re-add it
+    Unlink(UnlinkArgs),
+
+    /// Uninstall a version or all versions of a repository
+    Uninstall(UninstallArgs),
 
     /// Persistently add poof's bin directory to your shell PATH
     Enable(EnableArgs),

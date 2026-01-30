@@ -31,6 +31,10 @@ mod enable;
 mod install;
 #[path = "integration/commands/list.rs"]
 mod list;
+#[path = "integration/commands/uninstall.rs"]
+mod uninstall;
+#[path = "integration/commands/unlink.rs"]
+mod unlink;
 #[path = "integration/commands/update.rs"]
 mod update;
 #[path = "integration/commands/use.rs"]

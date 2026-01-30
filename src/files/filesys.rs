@@ -134,3 +134,19 @@ pub fn create_symlink(
     }
     Ok(())
 }
+
+/// Check if a symlink is broken.
+/// Returns true if the symlink is broken, false otherwise.
+pub fn is_broken_symlink(path: &Path) -> std::io::Result<bool> {
+    // this uses try_exists to check if the target exists.
+    // which is more efficient than reading the symlink target and checking if it exists.
+    // try_exists has been added in Rust 1.63.0.
+    // doc: https://doc.rust-lang.org/std/path/struct.Path.html#method.try_exists
+    let sym_meta = std::fs::symlink_metadata(path)?;
+
+    if sym_meta.is_symlink() {
+        Ok(!path.try_exists()?)
+    } else {
+        Ok(false)
+    }
+}
