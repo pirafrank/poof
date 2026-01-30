@@ -1,3 +1,4 @@
+use crate::cli::UpdateArgs;
 use crate::{
     commands::{self, download::download_asset, list::list_installed_spells},
     constants::APP_NAME,
@@ -9,7 +10,6 @@ use crate::{
     models::spell::Spell,
     utils::semver::{SemverStringPrefix, Version},
 };
-use crate::cli::UpdateArgs;
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, error, info};
 use rayon::prelude::*;

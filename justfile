@@ -23,6 +23,10 @@ install-cargo-plugins:
   cargo install cargo-llvm-cov
   cargo binstall git-cliff
 
+# Check for errors in all targets
+check:
+  cargo check --all-targets
+
 # Build the project
 build:
   cargo build

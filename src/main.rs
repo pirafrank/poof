@@ -17,7 +17,6 @@ mod utils;
 // Use modules locally
 use crate::cli::{Cli, Cmd};
 use crate::constants::THIS_REPO_URL;
-use crate::github::client::{get_asset, get_release};
 use crate::utils::semver::SemverStringConversion;
 
 fn is_supported_os() -> bool {

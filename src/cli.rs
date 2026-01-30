@@ -1,12 +1,11 @@
 use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
-use crate::models::{supported_shells::SupportedShell, spell::Spell};
+use crate::models::supported_shells::SupportedShell;
 
 use clap::{Parser, Subcommand};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use lazy_static::lazy_static;
 use regex::Regex;
-
 
 // Constants
 
@@ -30,11 +29,11 @@ pub struct UseArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     /// e.g. pirafrank/rust_exif_renamer
     #[arg(required = true, value_parser = validate_repo_format)]
-    repo: String,
+    pub repo: String,
 
     /// version to set as default
     #[arg(required = true)]
-    version: String,
+    pub version: String,
 }
 
 // Common arguments for repository operations
@@ -43,11 +42,11 @@ pub struct CmdArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     /// e.g. pirafrank/rust_exif_renamer
     #[arg(required = true, value_parser = validate_repo_format)]
-    repo: String,
+    pub repo: String,
 
     /// Optional release tag (defaults to 'latest')
     #[arg(long, short)]
-    tag: Option<String>,
+    pub tag: Option<String>,
 }
 
 // Specific structure for the update command
@@ -55,15 +54,15 @@ pub struct CmdArgs {
 pub struct UpdateArgs {
     /// Github slug
     #[arg(value_parser = validate_repo_format, required_unless_present_any = ["all", "update_self"])]
-    repo: Option<String>,
+    pub repo: Option<String>,
 
     /// Update all installed binaries
     #[arg(long, conflicts_with_all = ["repo", "update_self"])]
-    all: bool,
+    pub all: bool,
 
     /// Update poof itself
     #[arg(long = "self", conflicts_with_all = ["repo", "all"])]
-    update_self: bool,
+    pub update_self: bool,
 }
 
 // Structure for the completions command
@@ -72,7 +71,7 @@ pub struct CompletionsArgs {
     /// Shell type to generate completions for.
     /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
     #[arg(long, short, value_parser = parse_shell)]
-    shell: SupportedShell,
+    pub shell: SupportedShell,
 }
 
 fn parse_shell(s: &str) -> Result<SupportedShell, String> {
@@ -91,7 +90,7 @@ pub struct InitArgs {
     /// Shell type to generate init script for.
     /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
     #[arg(long, short, value_parser = parse_init_shell)]
-    shell: SupportedShell,
+    pub shell: SupportedShell,
 }
 
 fn parse_init_shell(s: &str) -> Result<SupportedShell, String> {
@@ -110,12 +109,12 @@ pub struct EnableArgs {
     /// Shell type to configure.
     /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
     #[arg(long, short, value_parser = parse_shell)]
-    shell: SupportedShell,
+    pub shell: SupportedShell,
 }
 
 // Command line interface
 #[derive(Subcommand, Clone)]
-enum Cmd {
+pub enum Cmd {
     /// Only download binary for the platform in current directory. No install.
     Download(CmdArgs),
 
@@ -174,9 +173,9 @@ version = VERSION,
 pub struct Cli {
     /// Command to execute
     #[command(subcommand)]
-    command: Cmd,
+    pub command: Cmd,
 
     /// Enable debug logging
     #[command(flatten)]
-    verbose: Verbosity<InfoLevel>, // default to INFO
+    pub verbose: Verbosity<InfoLevel>, // default to INFO
 }

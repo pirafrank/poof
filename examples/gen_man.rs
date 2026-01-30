@@ -14,10 +14,20 @@ mod constants;
 #[path = "../src/core/platform_info.rs"]
 pub mod platform_info_impl;
 
+#[allow(dead_code)]
+#[path = "../src/models/supported_shells.rs"]
+pub mod supported_shells_impl;
+
 // Define core module acting as a namespace
 #[allow(dead_code)]
 mod core {
     pub use super::platform_info_impl as platform_info;
+}
+
+// Define models module acting as a namespace
+#[allow(dead_code)]
+mod models {
+    pub use super::supported_shells_impl as supported_shells;
 }
 
 // Import string.rs as a top-level module
