@@ -23,6 +23,10 @@ install-cargo-plugins:
   cargo install cargo-llvm-cov
   cargo binstall git-cliff
 
+# Check for errors in all targets
+check:
+  cargo check --all-targets
+
 # Build the project
 build:
   cargo build
@@ -66,7 +70,7 @@ better: fmt lint
 pre-commit: fmt-check lint
 
 # Run pre-push checks
-pre-push: build test
+pre-push: check test
 
 # Run pre-push checks with tags
 pre-push-tag:
@@ -112,6 +116,10 @@ clean-dl:
 
 # Clean all artifacts
 clean-all: clean clean-dl
+
+# Generate man pages
+man:
+  cargo run --example gen_man
 
 # Generate documentation
 docs:

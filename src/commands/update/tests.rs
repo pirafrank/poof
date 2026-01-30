@@ -445,7 +445,7 @@ fn test_update_self_github_api_failure() -> Result<()> {
 
 #[test]
 fn test_process_update_with_no_arguments() -> Result<()> {
-    use crate::UpdateArgs;
+    use crate::cli::UpdateArgs;
 
     let args = UpdateArgs {
         repo: None,
@@ -463,7 +463,7 @@ fn test_process_update_with_no_arguments() -> Result<()> {
 
 #[test]
 fn test_process_update_with_all_flag() -> Result<()> {
-    use crate::UpdateArgs;
+    use crate::cli::UpdateArgs;
 
     let test_env = setup_test_env()?;
 
@@ -490,7 +490,7 @@ fn test_process_update_with_all_flag() -> Result<()> {
 
 #[test]
 fn test_process_update_with_repo_name() -> Result<()> {
-    use crate::UpdateArgs;
+    use crate::cli::UpdateArgs;
 
     let test_env = setup_test_env()?;
 

@@ -41,3 +41,6 @@ jobs:
 
       - name: Perform CI checks
         run: just ci
+
+      - name: Generate man pages
+        run: just man

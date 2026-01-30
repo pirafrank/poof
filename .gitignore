@@ -62,3 +62,5 @@ data/*
 # direnv
 .envrc
 
+# generated man pages
+man/

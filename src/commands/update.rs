@@ -1,3 +1,4 @@
+use crate::cli::UpdateArgs;
 use crate::{
     commands::{self, download::download_asset, list::list_installed_spells},
     constants::APP_NAME,
@@ -8,7 +9,6 @@ use crate::{
     github::client::{get_assets, get_release},
     models::spell::Spell,
     utils::semver::{SemverStringPrefix, Version},
-    UpdateArgs,
 };
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, error, info};
