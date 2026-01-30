@@ -67,15 +67,6 @@ pub struct UpdateArgs {
     pub update_self: bool,
 }
 
-// Structure for the completions command
-#[derive(Parser, Clone)]
-pub struct CompletionsArgs {
-    /// Shell type to generate completions for.
-    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
-    #[arg(long, short, value_parser = parse_shell)]
-    pub shell: SupportedShell,
-}
-
 fn parse_shell(s: &str) -> Result<SupportedShell, String> {
     SupportedShell::from_str(s).ok_or_else(|| {
         format!(
@@ -86,23 +77,22 @@ fn parse_shell(s: &str) -> Result<SupportedShell, String> {
     })
 }
 
+// Structure for the completions command
+#[derive(Parser, Clone)]
+pub struct CompletionsArgs {
+    /// Shell type to generate completions for.
+    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
+    #[arg(long, short, value_parser = parse_shell)]
+    pub shell: SupportedShell,
+}
+
 // Structure for the init command
 #[derive(Parser, Clone)]
 pub struct InitArgs {
     /// Shell type to generate init script for.
     /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
-    #[arg(long, short, value_parser = parse_init_shell)]
+    #[arg(long, short, value_parser = parse_shell)]
     pub shell: SupportedShell,
-}
-
-fn parse_init_shell(s: &str) -> Result<SupportedShell, String> {
-    SupportedShell::from_str(s).ok_or_else(|| {
-        format!(
-            "unsupported shell: '{}'. Possible values: {}",
-            s,
-            SupportedShell::possible_values().join(", ")
-        )
-    })
 }
 
 // Structure for the enable command

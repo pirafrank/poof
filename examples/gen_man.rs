@@ -171,7 +171,7 @@ fn main() -> Result<()> {
     // Append our custom detailed subcommands section
     writeln!(&mut buffer, ".SH \"SUBCOMMANDS\"")?;
 
-    for sub in cmd.get_subcommands() {
+    for sub in cmd.get_subcommands().filter(|s| !s.is_hide_set()) {
         render_subcommand(sub, &mut buffer)?;
     }
 
