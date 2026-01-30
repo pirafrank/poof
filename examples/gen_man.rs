@@ -47,8 +47,14 @@ fn render_subcommand(sub: &Command, buf: &mut Vec<u8>) -> Result<()> {
     }
     writeln!(buf)?;
 
-    // Arguments / Options
-    let args: Vec<_> = sub.get_arguments().collect();
+    // Arguments / Options - filter out global options (verbose, quiet, help)
+    let args: Vec<_> = sub
+        .get_arguments()
+        .filter(|arg| {
+            let id = arg.get_id().as_str();
+            id != "verbose" && id != "quiet" && id != "help"
+        })
+        .collect();
 
     for arg in args {
         writeln!(buf, ".TP")?;
@@ -131,6 +137,23 @@ fn main() -> Result<()> {
     // Generate the main man page structure
     let mut buffer: Vec<u8> = Default::default();
     Man::new(main_cmd).render(&mut buffer)?;
+
+    // Add GLOBAL OPTIONS section that documents options available to all subcommands
+    writeln!(&mut buffer, ".SH \"GLOBAL OPTIONS\"")?;
+    writeln!(
+        &mut buffer,
+        "These options are available for all subcommands:"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(&mut buffer, ".TP")?;
+    writeln!(&mut buffer, "\\fB-v\\fR, \\fB--verbose\\fR")?;
+    writeln!(&mut buffer, "Increase logging verbosity")?;
+    writeln!(&mut buffer, ".TP")?;
+    writeln!(&mut buffer, "\\fB-q\\fR, \\fB--quiet\\fR")?;
+    writeln!(&mut buffer, "Decrease logging verbosity")?;
+    writeln!(&mut buffer, ".TP")?;
+    writeln!(&mut buffer, "\\fB-h\\fR, \\fB--help\\fR")?;
+    writeln!(&mut buffer, "Print help")?;
 
     // Append our custom detailed subcommands section
     writeln!(&mut buffer, ".SH \"SUBCOMMANDS\"")?;
