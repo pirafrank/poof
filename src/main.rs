@@ -143,9 +143,6 @@ fn run() -> Result<()> {
         Cmd::Info => {
             commands::info::show_info();
         }
-        Cmd::Debug => {
-            commands::info::show_info();
-        }
         Cmd::Enable(args) => {
             commands::enable::run(args.shell);
         }

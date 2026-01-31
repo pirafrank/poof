@@ -216,10 +216,6 @@ pub enum Cmd {
 
     /// Show version information
     Version,
-
-    /// Show debug information
-    #[command(hide = true)]
-    Debug,
 }
 
 #[derive(Parser)]

@@ -35,7 +35,7 @@ Mandatory information:
 * **Describe the exact steps which reproduce the problem** in as many details as possible.
 * **Describe the behavior you observed after following the steps** and point out what exactly is the problem with that behavior.
 * **Explain which behavior you expected to see instead and why.**
-* **Include debug information**, which gets printed via `poof debug`
+* **Include debug information**, which gets printed via `poof info`
 * **Include a stack trace (if available)**, possibly with `RUST_BACKTRACE=full` set.
 * **If the problem wasn't triggered by a specific action**, describe what you were doing before the problem happened.
 
@@ -65,7 +65,7 @@ Enhancement suggestions are tracked as GitHub issues. Create an issue on the rep
 * **Include screenshots and animated GIFs** which help demonstrate the suggestion.
 * **Explain why this enhancement would be useful** to most poof users.
 * **Specify which version of poof you're using.**
-* **Specify debug info, and the name and version of your OS.**. Debug info can be obtained by running `poof debug`.
+* **Specify debug info, and the name and version of your OS.**. Debug info can be obtained by running `poof info`.
 
 ### Your First Code Contribution
 

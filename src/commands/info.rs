@@ -12,7 +12,7 @@ pub fn show_info() {
 
     // App info
     output.push_str(&format!(
-        "\n{} - {}\n{}\n",
+        "\n{} - {}\n\n{}\n",
         APP_NAME,
         DESCRIPTION,
         long_version()

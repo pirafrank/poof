@@ -52,7 +52,7 @@ body:
     id: debug-info
     attributes:
       label: Platform info
-      description: Run `poof debug` and paste the output here.
+      description: Run `poof info` and paste the output here.
       render: shell
     validations:
       required: true
