@@ -8,18 +8,26 @@ use std::process::{Command, Stdio};
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
 
+/// Helper to set environment variables from TestFixture on a Command
+fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
+    let (home_key, home_val) = fixture.env_home();
+    cmd.env(home_key, home_val);
+
+    #[cfg(target_os = "linux")]
+    if let Some((cache_key, cache_val)) = fixture.env_cache_home() {
+        cmd.env(cache_key, cache_val);
+    }
+}
+
 fn run_clean_with_input(
     fixture: &TestFixture,
     input: &[u8],
 ) -> Result<std::process::Output, Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("clean");
+    set_test_env(&mut cmd, fixture);
+
     let mut child = cmd
-        .arg("clean")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_CACHE_HOME",
-            fixture.cache_dir.parent().unwrap().to_str().unwrap(),
-        )
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

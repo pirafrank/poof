@@ -8,6 +8,22 @@ use std::process::Command;
 use super::common::fixtures::test_env::TestFixture;
 use super::common::repo_format_validation::*;
 
+/// Helper to set environment variables from TestFixture on a Command
+fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
+    let (home_key, home_val) = fixture.env_home();
+    cmd.env(home_key, home_val);
+
+    #[cfg(target_os = "linux")]
+    {
+        if let Some((data_key, data_val)) = fixture.env_data_home() {
+            cmd.env(data_key, data_val);
+        }
+        if let Some((cache_key, cache_val)) = fixture.env_cache_home() {
+            cmd.env(cache_key, cache_val);
+        }
+    }
+}
+
 #[serial]
 #[test]
 fn test_install_requires_args() -> Result<(), Box<dyn std::error::Error>> {
@@ -58,24 +74,9 @@ fn test_install_creates_directories() -> Result<(), Box<dyn std::error::Error>> 
 
     // Even if install fails (network, etc.), it should attempt to create cache/data dirs
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let _output = cmd
-        .arg("install")
-        .arg("nonexistent/repo")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .env(
-            "XDG_CACHE_HOME",
-            fixture.home_dir.join(".cache").to_str().unwrap(),
-        )
-        .output()?;
+    cmd.arg("install").arg("nonexistent/repo");
+    set_test_env(&mut cmd, &fixture);
+    let _output = cmd.output()?;
 
     // Cache and data directories should exist (created by datadirs functions)
     // Note: They may be created even if install fails

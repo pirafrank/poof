@@ -9,25 +9,27 @@ use std::process::{Command, Stdio};
 use super::common::fixtures::test_env::TestFixture;
 use super::common::repo_format_validation::*;
 
+/// Helper to set environment variables from TestFixture on a Command
+fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
+    let (home_key, home_val) = fixture.env_home();
+    cmd.env(home_key, home_val);
+
+    #[cfg(target_os = "linux")]
+    if let Some((data_key, data_val)) = fixture.env_data_home() {
+        cmd.env(data_key, data_val);
+    }
+}
+
 fn run_uninstall_with_input(
     fixture: &TestFixture,
     args: &[&str],
     input: &[u8],
 ) -> Result<std::process::Output, Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("uninstall").args(args);
+    set_test_env(&mut cmd, fixture);
+
     let mut child = cmd
-        .arg("uninstall")
-        .args(args)
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -261,23 +263,13 @@ fn test_uninstall_with_yes_flag() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use -y flag to skip confirmation
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("uninstall")
+    cmd.arg("uninstall")
         .arg(repo)
         .arg("--version")
         .arg(version)
-        .arg("--yes")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+        .arg("--yes");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     assert!(
         output.status.success(),

@@ -8,6 +8,17 @@ use std::process::{Command, Stdio};
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
 
+/// Helper to set environment variables from TestFixture on a Command
+fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
+    let (home_key, home_val) = fixture.env_home();
+    cmd.env(home_key, home_val);
+
+    #[cfg(target_os = "linux")]
+    if let Some((data_key, data_val)) = fixture.env_data_home() {
+        cmd.env(data_key, data_val);
+    }
+}
+
 #[cfg(not(target_os = "windows"))]
 fn setup_test_symlink_env(
     fixture: &TestFixture,
@@ -27,19 +38,10 @@ fn run_unlink_with_input(
     input: &[u8],
 ) -> Result<std::process::Output, Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("unlink").arg(binary_name);
+    set_test_env(&mut cmd, fixture);
+
     let mut child = cmd
-        .arg("unlink")
-        .arg(binary_name)
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -227,21 +229,9 @@ fn test_unlink_with_yes_flag() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use -y flag to skip confirmation
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("unlink")
-        .arg(symlink_name)
-        .arg("-y")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("unlink").arg(symlink_name).arg("-y");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     assert!(
         output.status.success(),

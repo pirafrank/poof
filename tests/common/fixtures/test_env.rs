@@ -91,6 +91,70 @@ impl TestFixture {
         })
     }
 
+    /// Returns the HOME environment variable tuple for use with Command::env()
+    ///
+    /// # Example
+    /// ```
+    /// let (key, value) = fixture.env_home();
+    /// cmd.env(key, value);
+    /// ```
+    pub fn env_home(&self) -> (&str, &str) {
+        ("HOME", self.home_dir.to_str().unwrap())
+    }
+
+    /// Returns the XDG_DATA_HOME environment variable tuple for use with Command::env()
+    /// On Linux, this points to ~/.local/share
+    /// On macOS, this returns None as XDG_DATA_HOME is not used
+    ///
+    /// # Example
+    /// ```
+    /// if let Some((key, value)) = fixture.env_data_home() {
+    ///     cmd.env(key, value);
+    /// }
+    /// ```
+    #[cfg(target_os = "linux")]
+    pub fn env_data_home(&self) -> Option<(&str, String)> {
+        Some((
+            "XDG_DATA_HOME",
+            self.home_dir
+                .join(".local")
+                .join("share")
+                .to_str()
+                .unwrap()
+                .to_string(),
+        ))
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn env_data_home(&self) -> Option<(&str, String)> {
+        // macOS doesn't use XDG_DATA_HOME
+        None
+    }
+
+    /// Returns the XDG_CACHE_HOME environment variable tuple for use with Command::env()
+    /// On Linux, this points to ~/.cache
+    /// On macOS, this returns None as XDG_CACHE_HOME is not used
+    ///
+    /// # Example
+    /// ```
+    /// if let Some((key, value)) = fixture.env_cache_home() {
+    ///     cmd.env(key, value);
+    /// }
+    /// ```
+    #[cfg(target_os = "linux")]
+    pub fn env_cache_home(&self) -> Option<(&str, String)> {
+        Some((
+            "XDG_CACHE_HOME",
+            self.home_dir.join(".cache").to_str().unwrap().to_string(),
+        ))
+    }
+
+    #[cfg(target_os = "macos")]
+    pub fn env_cache_home(&self) -> Option<(&str, String)> {
+        // macOS doesn't use XDG_CACHE_HOME
+        None
+    }
+
     /// Create a fake binary installation for testing
     pub fn create_fake_installation(
         &self,

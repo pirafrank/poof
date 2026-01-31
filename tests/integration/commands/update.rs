@@ -9,6 +9,17 @@ use super::common::fixtures::mock_github::MockGitHub;
 use super::common::fixtures::test_env::TestFixture;
 use super::common::repo_format_validation::*;
 
+/// Helper to set environment variables from TestFixture on a Command
+fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
+    let (home_key, home_val) = fixture.env_home();
+    cmd.env(home_key, home_val);
+
+    #[cfg(target_os = "linux")]
+    if let Some((data_key, data_val)) = fixture.env_data_home() {
+        cmd.env(data_key, data_val);
+    }
+}
+
 #[serial]
 #[test]
 fn test_update_requires_args() -> Result<(), Box<dyn std::error::Error>> {
@@ -240,22 +251,8 @@ fn test_update_with_nonexistent_repo() -> Result<(), Box<dyn std::error::Error>>
 
     // Try to update a repo that doesn't exist
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    cmd.arg("update")
-        .arg("nonexistent/repo")
-        .env("HOME", fixture.home_dir.to_str().unwrap());
-
-    #[cfg(target_os = "linux")]
-    {
-        cmd.env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        );
-    }
+    cmd.arg("update").arg("nonexistent/repo");
+    set_test_env(&mut cmd, &fixture);
 
     let output = cmd.output()?;
 
@@ -279,22 +276,8 @@ fn test_update_with_installed_repo() -> Result<(), Box<dyn std::error::Error>> {
 
     // Try to update (will fail on network, but should handle gracefully)
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    cmd.arg("update")
-        .arg(repo)
-        .env("HOME", fixture.home_dir.to_str().unwrap());
-
-    #[cfg(target_os = "linux")]
-    {
-        cmd.env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        );
-    }
+    cmd.arg("update").arg(repo);
+    set_test_env(&mut cmd, &fixture);
 
     let output = cmd.output()?;
 
@@ -315,22 +298,8 @@ fn test_update_all_with_installations() -> Result<(), Box<dyn std::error::Error>
 
     // Try to update all (will fail on network, but should handle gracefully)
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    cmd.arg("update")
-        .arg("--all")
-        .env("HOME", fixture.home_dir.to_str().unwrap());
-
-    #[cfg(target_os = "linux")]
-    {
-        cmd.env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        );
-    }
+    cmd.arg("update").arg("--all");
+    set_test_env(&mut cmd, &fixture);
 
     let output = cmd.output()?;
 
@@ -427,23 +396,8 @@ fn test_update_sets_new_version_as_default() -> Result<(), Box<dyn std::error::E
     // Step 3: Set the new version as default (this is what the update command now does after installation)
     // We use the "use" command to simulate this behavior, which is what update internally calls
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    cmd.arg("use")
-        .arg(repo)
-        .arg(new_version)
-        .env("HOME", fixture.home_dir.to_str().unwrap());
-
-    #[cfg(target_os = "linux")]
-    {
-        cmd.env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        );
-    }
+    cmd.arg("use").arg(repo).arg(new_version);
+    set_test_env(&mut cmd, &fixture);
 
     let output = cmd.output()?;
 
