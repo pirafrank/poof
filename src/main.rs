@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use log::{debug, error, info};
@@ -12,6 +10,7 @@ mod core;
 mod files;
 mod github;
 mod models;
+mod output;
 mod utils;
 
 // Use modules locally
@@ -37,9 +36,26 @@ fn run() -> Result<()> {
     // Set up logging
     env_logger::Builder::new()
         .filter_level(cli.verbose.log_level_filter())
+        .parse_default_env() // This allows RUST_LOG to override
         .format_timestamp(None)
         .format_module_path(false)
         .format_target(false)
+        .format(|buf, record| {
+            use log::Level;
+            use std::io::Write;
+
+            // info!() shows just the message, others show colored level prefix
+            match record.level() {
+                Level::Info => writeln!(buf, "{}", record.args()),
+                _ => {
+                    let level_style = buf.default_level_style(record.level());
+                    write!(buf, "{}", level_style.render())?;
+                    write!(buf, "[{}]", record.level())?;
+                    write!(buf, "{}", level_style.render_reset())?;
+                    writeln!(buf, " {}", record.args())
+                }
+            }
+        })
         .init();
 
     // Execute different logic based on command
@@ -97,21 +113,16 @@ fn run() -> Result<()> {
             if list.is_empty() {
                 info!("No installed binaries found.");
             } else {
-                let mut stdout = std::io::stdout().lock();
-                writeln!(stdout).unwrap();
-                writeln!(stdout, "{:<40} {:<15}", "Repository", "Versions").unwrap();
-                writeln!(stdout, "{:<40} {:<15}", "----------", "--------").unwrap();
+                output!("");
+                output!("{:<40}\t{}", "Repository", "Versions");
+                output!("{:<40}\t{}", "----------", "--------");
                 for asset in list {
-                    writeln!(
-                        stdout,
-                        "{:<40} {:?}",
+                    output!(
+                        "{:<40}\t{}",
                         asset.get_name(),
-                        asset.get_versions().to_string_vec()
-                    )
-                    .unwrap();
+                        asset.get_versions().to_string_vec().join(", ")
+                    );
                 }
-                writeln!(stdout).unwrap();
-                drop(stdout); // explicitly release the lock
             }
         }
         Cmd::Which(args) => {
@@ -127,7 +138,7 @@ fn run() -> Result<()> {
             commands::check::check_if_bin_in_path();
         }
         Cmd::Version => {
-            println!("{}", crate::core::platform_info::long_version());
+            output!("{}", crate::core::platform_info::long_version());
         }
         Cmd::Info => {
             commands::info::show_info();
@@ -157,17 +168,15 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
-    // call the main logic function
-    let result = run();
-
-    // log the error explicitly
-    if let Err(e) = &result {
-        error!("Execution failed: {:?}", e);
+fn main() {
+    if let Err(e) = run() {
+        if log::log_enabled!(log::Level::Debug) {
+            // Show full chain in debug mode
+            error!("{:?}", e);
+        } else {
+            // Show only top-level error in normal mode
+            error!("{}", e);
+        }
+        std::process::exit(1);
     }
-
-    // return the result
-    // if Ok(()) -> exit code 0
-    // if Err(e) -> anyhow's Termination impl prints the error and exits with code 1
-    result
 }

@@ -146,24 +146,24 @@ fn test_what_single_version_single_binary() -> Result<(), Box<dyn std::error::Er
     assert!(
         output.status.success(),
         "Command should succeed: {}",
-        String::from_utf8_lossy(&output.stderr)
+        String::from_utf8_lossy(&output.stdout)
     );
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stderr.contains("testuser/mytool"),
+        stdout.contains("testuser/mytool"),
         "Output should show slug: {}",
-        stderr
+        stdout
     );
     assert!(
-        stderr.contains("1.0.0"),
+        stdout.contains("1.0.0"),
         "Output should show version: {}",
-        stderr
+        stdout
     );
     assert!(
-        stderr.contains("mytool"),
+        stdout.contains("mytool"),
         "Output should list the binary: {}",
-        stderr
+        stdout
     );
 
     Ok(())
@@ -194,19 +194,19 @@ fn test_what_multiple_versions_latest_selected() -> Result<(), Box<dyn std::erro
     assert!(
         output.status.success(),
         "Command should succeed: {}",
-        String::from_utf8_lossy(&output.stderr)
+        String::from_utf8_lossy(&output.stdout)
     );
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stderr.contains("2.1.0"),
+        stdout.contains("2.1.0"),
         "Output should show latest version (2.1.0): {}",
-        stderr
+        stdout
     );
     assert!(
-        !stderr.contains("1.0.0") && !stderr.contains("1.5.0") && !stderr.contains("2.0.0"),
+        !stdout.contains("1.0.0") && !stdout.contains("1.5.0") && !stdout.contains("2.0.0"),
         "Output should not show older versions: {}",
-        stderr
+        stdout
     );
 
     Ok(())
@@ -248,24 +248,24 @@ fn test_what_latest_version_multiple_binaries() -> Result<(), Box<dyn std::error
     assert!(
         output.status.success(),
         "Command should succeed: {}",
-        String::from_utf8_lossy(&output.stderr)
+        String::from_utf8_lossy(&output.stdout)
     );
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stderr.contains("multibin"),
+        stdout.contains("multibin"),
         "Output should list first binary: {}",
-        stderr
+        stdout
     );
     assert!(
-        stderr.contains("tool1"),
+        stdout.contains("tool1"),
         "Output should list second binary: {}",
-        stderr
+        stdout
     );
     assert!(
-        stderr.contains("tool2"),
+        stdout.contains("tool2"),
         "Output should list third binary: {}",
-        stderr
+        stdout
     );
 
     Ok(())
@@ -297,14 +297,14 @@ fn test_what_semantic_version_sorting() -> Result<(), Box<dyn std::error::Error>
     assert!(
         output.status.success(),
         "Command should succeed: {}",
-        String::from_utf8_lossy(&output.stderr)
+        String::from_utf8_lossy(&output.stdout)
     );
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stderr.contains("2.0.0"),
+        stdout.contains("2.0.0"),
         "Output should show latest version (2.0.0), not 1.10.0 or other versions: {}",
-        stderr
+        stdout
     );
 
     Ok(())
@@ -335,14 +335,14 @@ fn test_what_prerelease_versions() -> Result<(), Box<dyn std::error::Error>> {
     assert!(
         output.status.success(),
         "Command should succeed: {}",
-        String::from_utf8_lossy(&output.stderr)
+        String::from_utf8_lossy(&output.stdout)
     );
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        stderr.contains("2.0.0") && !stderr.contains("alpha") && !stderr.contains("beta"),
+        stdout.contains("2.0.0") && !stdout.contains("alpha") && !stdout.contains("beta"),
         "Output should show stable 2.0.0, not prerelease versions: {}",
-        stderr
+        stdout
     );
 
     Ok(())

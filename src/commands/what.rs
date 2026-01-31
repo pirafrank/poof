@@ -1,7 +1,7 @@
 //! Main file handling 'what' command
 
 use anyhow::{bail, Context, Result};
-use log::{error, info};
+use log::error;
 use std::fs;
 
 use crate::cli::WhatArgs;
@@ -9,6 +9,7 @@ use crate::files::datadirs;
 use crate::files::filesys;
 use crate::files::utils::find_similar_repo;
 use crate::models::slug::Slug;
+use crate::output;
 use crate::utils::semver::SemverSort;
 
 pub fn run_what(args: &WhatArgs) -> Result<()> {
@@ -84,10 +85,10 @@ pub fn run_what(args: &WhatArgs) -> Result<()> {
     }
 
     // Output the results
-    info!("{} (version {}) provides:", slug, latest_version);
+    output!("{} (version {}) provides:", slug, latest_version);
     for binary_path in binaries {
         if let Some(binary_name) = binary_path.file_name() {
-            info!("- {}", binary_name.to_string_lossy());
+            output!("- {}", binary_name.to_string_lossy());
         }
     }
 

@@ -21,7 +21,7 @@ pub fn long_version() -> &'static str {
     let linking_type = "dynamically linked";
     Box::leak(
         format!(
-            "\nVersion   : {}\nCommit    : {}\nBuild Date: {}\nBuilt with: {} ({}){}",
+            "Version   : {}\nCommit    : {}\nBuild Date: {}\nBuilt with: {} ({}){}",
             VERSION,
             COMMIT,
             BUILD_DATE,

@@ -45,10 +45,17 @@ fn test_list_with_no_installations() -> Result<(), Box<dyn std::error::Error>> {
         output.status.success(),
         "List command should succeed even with no installations"
     );
+
+    // Empty list shows diagnostic message on stderr, not stdout
     assert!(
-        stdout.contains("No installed binaries found") || stdout.is_empty(),
-        "Should indicate no binaries found. stdout: {}, stderr: {}",
-        stdout,
+        stdout.is_empty(),
+        "stdout should be empty when no installations found: {}",
+        stdout
+    );
+
+    assert!(
+        stderr.contains("No installed binaries found"),
+        "stderr should indicate no binaries found: {}",
         stderr
     );
 
@@ -121,6 +128,13 @@ fn test_list_with_multiple_installations() -> Result<(), Box<dyn std::error::Err
         stdout
     );
 
+    // Verify TSV format
+    assert!(
+        stdout.contains("\t"),
+        "Output should be tab-separated: {}",
+        stdout
+    );
+
     Ok(())
 }
 
@@ -138,10 +152,33 @@ fn test_list_output_format() -> Result<(), Box<dyn std::error::Error>> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Check for table headers
+    // Check for TSV format: repo\tversions
     assert!(
-        stdout.contains("Repository") || stdout.contains("Versions"),
-        "Output should contain table headers: {}",
+        stdout.contains("\t"),
+        "Output should be tab-separated: {}",
+        stdout
+    );
+
+    // Should contain the repo and version
+    assert!(
+        stdout.contains("test/repo"),
+        "Output should contain repository: {}",
+        stdout
+    );
+
+    assert!(
+        stdout.contains("1.0.0"),
+        "Output should contain version: {}",
+        stdout
+    );
+
+    // Check it follows TSV format (one line with tab separator)
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert!(
+        lines.iter().any(|line| line.contains("test/repo")
+            && line.contains("\t")
+            && line.contains("1.0.0")),
+        "Should have a line with repo, tab, and version: {}",
         stdout
     );
 
