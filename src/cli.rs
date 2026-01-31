@@ -30,7 +30,7 @@ fn validate_binary_name(s: &str) -> Result<String, String> {
         Ok(s.to_string())
     } else {
         Err(format!(
-            "Binary name must contain only letters, numbers, and hyphens, got: {}",
+            "Binary name must contain only letters, numbers, underscores, and hyphens, got: {}",
             s
         ))
     }

@@ -45,10 +45,15 @@ fn run_unlink_with_input(
         .stderr(Stdio::piped())
         .spawn()?;
 
+    // Fix: Ignore broken pipe errors when the code quits before
+    // reading from stdin, e.g. when the target is not a symlink.
     {
         let mut stdin = child.stdin.take().expect("Cannot open stdin");
-        stdin.write_all(input)?;
-        stdin.flush()?;
+        if let Err(e) = stdin.write_all(input).and_then(|_| stdin.flush()) {
+            if e.kind() != std::io::ErrorKind::BrokenPipe {
+                return Err(e.into());
+            }
+        }
     }
 
     Ok(child.wait_with_output()?)
