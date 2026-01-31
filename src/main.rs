@@ -114,6 +114,9 @@ fn run() -> Result<()> {
                 drop(stdout); // explicitly release the lock
             }
         }
+        Cmd::Which(args) => {
+            commands::which::run_which(args)?;
+        }
         Cmd::Update(args) => {
             commands::update::process_update(args)?; // we use ? here, it returns a Result
         }
