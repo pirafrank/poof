@@ -65,8 +65,8 @@ fn test_install_creates_directories() -> Result<(), Box<dyn std::error::Error>> 
 
     // Cache and data directories should exist (created by datadirs functions)
     // Note: They may be created even if install fails
-    let _ = fixture.cache_dir;
-    let _ = fixture.data_dir;
+    assert!(fixture.cache_dir.exists(), "Cache directory should exist");
+    assert!(fixture.data_dir.exists(), "Data directory should exist");
 
     Ok(())
 }
@@ -209,7 +209,7 @@ fn test_install_with_poof_managed_binary_different_slug() -> Result<(), Box<dyn 
 
     // Create binary for second installation
     let binary_path2 = install_path2.join(binary_name);
-    fs::write(&binary_path2, b"#!/bin/sh\necho 'user2 tool'")?;
+    fixture.create_executable_with_perms(&binary_path2, b"#!/bin/sh\necho 'user2 tool'")?;
 
     // Verify both binaries exist in their respective install directories
     assert!(install_path1.exists(), "First installation should exist");

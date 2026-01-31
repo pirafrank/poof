@@ -55,7 +55,7 @@ The `TestFixture` struct in `tests/common/fixtures/test_env.rs` provides:
 
 All tests use temporary file systems and never touch the actual file system.
 
-Handling of temporary directories and environment variables in test environment is shown below.
+Test environment's handling of temporary directories and environment variables is shown below
 
 ```mermaid
 graph LR

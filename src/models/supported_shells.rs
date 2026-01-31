@@ -55,8 +55,8 @@ impl FromStr for SupportedShell {
 
 impl SupportedShell {
     /// Get all possible shell values
-    pub fn possible_values() -> Vec<&'static str> {
-        vec![
+    pub fn possible_values() -> &'static [&'static str] {
+        &[
             "bash",
             "elvish",
             "fish",

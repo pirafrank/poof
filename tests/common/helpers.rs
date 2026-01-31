@@ -11,13 +11,14 @@ pub fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
     let (home_key, home_val) = fixture.env_home();
     cmd.env(home_key, home_val);
 
-    {
-        if let Some((data_key, data_val)) = fixture.env_data_home() {
-            cmd.env(data_key, data_val);
-        }
-        if let Some((cache_key, cache_val)) = fixture.env_cache_home() {
-            cmd.env(cache_key, cache_val);
-        }
+    // these are automatically set by the TestFixture
+    // and support for Linux and macOS is handled by the TestFixture.
+    if let Some((data_key, data_val)) = fixture.env_data_home() {
+        cmd.env(data_key, data_val);
+    }
+
+    if let Some((cache_key, cache_val)) = fixture.env_cache_home() {
+        cmd.env(cache_key, cache_val);
     }
 }
 

@@ -98,8 +98,8 @@ impl TestFixture {
     /// let (key, value) = fixture.env_home();
     /// cmd.env(key, value);
     /// ```
-    pub fn env_home(&self) -> (&str, &str) {
-        ("HOME", self.home_dir.to_str().unwrap())
+    pub fn env_home(&self) -> (&str, String) {
+        ("HOME", self.home_dir.to_str().unwrap().to_string())
     }
 
     /// Returns the XDG_DATA_HOME environment variable tuple for use with Command::env()

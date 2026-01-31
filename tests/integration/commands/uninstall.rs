@@ -310,7 +310,7 @@ fn test_uninstall_cleans_broken_symlinks() -> Result<(), Box<dyn std::error::Err
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.to_lowercase().contains("successfully removed"),
-        "Output should mention cleaning up broken symlinks: {}",
+        "Output should confirm successful removal: {}",
         stderr
     );
 

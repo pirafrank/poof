@@ -55,7 +55,7 @@ fmt:
 fmt-check:
   cargo fmt -- --check
 
-# Run the linter on all source files (exclude dependencies)
+# Run the linter on default targets (exclude dependencies)
 lint:
   cargo clippy -- --no-deps -D warnings
 
