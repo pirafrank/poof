@@ -125,20 +125,20 @@ fn test_which_with_valid_symlink() -> Result<(), Box<dyn std::error::Error>> {
 
     assert!(output.status.success(), "Command should succeed");
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
 
-    // Should show the slug (username/reponame)
+    // Should show the slug (username/reponame) in format "binary: repo version"
     assert!(
-        stderr.contains("someuser/somerepo"),
+        stdout.contains("someuser/somerepo"),
         "Output should contain the repository slug: {}",
-        stderr
+        stdout
     );
 
     // Should also show version information
     assert!(
-        stderr.contains("2.5.3") || stderr.contains("version"),
+        stdout.contains("2.5.3"),
         "Output should contain version information: {}",
-        stderr
+        stdout
     );
 
     Ok(())
@@ -292,31 +292,24 @@ fn test_which_output_format() -> Result<(), Box<dyn std::error::Error>> {
 
     assert!(output.status.success(), "Command should succeed");
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
-
-    // Check output format matches expected pattern
-    assert!(
-        stderr.contains("is provided by"),
-        "Output should contain 'is provided by': {}",
-        stderr
-    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
 
     assert!(
-        stderr.contains(binary_name),
+        stdout.contains(binary_name),
         "Output should contain binary name: {}",
-        stderr
+        stdout
     );
 
     assert!(
-        stderr.contains("user/repo"),
+        stdout.contains("user/repo"),
         "Output should contain the repository slug: {}",
-        stderr
+        stdout
     );
 
     assert!(
-        stderr.contains("version") || stderr.contains("1.0.1"),
+        stdout.contains("1.0.1"),
         "Output should contain version information: {}",
-        stderr
+        stdout
     );
 
     Ok(())

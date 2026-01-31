@@ -1,12 +1,13 @@
 //! Main file handling 'which' command
 
 use anyhow::{bail, Context, Result};
-use log::{debug, info};
+use log::{debug, error};
 use std::path::Path;
 
 use crate::cli::WhichArgs;
 use crate::files::datadirs;
 use crate::models::slug::Slug;
+use crate::output;
 
 pub fn run_which(args: &WhichArgs) -> Result<()> {
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory path")?;
@@ -14,7 +15,7 @@ pub fn run_which(args: &WhichArgs) -> Result<()> {
 
     // Check if binary exists
     if !binary_path.exists() {
-        info!("'{}' not found in poof's bin directory.", args.binary_name);
+        error!("'{}' not found in poof's bin directory.", args.binary_name);
         return Ok(());
     }
 
@@ -22,7 +23,7 @@ pub fn run_which(args: &WhichArgs) -> Result<()> {
     let symlink_target = match binary_path.read_link() {
         Ok(target) => target,
         Err(_) => {
-            info!(
+            error!(
                 "'{}' exists in poof's bin directory but is not a symlink.\n\
                 This is likely a foreign binary not managed by poof. Please remove it and try again.",
                 args.binary_name
@@ -39,10 +40,8 @@ pub fn run_which(args: &WhichArgs) -> Result<()> {
         )
     })?;
 
-    info!(
-        "{} is provided by '{}' version {}.",
-        args.binary_name, slug, version
-    );
+    output!("{} is provided by:", args.binary_name);
+    output!("{} {}", slug, version);
 
     Ok(())
 }
