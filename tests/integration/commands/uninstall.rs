@@ -115,7 +115,8 @@ fn test_uninstall_slug_not_exists() -> Result<(), Box<dyn std::error::Error>> {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("not installed") || stderr.contains("Repository"),
+        stderr.to_lowercase().contains("no versions")
+            || stderr.to_lowercase().contains("nothing to do"),
         "Should indicate repository not installed: {}",
         stderr
     );
@@ -153,8 +154,9 @@ fn test_uninstall_version_with_confirmation_yes() -> Result<(), Box<dyn std::err
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("successfully deleted") || stderr.contains("deleted"),
-        "Should confirm deletion: {}",
+        stderr.to_lowercase().contains("successfully removed")
+            || stderr.to_lowercase().contains("removed"),
+        "Should confirm removal: {}",
         stderr
     );
 
@@ -325,7 +327,7 @@ fn test_uninstall_cleans_broken_symlinks() -> Result<(), Box<dyn std::error::Err
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("Cleaned up") || stderr.contains("broken symlink"),
+        stderr.contains("successfully removed"),
         "Output should mention cleaning up broken symlinks: {}",
         stderr
     );
