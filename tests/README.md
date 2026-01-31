@@ -48,11 +48,56 @@ These tests cover general argument parsing and handling:
 ### TestFixture
 
 The `TestFixture` struct in `tests/common/fixtures/test_env.rs` provides:
+
 - Temporary directory setup
 - Fake installation creation
 - Automatic cleanup
 
 All tests use temporary file systems and never touch the actual file system.
+
+Handling of temporary directories and environment variables in test environment is shown below.
+
+```mermaid
+graph LR
+    TestFixture[TestFixture] -->|provides| EnvVars[Environment Variables]
+    EnvVars -->|HOME| HomeDir[fixture.home_dir]
+    EnvVars -->|XDG_DATA_HOME| DataHome[.local/share]
+    EnvVars -->|XDG_CACHE_HOME| CacheHome[.cache]
+    TestCommands[Test Commands] -->|use| EnvVars
+```
+
+### Shared Helper Functions
+
+The `tests/common/helpers.rs` module provides shared utility functions used across integration tests:
+
+#### `set_test_env(cmd: &mut Command, fixture: &TestFixture)`
+
+Configures a `Command` with isolated environment variables from a `TestFixture`. This ensures tests run in a temporary environment without touching the actual file system.
+
+**Sets the following environment variables:**
+- `HOME` - Points to the fixture's temporary home directory
+- `XDG_DATA_HOME` - Points to `.local/share` (Linux only)
+- `XDG_CACHE_HOME` - Points to `.cache` (Linux only)
+
+**Usage example:**
+
+```rust
+use super::common::fixtures::test_env::TestFixture;
+use super::common::helpers::set_test_env;
+
+let fixture = TestFixture::new()?;
+let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+cmd.arg("list");
+set_test_env(&mut cmd, &fixture);
+let output = cmd.output()?;
+```
+
+This helper is used across all command integration tests to ensure proper environment isolation.
+
+#### Other Helper Functions
+
+- `run_command(args: &[&str])` - Executes a command and returns `(success, stdout, stderr)`
+- `assert_contains_all(text: &str, substrings: &[&str])` - Asserts that text contains all specified substrings
 
 ### Repository Format Validation
 

@@ -7,17 +7,7 @@ use std::process::{Command, Stdio};
 
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
-
-/// Helper to set environment variables from TestFixture on a Command
-fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
-    let (home_key, home_val) = fixture.env_home();
-    cmd.env(home_key, home_val);
-
-    #[cfg(target_os = "linux")]
-    if let Some((cache_key, cache_val)) = fixture.env_cache_home() {
-        cmd.env(cache_key, cache_val);
-    }
-}
+use super::common::helpers::set_test_env;
 
 fn run_clean_with_input(
     fixture: &TestFixture,

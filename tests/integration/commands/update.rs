@@ -7,18 +7,8 @@ use std::process::Command;
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::mock_github::MockGitHub;
 use super::common::fixtures::test_env::TestFixture;
+use super::common::helpers::set_test_env;
 use super::common::repo_format_validation::*;
-
-/// Helper to set environment variables from TestFixture on a Command
-fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
-    let (home_key, home_val) = fixture.env_home();
-    cmd.env(home_key, home_val);
-
-    #[cfg(target_os = "linux")]
-    if let Some((data_key, data_val)) = fixture.env_data_home() {
-        cmd.env(data_key, data_val);
-    }
-}
 
 #[serial]
 #[test]
