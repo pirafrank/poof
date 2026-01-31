@@ -277,7 +277,7 @@ fn test_tar_file_too_small_for_offset_magic() {
     let file_path = temp_dir.path().join("tiny.tar");
     let mut file = File::create(&file_path).unwrap();
     // Write less than TAR_MAGIC_OFFSET bytes
-    file.write_all(&vec![0u8; 100]).unwrap();
+    file.write_all(&[0u8; 100]).unwrap();
 
     let format = get_validated_archive_format(&file_path);
     assert!(format.is_err());

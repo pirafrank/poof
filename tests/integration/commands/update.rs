@@ -144,7 +144,7 @@ fn test_update_self_checks_for_updates() -> Result<(), Box<dyn std::error::Error
 
     // Should indicate it's up-to-date (message goes to stderr via logging)
     assert!(
-        stderr.contains("up-to-date") || stderr.contains(&current_version),
+        stderr.contains("up-to-date") || stderr.contains(current_version),
         "Should indicate up-to-date status. stdout: {}, stderr: {}",
         stdout,
         stderr

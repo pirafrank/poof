@@ -368,7 +368,7 @@ fn test_install_clean_scenario_no_conflicts() -> Result<(), Box<dyn std::error::
         "Symlink should point to the binary"
     );
     assert!(
-        symlink_target.to_string_lossy().contains(&version),
+        symlink_target.to_string_lossy().contains(version),
         "Symlink target should contain version"
     );
 

@@ -455,7 +455,7 @@ mod tests {
 
     #[test]
     fn test_raw_version_ordering() {
-        let mut versions = vec![
+        let mut versions = [
             RawVersion::new("r35".to_string()),
             RawVersion::new("r4".to_string()),
             RawVersion::new("v1.0.0".to_string()),
