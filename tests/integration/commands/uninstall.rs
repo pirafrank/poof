@@ -7,6 +7,7 @@ use std::process::{Command, Stdio};
 
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
+use super::common::helpers::set_test_env;
 use super::common::repo_format_validation::*;
 
 fn run_uninstall_with_input(
@@ -15,19 +16,10 @@ fn run_uninstall_with_input(
     input: &[u8],
 ) -> Result<std::process::Output, Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("uninstall").args(args);
+    set_test_env(&mut cmd, fixture);
+
     let mut child = cmd
-        .arg("uninstall")
-        .args(args)
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -261,23 +253,13 @@ fn test_uninstall_with_yes_flag() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use -y flag to skip confirmation
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("uninstall")
+    cmd.arg("uninstall")
         .arg(repo)
         .arg("--version")
         .arg(version)
-        .arg("--yes")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+        .arg("--yes");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     assert!(
         output.status.success(),
@@ -327,8 +309,8 @@ fn test_uninstall_cleans_broken_symlinks() -> Result<(), Box<dyn std::error::Err
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("successfully removed"),
-        "Output should mention cleaning up broken symlinks: {}",
+        stderr.to_lowercase().contains("successfully removed"),
+        "Output should confirm successful removal: {}",
         stderr
     );
 

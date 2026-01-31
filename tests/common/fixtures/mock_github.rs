@@ -132,7 +132,7 @@ impl MockGitHub {
             version,
             vec![MockAsset {
                 name: asset_name,
-                download_url: download_url,
+                download_url,
                 content_type: "application/octet-stream".to_string(),
             }],
         )

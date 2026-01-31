@@ -6,6 +6,7 @@ use std::process::Command;
 
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
+use super::common::helpers::set_test_env;
 
 #[serial]
 #[test]
@@ -15,19 +16,9 @@ fn test_list_with_non_existing_data_dir() -> Result<(), Box<dyn std::error::Erro
     // Do NOT create data dir
 
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("list")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("list");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     assert!(
         output.status.success(),
@@ -43,19 +34,9 @@ fn test_list_with_no_installations() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
 
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("list")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("list");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -85,19 +66,9 @@ fn test_list_with_single_installation() -> Result<(), Box<dyn std::error::Error>
     fixture.create_fake_installation(repo, version)?;
 
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("list")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("list");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -127,19 +98,9 @@ fn test_list_with_multiple_installations() -> Result<(), Box<dyn std::error::Err
     fixture.create_fake_installation("user2/repo2", "1.5.0")?;
 
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("list")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("list");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -171,19 +132,9 @@ fn test_list_output_format() -> Result<(), Box<dyn std::error::Error>> {
     fixture.create_fake_installation("test/repo", "1.0.0")?;
 
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("list")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("list");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -208,19 +159,9 @@ fn test_list_with_corrupted_directory_structure() -> Result<(), Box<dyn std::err
     std::fs::write(&bad_path, b"not a directory")?;
 
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("list")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("list");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     // List should handle this gracefully (skip or error appropriately)
     // The exact behavior depends on implementation

@@ -7,19 +7,17 @@ use std::process::{Command, Stdio};
 
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
+use super::common::helpers::set_test_env;
 
 fn run_clean_with_input(
     fixture: &TestFixture,
     input: &[u8],
 ) -> Result<std::process::Output, Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("clean");
+    set_test_env(&mut cmd, fixture);
+
     let mut child = cmd
-        .arg("clean")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_CACHE_HOME",
-            fixture.cache_dir.parent().unwrap().to_str().unwrap(),
-        )
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

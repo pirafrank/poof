@@ -2,6 +2,26 @@
 //! This module provides helper functions for testing
 //! such as running commands and checking strings.
 
+use super::fixtures::test_env::TestFixture;
+use std::process::Command;
+
+/// Helper to set environment variables from TestFixture on a Command
+/// This ensures tests run in an isolated environment without touching the real filesystem
+pub fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
+    let (home_key, home_val) = fixture.env_home();
+    cmd.env(home_key, home_val);
+
+    // these are automatically set by the TestFixture
+    // and support for Linux and macOS is handled by the TestFixture.
+    if let Some((data_key, data_val)) = fixture.env_data_home() {
+        cmd.env(data_key, data_val);
+    }
+
+    if let Some((cache_key, cache_val)) = fixture.env_cache_home() {
+        cmd.env(cache_key, cache_val);
+    }
+}
+
 /// Helper function to run a command and capture output
 #[allow(dead_code)]
 pub fn run_command(args: &[&str]) -> Result<(bool, String, String), Box<dyn std::error::Error>> {

@@ -6,6 +6,7 @@ use std::process::Command;
 
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
+use super::common::helpers::set_test_env;
 use super::common::repo_format_validation::*;
 
 #[serial]
@@ -58,29 +59,14 @@ fn test_install_creates_directories() -> Result<(), Box<dyn std::error::Error>> 
 
     // Even if install fails (network, etc.), it should attempt to create cache/data dirs
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let _output = cmd
-        .arg("install")
-        .arg("nonexistent/repo")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .env(
-            "XDG_CACHE_HOME",
-            fixture.home_dir.join(".cache").to_str().unwrap(),
-        )
-        .output()?;
+    cmd.arg("install").arg("nonexistent/repo");
+    set_test_env(&mut cmd, &fixture);
+    let _output = cmd.output()?;
 
     // Cache and data directories should exist (created by datadirs functions)
     // Note: They may be created even if install fails
-    let _ = fixture.cache_dir;
-    let _ = fixture.data_dir;
+    assert!(fixture.cache_dir.exists(), "Cache directory should exist");
+    assert!(fixture.data_dir.exists(), "Data directory should exist");
 
     Ok(())
 }
@@ -223,7 +209,7 @@ fn test_install_with_poof_managed_binary_different_slug() -> Result<(), Box<dyn 
 
     // Create binary for second installation
     let binary_path2 = install_path2.join(binary_name);
-    fs::write(&binary_path2, b"#!/bin/sh\necho 'user2 tool'")?;
+    fixture.create_executable_with_perms(&binary_path2, b"#!/bin/sh\necho 'user2 tool'")?;
 
     // Verify both binaries exist in their respective install directories
     assert!(install_path1.exists(), "First installation should exist");
@@ -382,7 +368,7 @@ fn test_install_clean_scenario_no_conflicts() -> Result<(), Box<dyn std::error::
         "Symlink should point to the binary"
     );
     assert!(
-        symlink_target.to_string_lossy().contains(&version),
+        symlink_target.to_string_lossy().contains(version),
         "Symlink target should contain version"
     );
 

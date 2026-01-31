@@ -55,19 +55,23 @@ fmt:
 fmt-check:
   cargo fmt -- --check
 
-# Run the linter on all files (exclude dependencies)
+# Run the linter on default targets (exclude dependencies)
 lint:
   cargo clippy -- --no-deps -D warnings
+
+# Run the linter on all targets (exclude dependencies)
+lint-all:
+  cargo clippy --all-targets -- --no-deps -D warnings
 
 # Auto-fix clippy warnings
 fix:
   cargo clippy -- --no-deps -D warnings --fix --allow-dirty
 
 # Run the formatter and linter on all source files
-better: fmt lint
+better: fmt lint-all
 
 # Run pre-commit checks on staged files
-pre-commit: fmt-check lint
+pre-commit: fmt-check lint-all
 
 # Run pre-push checks
 pre-push: check test

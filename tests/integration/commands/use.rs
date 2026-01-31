@@ -8,6 +8,7 @@ use std::process::Command;
 
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
+use super::common::helpers::set_test_env;
 
 #[test]
 fn test_use_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,21 +38,9 @@ fn test_use_requires_installation() -> Result<(), Box<dyn std::error::Error>> {
 
     // Try to use a version that doesn't exist
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("use")
-        .arg("nonexistent/repo")
-        .arg("1.0.0")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("use").arg("nonexistent/repo").arg("1.0.0");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     // Should fail because repository is not installed
     assert!(
@@ -88,21 +77,9 @@ fn test_use_with_nonexistent_version() -> Result<(), Box<dyn std::error::Error>>
     );
 
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("use")
-        .arg(repo)
-        .arg("999.999.999")
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("use").arg(repo).arg("999.999.999");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     assert!(
         !output.status.success(),
@@ -147,21 +124,9 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use version 2.0.0 as default
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("use")
-        .arg(repo)
-        .arg(version2)
-        .env("HOME", fixture.home_dir.to_str().unwrap())
-        .env(
-            "XDG_DATA_HOME",
-            fixture
-                .home_dir
-                .join(".local")
-                .join("share")
-                .to_str()
-                .unwrap(),
-        )
-        .output()?;
+    cmd.arg("use").arg(repo).arg(version2);
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     // Check if command succeeded or if it failed with expected error
     let stderr = String::from_utf8_lossy(&output.stderr);
