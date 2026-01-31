@@ -11,7 +11,6 @@ pub fn set_test_env(cmd: &mut Command, fixture: &TestFixture) {
     let (home_key, home_val) = fixture.env_home();
     cmd.env(home_key, home_val);
 
-    #[cfg(target_os = "linux")]
     {
         if let Some((data_key, data_val)) = fixture.env_data_home() {
             cmd.env(data_key, data_val);
