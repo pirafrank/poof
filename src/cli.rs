@@ -80,10 +80,10 @@ pub struct UpdateArgs {
 }
 
 fn parse_shell(s: &str) -> Result<SupportedShell, String> {
-    SupportedShell::from_str(s).ok_or_else(|| {
+    s.parse::<SupportedShell>().map_err(|e| {
         format!(
-            "unsupported shell: '{}'. Possible values: {}",
-            s,
+            "{}. Possible values: {}",
+            e,
             SupportedShell::possible_values().join(", ")
         )
     })
