@@ -135,6 +135,12 @@ fn run() -> Result<()> {
         Cmd::Clean => {
             commands::clean::run_clean()?;
         }
+        Cmd::Unlink(args) => {
+            commands::unlink::run_unlink(args)?;
+        }
+        Cmd::Uninstall(args) => {
+            commands::uninstall::run_uninstall(args)?;
+        }
         Cmd::Completions(args) => {
             commands::completions::generate_completions(args.shell);
         }
