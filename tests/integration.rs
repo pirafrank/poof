@@ -39,3 +39,5 @@ mod unlink;
 mod update;
 #[path = "integration/commands/use.rs"]
 mod r#use;
+#[path = "integration/commands/which.rs"]
+mod which;

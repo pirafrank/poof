@@ -128,6 +128,14 @@ pub struct UnlinkArgs {
     pub yes: bool,
 }
 
+// Structure for the which command
+#[derive(Parser, Clone)]
+pub struct WhichArgs {
+    /// Name of the binary to look up
+    #[arg(required = true, value_parser = validate_binary_name)]
+    pub binary_name: String,
+}
+
 // Structure for the uninstall command
 #[derive(Parser, Clone)]
 #[command(group(ArgGroup::new("what_to_uninstall").required(true).args(["version", "all"])))]
@@ -160,6 +168,9 @@ pub enum Cmd {
 
     /// List all installed binaries and their versions
     List,
+
+    /// Show which repository provides a binary
+    Which(WhichArgs),
 
     /// Set an installed version of a slug as the default one
     Use(UseArgs),
