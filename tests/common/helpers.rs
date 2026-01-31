@@ -50,3 +50,12 @@ pub fn assert_contains_all(text: &str, substrings: &[&str]) {
         );
     }
 }
+
+/// Helper to make a file executable on Unix-like systems
+pub fn make_executable(path: &std::path::Path) -> std::io::Result<()> {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(path)?.permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(path, perms)
+}

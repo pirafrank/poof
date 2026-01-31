@@ -11,4 +11,5 @@ pub mod make_default;
 pub mod uninstall;
 pub mod unlink;
 pub mod update;
+pub mod what;
 pub mod which;

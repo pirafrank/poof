@@ -117,6 +117,9 @@ fn run() -> Result<()> {
         Cmd::Which(args) => {
             commands::which::run_which(args)?;
         }
+        Cmd::What(args) => {
+            commands::what::run_what(args)?;
+        }
         Cmd::Update(args) => {
             commands::update::process_update(args)?; // we use ? here, it returns a Result
         }

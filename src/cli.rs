@@ -136,6 +136,15 @@ pub struct WhichArgs {
     pub binary_name: String,
 }
 
+// Structure for the what command
+#[derive(Parser, Clone)]
+pub struct WhatArgs {
+    /// GitHub user and repository in the format USERNAME/REPO
+    /// e.g. pirafrank/rust_exif_renamer
+    #[arg(required = true, value_parser = validate_repo_format)]
+    pub repo: String,
+}
+
 // Structure for the uninstall command
 #[derive(Parser, Clone)]
 #[command(group(ArgGroup::new("what_to_uninstall").required(true).args(["version", "all"])))]
@@ -171,6 +180,9 @@ pub enum Cmd {
 
     /// Show which repository provides a binary
     Which(WhichArgs),
+
+    /// List all binaries provided by the latest version of a repository
+    What(WhatArgs),
 
     /// Set an installed version of a slug as the default one
     Use(UseArgs),
