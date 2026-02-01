@@ -249,37 +249,6 @@ fn test_update_all_repos_with_multiple_installations() -> Result<()> {
 }
 
 #[test]
-fn test_update_self_up_to_date() -> Result<()> {
-    let mut server = Server::new();
-    let current_version = env!("CARGO_PKG_VERSION");
-    let tag = format!("v{}", current_version);
-
-    // Mock response with current version
-    let _m = server
-        .mock("GET", "/pirafrank/poof/releases/latest")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(
-            json!({
-                "tag_name": tag,
-                "published_at": "2024-01-01T00:00:00Z",
-                "assets": []
-            })
-            .to_string(),
-        )
-        .create();
-
-    // Set environment to use mock GitHub API
-    temp_env::with_var("POOF_GITHUB_API_URL", Some(server.url().as_str()), || {
-        let result = update_self();
-        // Should succeed and report up-to-date
-        assert!(result.is_ok());
-    });
-
-    Ok(())
-}
-
-#[test]
 fn test_update_single_repo_invalid_semver_installed() -> Result<()> {
     let test_env = setup_test_env()?;
 
@@ -392,65 +361,12 @@ fn test_update_single_repo_github_api_failure() -> Result<()> {
 }
 
 #[test]
-fn test_update_self_invalid_semver_from_github() -> Result<()> {
-    let mut server = Server::new();
-
-    // Mock response with invalid semver tag
-    let _m = server
-        .mock("GET", "/pirafrank/poof/releases/latest")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(
-            json!({
-                "tag_name": "not-a-valid-semver",
-                "published_at": "2024-01-01T00:00:00Z",
-                "assets": []
-            })
-            .to_string(),
-        )
-        .create();
-
-    // Set environment to use mock GitHub API
-    temp_env::with_var("POOF_GITHUB_API_URL", Some(server.url().as_str()), || {
-        let result = update_self();
-        assert!(result.is_err());
-        let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Cannot parse") || err_msg.contains("semver"));
-    });
-
-    Ok(())
-}
-
-#[test]
-fn test_update_self_github_api_failure() -> Result<()> {
-    let mut server = Server::new();
-
-    // Mock a GitHub API failure
-    let _m = server
-        .mock("GET", "/pirafrank/poof/releases/latest")
-        .with_status(404)
-        .with_body("Not Found")
-        .create();
-
-    // Set environment to use mock GitHub API
-    temp_env::with_var("POOF_GITHUB_API_URL", Some(server.url().as_str()), || {
-        let result = update_self();
-        assert!(result.is_err());
-        let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("Cannot get latest release") || err_msg.contains("404"));
-    });
-
-    Ok(())
-}
-
-#[test]
 fn test_process_update_with_no_arguments() -> Result<()> {
     use crate::cli::UpdateArgs;
 
     let args = UpdateArgs {
         repo: None,
         all: false,
-        update_self: false,
     };
 
     let result = process_update(&args);
@@ -470,7 +386,6 @@ fn test_process_update_with_all_flag() -> Result<()> {
     let args = UpdateArgs {
         repo: None,
         all: true,
-        update_self: false,
     };
 
     let env_vars: Vec<(&str, Option<&str>)> = test_env
@@ -497,7 +412,6 @@ fn test_process_update_with_repo_name() -> Result<()> {
     let args = UpdateArgs {
         repo: Some("user/repo".to_string()),
         all: false,
-        update_self: false,
     };
 
     let env_vars: Vec<(&str, Option<&str>)> = test_env

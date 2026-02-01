@@ -27,12 +27,16 @@ use super::common::fixtures::mock_github::MockGitHub;
 let mut mock_github = MockGitHub::new();
 
 // Mock up-to-date response
-let _m = mock_github.mock_poof_update_get_version("v1.0.0");
+let _m = mock_github.mock_latest_release(
+    "testuser/testrepo",
+    "v1.0.0",
+    vec![/* assets */]
+);
 
 // Run command with mock API URL
 let output = cmd
-    .arg("update")
-    .arg("--self")
+    .arg("install")
+    .arg("testuser/testrepo")
     .env("POOF_GITHUB_API_URL", mock_github.base_url())
     .output()?;
 ```
@@ -43,7 +47,6 @@ let output = cmd
 - `mock_release_by_tag(repo, tag, assets)` - Mock a specific release by tag
 - `mock_not_found(repo)` - Mock a 404 response
 - `mock_network_error(repo)` - Mock a 500 error
-- `mock_poof_update_get_version(version)` - Mock poof self-update check returning the given version
 
 ### `POOF_GITHUB_API_URL` env var
 
