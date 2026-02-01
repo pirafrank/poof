@@ -97,16 +97,24 @@ fn run() -> Result<()> {
             commands::install::install(&args.repo, args.tag.as_deref())?;
         }
         Cmd::Use(args) => {
-            let version = &args.version;
-            info!(
-                "Setting version '{}' as default for {}",
-                version, &args.repo
-            );
-            if let Err(e) = commands::make_default::set_default(&args.repo, version) {
+            if let Some(ref version) = args.version {
+                info!(
+                    "Setting version '{}' as default for {}",
+                    version, &args.repo
+                );
+            } else {
+                info!("Setting latest version as default for {}", &args.repo);
+            }
+            if let Err(e) = commands::make_default::set_default(&args.repo, args.version.as_deref())
+            {
                 error!("Cannot set default version: {}", e);
                 std::process::exit(110);
             }
-            info!("Version '{}' set as default.", version);
+            if let Some(ref version) = args.version {
+                info!("Version '{}' set as default.", version);
+            } else {
+                info!("Latest version set as default.");
+            }
         }
         Cmd::List => {
             let list = commands::list::list_installed_spells();

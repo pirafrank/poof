@@ -43,9 +43,9 @@ pub struct UseArgs {
     #[arg(required = true, value_parser = validate_repo_format)]
     pub repo: String,
 
-    /// version to set as default
-    #[arg(required = true)]
-    pub version: String,
+    /// Version to set as default. If not specified, uses the latest version.
+    #[arg()]
+    pub version: Option<String>,
 }
 
 // Common arguments for repository operations
