@@ -1,12 +1,7 @@
 use crate::cli::UpdateArgs;
 use crate::{
-    commands::{self, download::download_asset, list::list_installed_spells},
-    constants::APP_NAME,
-    files::{
-        archives::extract_to_dir, filesys::find_exec_files_from_extracted_archive,
-        magic::is_exec_by_magic_number, utils::get_stem_name_trimmed_at_first_separator,
-    },
-    github::client::{get_assets, get_release},
+    commands::{self, list::list_installed_spells},
+    github::client::get_release,
     models::spell::Spell,
     utils::semver::{SemverStringPrefix, Version},
 };
@@ -156,144 +151,15 @@ fn update_all_repos() -> Result<()> {
     }
 }
 
-/// Update poof itself
-fn update_self() -> Result<()> {
-    info!("Checking github.com for updates...");
-
-    let current_version = env!("CARGO_PKG_VERSION");
-    let repo = "pirafrank/poof";
-
-    // Get the latest release from GitHub
-    let latest_release = get_release(repo, None)
-        .with_context(|| "Cannot get latest release information for poof")?;
-    let latest_version_str = latest_release.tag_name();
-    let latest_version =
-        Version::parse(latest_version_str.strip_v().as_str()).with_context(|| {
-            format!(
-                "Cannot parse latest release tag '{}' as semver",
-                latest_version_str
-            )
-        })?;
-
-    let current_version_parsed = Version::parse(current_version).with_context(|| {
-        format!(
-            "Cannot parse current version '{}' as semver",
-            current_version
-        )
-    })?;
-
-    info!("Current installed version: {}", current_version);
-
-    // Check if update is needed
-    if latest_version <= current_version_parsed {
-        info!(
-            "{} is already up-to-date (version {}).",
-            APP_NAME, current_version
-        );
-        return Ok(());
-    }
-
-    info!(
-        "Newer version {} found. Updating from {}.",
-        latest_version, current_version
-    );
-
-    // Find compatible asset
-    let assets = get_assets(&latest_release).with_context(|| {
-        format!(
-            "Cannot find any compatible asset from release {} for current platform.",
-            latest_version_str
-        )
-    })?;
-    // for self-update, we only need the first asset since we are pretty sure for poof there only will be one.
-    let binary = assets
-        .first()
-        .ok_or_else(|| anyhow!("No compatible asset found"))?;
-
-    // Create a temporary directory for downloading
-    let temp_dir = std::env::temp_dir().join(format!("poof-update-{}", latest_version_str));
-    std::fs::create_dir_all(&temp_dir)
-        .with_context(|| format!("Cannot create temporary directory {}", temp_dir.display()))?;
-
-    // Download the binary
-    download_asset(binary.name(), binary.browser_download_url(), &temp_dir)
-        .with_context(|| format!("Cannot download binary for version {}", latest_version_str))?;
-
-    let downloaded_file = temp_dir.join(binary.name());
-    let new_binary_path = if is_exec_by_magic_number(&downloaded_file) {
-        // Direct executable binary
-        debug!("Downloaded file {} is an executable binary.", binary.name());
-        downloaded_file
-    } else {
-        // Archive - extract and find the binary
-        debug!(
-            "Downloaded file {} is an archive. Extracting...",
-            binary.name()
-        );
-        extract_to_dir(&downloaded_file, &temp_dir)
-            .map_err(|e| anyhow!("Cannot extract archive: {}", e))?;
-
-        let exec_files = find_exec_files_from_extracted_archive(&downloaded_file);
-        if exec_files.is_empty() {
-            bail!("No executable found in extracted archive");
-        }
-
-        // Find the binary matching APP_NAME or use the first executable
-        let target_binary = exec_files
-            .iter()
-            .find(|path| {
-                path.file_name()
-                    .map(|n| {
-                        let stem = get_stem_name_trimmed_at_first_separator(n);
-                        stem.to_string_lossy() == APP_NAME || n.to_string_lossy() == APP_NAME
-                    })
-                    .unwrap_or(false)
-            })
-            .or_else(|| exec_files.first())
-            .ok_or_else(|| anyhow!("No executable found in archive"))?;
-
-        target_binary.clone()
-    };
-
-    // Use self_replace to replace the current executable
-    info!("Replacing current executable with new version...");
-    self_replace::self_replace(&new_binary_path).with_context(|| {
-        format!(
-            "Cannot replace executable with {}",
-            new_binary_path.display()
-        )
-    })?;
-
-    // Clean up temporary directory
-    if let Err(e) = std::fs::remove_dir_all(&temp_dir) {
-        debug!(
-            "Cannot clean up temporary directory {}: {}",
-            temp_dir.display(),
-            e
-        );
-    }
-
-    info!(
-        "Successfully updated {} from version {} to {}",
-        APP_NAME, current_version, latest_version
-    );
-    info!("Please restart the application if it hasn't exited automatically.");
-
-    Ok(())
-}
-
 // Main process
 pub fn process_update(args: &UpdateArgs) -> Result<()> {
     if args.all {
         update_all_repos().context("Failed during update --all")?;
         Ok(())
-    } else if args.update_self {
-        update_self().context("Failed during update --self")?;
-        Ok(())
     } else if let Some(repo) = &args.repo {
         update_single_repo(repo)
     } else {
-        bail!("No repository specified, and neither --all nor --self flags were provided.");
+        bail!("No repository specified, and --all flag was not provided.");
     }
 }
 

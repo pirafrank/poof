@@ -65,18 +65,12 @@ pub struct CmdArgs {
 #[derive(Parser, Clone)]
 pub struct UpdateArgs {
     /// Github slug in the format USERNAME/REPO
-    #[arg(value_parser = validate_repo_format, required_unless_present_any = ["all", "update_self"])]
+    #[arg(value_parser = validate_repo_format, required_unless_present_any = ["all"])]
     pub repo: Option<String>,
 
     /// Update all installed binaries
-    #[arg(long, conflicts_with_all = ["repo", "update_self"])]
+    #[arg(long, conflicts_with_all = ["repo"])]
     pub all: bool,
-
-    /// Update poof itself to the latest version.
-    /// It works only if the binary has not been installed from a package manager.
-    /// If you installed poof from a package manager, update via that package manager instead.
-    #[arg(long = "self", conflicts_with_all = ["repo", "all"])]
-    pub update_self: bool,
 }
 
 fn parse_shell(s: &str) -> Result<SupportedShell, String> {
