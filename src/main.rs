@@ -33,10 +33,9 @@ fn run() -> Result<()> {
 
     // Parse command-line arguments
     let cli = Cli::parse();
-    // Set up logging
-    env_logger::Builder::new()
-        .filter_level(cli.verbose.log_level_filter())
-        .parse_default_env() // This allows RUST_LOG to override
+    // Set up logging using RUST_LOG environment variable (defaults to info level)
+    env_logger::Builder::from_default_env()
+        .filter_level(log::LevelFilter::Info)
         .format_timestamp(None)
         .format_module_path(false)
         .format_target(false)

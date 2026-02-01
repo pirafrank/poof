@@ -57,12 +57,12 @@ fn render_subcommand(sub: &Command, buf: &mut Vec<u8>) -> Result<()> {
     }
     writeln!(buf)?;
 
-    // Arguments / Options - filter out global options (verbose, quiet, help)
+    // Arguments / Options - filter out global options (help)
     let args: Vec<_> = sub
         .get_arguments()
         .filter(|arg| {
             let id = arg.get_id().as_str();
-            id != "verbose" && id != "quiet" && id != "help"
+            id != "help"
         })
         .collect();
 
@@ -155,12 +155,6 @@ fn main() -> Result<()> {
         "These options are available for all subcommands:"
     )?;
     writeln!(&mut buffer)?;
-    writeln!(&mut buffer, ".TP")?;
-    writeln!(&mut buffer, "\\fB-v\\fR, \\fB--verbose\\fR")?;
-    writeln!(&mut buffer, "Increase logging verbosity")?;
-    writeln!(&mut buffer, ".TP")?;
-    writeln!(&mut buffer, "\\fB-q\\fR, \\fB--quiet\\fR")?;
-    writeln!(&mut buffer, "Decrease logging verbosity")?;
     writeln!(&mut buffer, ".TP")?;
     writeln!(&mut buffer, "\\fB-h\\fR, \\fB--help\\fR")?;
     writeln!(&mut buffer, "Print help")?;
