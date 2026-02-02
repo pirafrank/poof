@@ -162,6 +162,51 @@ fn main() -> Result<()> {
     writeln!(&mut buffer, "\\fB-V\\fR, \\fB--version\\fR")?;
     writeln!(&mut buffer, "Print version")?;
 
+    // Add ENVIRONMENT section
+    writeln!(&mut buffer, ".SH \"ENVIRONMENT\"")?;
+    writeln!(&mut buffer, ".TP")?;
+    writeln!(&mut buffer, "\\fBRUST_LOG\\fR")?;
+    writeln!(
+        &mut buffer,
+        "Controls the verbosity of logging output. This is useful for troubleshooting issues."
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "Available log levels (from least to most verbose):"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(&mut buffer, "\\fBerror\\fR - Only show errors")?;
+    writeln!(&mut buffer)?;
+    writeln!(&mut buffer, "\\fBwarn\\fR - Show warnings and errors")?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "\\fBinfo\\fR - Show informational messages (default)"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "\\fBdebug\\fR - Show debug information for troubleshooting"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "\\fBtrace\\fR - Show all available logging information"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(&mut buffer, "Examples:")?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "Enable debug logging: \\fBRUST_LOG=debug poof install user/repo\\fR"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "Enable trace logging: \\fBRUST_LOG=trace poof install user/repo\\fR"
+    )?;
+
     // Append our custom detailed subcommands section
     writeln!(&mut buffer, ".SH \"SUBCOMMANDS\"")?;
 
