@@ -250,9 +250,14 @@ fn install_binary(
     if let Err(e) = check_for_same_named_binary_in_bin_dir(slug, &symlink_path) {
         warn!("{}", e);
         skip_symlink = true;
-    } else if let Err(e) = check_for_same_named_binary_in_path(exec_name, &bin_dir) {
-        warn!("{}", e);
-        skip_symlink = true;
+    } else if binary_in_path_is_not_managed_by_poof(exec_name, &bin_dir) {
+        // proceed with installation anyway, but warn the user
+        warn!(
+            "A third-party managed binary named '{}' is already installed in PATH.",
+            exec_name.to_string_lossy()
+        );
+        warn!("Installation may shadow/be shadowed by it. Please check your PATH.\n");
+        skip_symlink = false;
     }
 
     // copy the executable files to the install directory
@@ -372,7 +377,7 @@ fn check_for_same_named_binary_in_bin_dir(slug: &Slug, exec_in_bin: &Path) -> Re
 /// This to avoid shadowing some other binary or being shadowed by it.
 /// Returns an error if the binary is already installed in PATH and it's not something managed by poof.
 /// Returns Ok(()) if the binary is not installed in PATH or it's something managed by poof.
-fn check_for_same_named_binary_in_path(exec_name: &OsString, bin_dir: &Path) -> Result<()> {
+fn binary_in_path_is_not_managed_by_poof(exec_name: &OsString, bin_dir: &Path) -> bool {
     // Check if exec_name is in PATH and it's not something managed by poof.
     // This to avoid shadowing some other binary or being shadowed by it.
     if let Ok(path) = which(exec_name) {
@@ -380,15 +385,10 @@ fn check_for_same_named_binary_in_path(exec_name: &OsString, bin_dir: &Path) -> 
         // If it does, it's a binary by poof itself and we can proceed,
         // otherwise it's a foreign binary and we need to abort the installation.
         if !path.starts_with(bin_dir) {
-            bail!(
-                "A third-party managed binary named '{}' is already installed in PATH. Installation would shadow it. Please check your PATH.",
-                exec_name.to_string_lossy()
-            );
-        } else {
-            return Ok(());
+            return true;
         }
     }
-    Ok(())
+    false
 }
 
 #[cfg(test)]
