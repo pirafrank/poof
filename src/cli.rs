@@ -147,7 +147,7 @@ pub struct UninstallArgs {
     pub repo: String,
 
     /// Version to uninstall
-    #[arg(long, group = "what_to_uninstall")]
+    #[arg(long, short = 'v', group = "what_to_uninstall")]
     pub version: Option<String>,
 
     /// Uninstall all versions of the slug
