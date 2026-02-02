@@ -81,7 +81,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
             debug!("Cleaned up cache directory: {}", download_to.display());
         }
     }
-    info!("{} {} installed successfully.", repo, &version);
+    info!("{} {} installed successfully.\n", repo, &version);
 
     // check if the binaries are in the PATH by checking if poof's bin directory is in PATH
     commands::check::check_if_bin_in_path();
@@ -291,7 +291,7 @@ fn install_binary(
         // manually set the default version after installation (most cases).
         match filesys::create_symlink(&installed_exec, &symlink_path, true) {
             Ok(()) => {
-                info!("-> '{}' command installed", exec_name.to_string_lossy());
+                info!("✓ '{}' command installed\n", exec_name.to_string_lossy());
             }
             Err(e) => {
                 warn!(

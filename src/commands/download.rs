@@ -34,7 +34,7 @@ pub fn download_asset(
             .context("Cannot read download response bytes")?; // Use context
         copy(&mut content.as_ref(), &mut file).context("Cannot write downloaded data to file")?;
 
-        info!("Download complete.");
+        info!("Download complete.\n");
         Ok(target_file_path.clone())
     } else {
         // we use anyhow::bail! for errors originating here
