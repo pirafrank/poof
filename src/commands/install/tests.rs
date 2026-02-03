@@ -1224,7 +1224,7 @@ mod check_for_same_named_binary_in_bin_dir_tests {
 // =============================================================================
 
 #[cfg(test)]
-mod check_for_same_named_binary_in_path_tests {
+mod binary_in_path_is_not_managed_by_poof_tests {
     use super::*;
 
     #[test]
@@ -1235,11 +1235,8 @@ mod check_for_same_named_binary_in_path_tests {
         // Use a very unlikely binary name that shouldn't be in PATH
         let exec_name = OsString::from("extremely_unlikely_binary_name_12345");
 
-        let result = check_for_same_named_binary_in_path(&exec_name, &bin_dir);
-        assert!(
-            result.is_ok(),
-            "Should return Ok when binary is not in PATH"
-        );
+        let result = binary_in_path_is_not_managed_by_poof(&exec_name, &bin_dir);
+        assert!(!result, "Should return false when binary is not in PATH");
 
         Ok(())
     }
@@ -1260,11 +1257,11 @@ mod check_for_same_named_binary_in_path_tests {
             // Test with PATH extended
             env.with_path_extended(&bin_dir, || {
                 let exec_name = OsString::from("mytool");
-                let result = check_for_same_named_binary_in_path(&exec_name, &bin_dir);
+                let result = binary_in_path_is_not_managed_by_poof(&exec_name, &bin_dir);
 
                 assert!(
-                    result.is_ok(),
-                    "Should return Ok when binary is in PATH within poof's bin dir (self-reference)"
+                    !result,
+                    "Should return false when binary is in PATH within poof's bin dir (self-reference)"
                 );
             });
         });
@@ -1289,18 +1286,11 @@ mod check_for_same_named_binary_in_path_tests {
             // Test with third-party dir in PATH
             env.with_path_extended(&third_party_dir, || {
                 let exec_name = OsString::from("mytool");
-                let result = check_for_same_named_binary_in_path(&exec_name, &poof_bin_dir);
+                let result = binary_in_path_is_not_managed_by_poof(&exec_name, &poof_bin_dir);
 
                 assert!(
-                    result.is_err(),
-                    "Should return Err when binary is in PATH outside poof's bin dir"
-                );
-
-                let err_msg = format!("{:?}", result.unwrap_err());
-                assert!(
-                    err_msg.contains("third-party") || err_msg.contains("already installed"),
-                    "Error should mention third-party or shadow warning: {}",
-                    err_msg
+                    result,
+                    "Should return true when binary is in PATH outside poof's bin dir"
                 );
             });
         });
@@ -1331,12 +1321,9 @@ mod check_for_same_named_binary_in_path_tests {
 
                 // Now check our function
                 let exec_osstring = OsString::from(exec_name);
-                let result = check_for_same_named_binary_in_path(&exec_osstring, &poof_bin);
+                let result = binary_in_path_is_not_managed_by_poof(&exec_osstring, &poof_bin);
 
-                assert!(
-                    result.is_err(),
-                    "Should detect binary in PATH outside poof bin dir"
-                );
+                assert!(result, "Should detect binary in PATH outside poof bin dir");
             });
         });
 

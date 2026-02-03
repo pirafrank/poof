@@ -76,7 +76,9 @@ fn test_use_without_version_auto_selects_latest() -> Result<(), Box<dyn std::err
     } else {
         // Command succeeded - verify it auto-selected latest version
         assert!(
-            stderr.contains("No version specified") || stderr.contains("latest"),
+            stderr
+                .to_lowercase()
+                .contains("newest installed version as default"),
             "Should indicate auto-selecting latest version. stderr: {}",
             stderr
         );

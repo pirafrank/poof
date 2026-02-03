@@ -103,17 +103,15 @@ fn run() -> Result<()> {
                     version, &args.repo
                 );
             } else {
-                info!("Setting latest version as default for {}", &args.repo);
+                info!(
+                    "Setting the newest installed version as default for {}",
+                    &args.repo
+                );
             }
             if let Err(e) = commands::make_default::set_default(&args.repo, args.version.as_deref())
             {
                 error!("Cannot set default version: {}", e);
                 std::process::exit(110);
-            }
-            if let Some(ref version) = args.version {
-                info!("Version '{}' set as default.", version);
-            } else {
-                info!("Latest version set as default.");
             }
         }
         Cmd::List => {

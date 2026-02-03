@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{bail, Context, Result};
+use log::debug;
 use log::{error, info};
 
 use crate::files::datadirs;
@@ -99,14 +100,12 @@ fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
 pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
     // Resolve version: use provided version or get latest
     let resolved_version = match version {
-        Some(v) => {
-            info!("Using specified version: {}", v);
-            v.to_string()
-        }
+        Some(v) => v.to_string(),
         None => {
-            info!("No version specified, finding latest version...");
-            let latest = get_latest_version(repo)?;
-            info!("Found latest version: {}", latest);
+            let latest = get_latest_version(repo).with_context(|| {
+                format!("Failed to find the newest installed version for '{}'", repo)
+            })?;
+            debug!("Found {} to be the newest installed version", latest);
             latest
         }
     };
@@ -116,6 +115,8 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
     // Get the bin directory
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory")?;
 
+    // List of binaries to set as default
+    let mut binaries: Vec<String> = Vec::new();
     // Process each binary in wanted_dir
     for path in filesys::find_exec_files_in_dir(&install_dir) {
         // Skip non-executable files (they all should be since they have
@@ -130,6 +131,7 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
             let Some(file_name) = path.file_name() else {
                 continue;
             };
+            binaries.push(file_name.to_string_lossy().to_string());
             // make exec available in PATH, overwriting any existing symlink
             let symlink_path = bin_dir.join(file_name);
             filesys::create_symlink(&path, &symlink_path, true)
@@ -142,6 +144,10 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
                     )
                 })?;
         }
+    }
+    info!("Version {} set as default for:", resolved_version);
+    for binary in binaries {
+        info!("✓ {}", binary);
     }
     Ok(())
 }

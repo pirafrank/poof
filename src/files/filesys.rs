@@ -91,8 +91,6 @@ pub fn create_symlink(
     target: &PathBuf,
     remove_existing: bool,
 ) -> Result<(), String> {
-    use log::info;
-
     let msg = if remove_existing { "" } else { " NOT" };
     debug!(
         "Creating symlink {} -> {},{} removing existing",
@@ -116,7 +114,7 @@ pub fn create_symlink(
     // Create a symlink in the target directory pointing to the installed binary.
     match std::os::unix::fs::symlink(source, target) {
         Ok(_) => {
-            info!(
+            debug!(
                 "Symlink created: {} -> {}",
                 source.display(),
                 target.display()
