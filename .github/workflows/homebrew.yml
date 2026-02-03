@@ -1,0 +1,33 @@
+name: Homebrew Formula Update
+
+on:
+  workflow_run:
+    # this matches the name of the workflow .github/workflows/release.yml
+    workflows: ["Release"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  trigger-homebrew-update:
+    name: Trigger Homebrew formula update
+    runs-on: ubuntu-latest
+    # Only run if the Release workflow succeeded and was triggered by a tag
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+
+    steps:
+      - name: Trigger formula update
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ secrets.PAT }}
+          repository: pirafrank/homebrew-tap
+          event-type: update_formula
+          client-payload: '{"project_name": "poof"}'
+
+      - name: Log dispatch
+        run: |
+          echo "Dispatched Homebrew formula update for tag: ${{ github.event.workflow_run.head_branch }}"

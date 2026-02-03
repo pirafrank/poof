@@ -1,0 +1,25 @@
+name: asdf-poof Test
+
+on:
+    workflow_dispatch:
+
+jobs:
+    test:
+      name: Test asdf-poof plugin
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Set up asdf
+          id: set-up-asdf
+          uses: asdf-vm/actions/setup@v4
+
+        - name: Install asdf-poof plugin
+          run: |
+            asdf plugin add poof https://github.com/pirafrank/asdf-poof.git
+            asdf install poof latest
+            asdf set --home poof latest
+
+        - name: Test installed poof
+          run: poof --version

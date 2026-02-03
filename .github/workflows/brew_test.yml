@@ -1,0 +1,24 @@
+name: Homebrew Test
+
+on:
+    workflow_dispatch:
+
+jobs:
+    test:
+      name: Test Homebrew formula
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Set up Homebrew
+          id: set-up-homebrew
+          uses: Homebrew/actions/setup-homebrew@main
+
+        - name: Install Homebrew formula
+          run: |
+            brew tap pirafrank/tap
+            brew install pirafrank/tap/poof
+
+        - name: Test installed poof
+          run: poof --version
