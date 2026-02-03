@@ -110,7 +110,7 @@ fn run() -> Result<()> {
             }
             if let Err(e) = commands::make_default::set_default(&args.repo, args.version.as_deref())
             {
-                error!("Cannot set version {} as default", e);
+                error!("Cannot set default version: {}", e);
                 std::process::exit(110);
             }
         }
