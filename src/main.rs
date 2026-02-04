@@ -16,6 +16,8 @@ mod utils;
 // Use modules locally
 use crate::cli::{Cli, Cmd};
 use crate::constants::THIS_REPO_URL;
+use crate::models::slug::Slug;
+use crate::models::spell::Spell;
 use crate::utils::semver::SemverStringConversion;
 
 fn is_supported_os() -> bool {
@@ -113,8 +115,16 @@ fn run() -> Result<()> {
                 std::process::exit(110);
             }
         }
-        Cmd::List => {
-            let list = commands::list::list_installed_spells();
+        Cmd::List(args) => {
+            let list: Vec<Spell>;
+            if let Some(ref repo) = args.repo {
+                let repo = Slug::new(repo)?;
+                list = commands::list::list_installed_versions_per_slug(&repo);
+            } else {
+                list = commands::list::list_installed_spells();
+            }
+
+            // output the list
             if list.is_empty() {
                 info!("No installed binaries found.");
             } else {
