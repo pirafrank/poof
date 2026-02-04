@@ -84,26 +84,8 @@ fn parse_shell(s: &str) -> Result<SupportedShell, String> {
 
 // Structure for the completions command
 #[derive(Parser, Clone)]
-pub struct CompletionsArgs {
-    /// Shell type to generate completions for.
-    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
-    #[arg(long, short, value_parser = parse_shell)]
-    pub shell: SupportedShell,
-}
-
-// Structure for the init command
-#[derive(Parser, Clone)]
-pub struct InitArgs {
-    /// Shell type to generate init script for.
-    /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
-    #[arg(long, short, value_parser = parse_shell)]
-    pub shell: SupportedShell,
-}
-
-// Structure for the enable command
-#[derive(Parser, Clone)]
-pub struct EnableArgs {
-    /// Shell type to configure.
+pub struct ShellIntegrationArgs {
+    /// Shell type to generate completions for, integrate via init command, and more.
     /// Possible values: bash, elvish, fish, nushell (or nu), powershell (or pwsh), xonsh, zsh
     #[arg(long, short, value_parser = parse_shell)]
     pub shell: SupportedShell,
@@ -190,16 +172,16 @@ pub enum Cmd {
     Uninstall(UninstallArgs),
 
     /// Persistently add poof's bin directory to your shell PATH
-    Enable(EnableArgs),
+    Enable(ShellIntegrationArgs),
 
     /// Check if poof's bin directory is in the PATH
     Check,
 
     /// Generate shell completions to stdout
-    Completions(CompletionsArgs),
+    Completions(ShellIntegrationArgs),
 
     /// Generate shell-specific init script to add poof bin directory to PATH
-    Init(InitArgs),
+    Init(ShellIntegrationArgs),
 
     /// Empty the cache directory
     Clean,
