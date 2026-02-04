@@ -119,7 +119,13 @@ fn run() -> Result<()> {
             let list: Vec<Spell>;
             if let Some(ref repo) = args.repo {
                 let repo = Slug::new(repo)?;
-                list = vec![commands::list::list_installed_versions_per_slug(&repo)?];
+                list = match commands::list::list_installed_versions_per_slug(&repo)? {
+                    Some(spell) => vec![spell],
+                    None => {
+                        info!("Repository '{}' does not seem to be installed.", repo);
+                        return Ok(());
+                    }
+                };
             } else {
                 list = commands::list::list_installed_spells();
             }

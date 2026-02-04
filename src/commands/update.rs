@@ -7,7 +7,7 @@ use crate::{
     models::spell::Spell,
     utils::semver::{SemverStringPrefix, Version},
 };
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use log::{debug, error, info};
 use rayon::prelude::*;
 
@@ -16,15 +16,26 @@ fn update_single_repo(repo: &str) -> Result<()> {
     info!("Checking for updates for {}", repo);
 
     // 1. find the specific asset for the requested repo
-    let asset = list_installed_versions_per_slug(&Slug::new(repo)?)?;
+    let asset_option = list_installed_versions_per_slug(&Slug::new(repo)?)?;
+    let asset = match asset_option {
+        Some(asset) => asset,
+        None => {
+            info!("Repository '{}' not found. Doing nothing.", repo);
+            return Ok(());
+        }
+    };
 
-    // we know asset exists, extract the latest version string using ?
-    let highest_installed_str = asset.get_latest_version().ok_or_else(|| {
-        anyhow!(
-            "Spell {} found but has no versions listed (internal error)",
-            repo
-        )
-    })?;
+    // we know asset exists, extract the latest version string
+    let highest_installed_str = match asset.get_latest_version() {
+        Some(version) => version,
+        None => {
+            info!(
+                "Repository '{}' found but has no versions listed. Nothing to update.",
+                repo
+            );
+            return Ok(());
+        }
+    };
 
     let highest_installed = Version::parse(&highest_installed_str).with_context(|| {
         format!(
