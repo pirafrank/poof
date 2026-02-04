@@ -7,9 +7,12 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 
-use crate::files::datadirs::get_data_dir;
+use crate::files::datadirs::{get_data_dir, get_versions_nest};
+use crate::models::slug::Slug;
 use crate::models::spell::Spell;
+use crate::utils::semver::Version;
 
+/// List all installed spells in the data directory.
 pub fn list_installed_spells() -> Vec<Spell> {
     // List all files in the bin directory.
     // Making this iterative for clarity and performance,
@@ -81,9 +84,39 @@ pub fn list_installed_spells() -> Vec<Spell> {
     }
 
     let mut result: Vec<Spell> = versions_map
+        // filter out non-directory entries and map to Spell struct.
+        // not going parallel here because it's unlikely the user has that many versions.
+        // to go parallel we should implement FromParallelIterator for Spell.
         .into_iter()
         .map(|(slug, versions)| Spell::new_as_string(slug, versions))
         .collect();
     result.sort();
     result
+}
+
+/// List all installed versions of a spell for a given slug in the data directory.
+pub fn list_installed_versions_per_slug(slug: &Slug) -> Vec<Spell> {
+    let data_dir: PathBuf = get_data_dir()
+        .ok_or_else(|| anyhow!("Cannot get data directory"))
+        .unwrap();
+
+    let versions_dir = get_versions_nest(&data_dir, slug.as_str());
+    let version_dirs = match fs::read_dir(&versions_dir) {
+        Ok(version_dirs) => version_dirs.flatten().collect::<Vec<_>>(),
+        Err(_) => return Vec::new(),
+    };
+
+    let results: Vec<Version> = version_dirs
+        // filter out non-directory entries and map to Spell struct.
+        // not going parallel here because it's unlikely the user has that many versions.
+        // to go parallel we should implement FromParallelIterator for Spell.
+        .into_iter()
+        .filter(|version| version.path().is_dir())
+        .map(|version| Version::new(version.file_name().into_string().unwrap_or_default()))
+        .collect::<Vec<_>>();
+
+    let spell = Spell::new(slug.as_str().to_string(), results);
+    // make an array of one spell with the slug and the versions
+    // for compatibility with the rest of the code.
+    vec![spell]
 }

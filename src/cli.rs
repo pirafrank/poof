@@ -103,6 +103,15 @@ pub struct UnlinkArgs {
     pub yes: bool,
 }
 
+// Structure for the list command
+#[derive(Parser, Clone)]
+pub struct ListArgs {
+    /// GitHub user and repository in the format USERNAME/REPO
+    /// e.g. pirafrank/rust_exif_renamer
+    #[arg(required = false, value_parser = validate_repo_format)]
+    pub repo: Option<String>,
+}
+
 // Structure for the which command
 #[derive(Parser, Clone)]
 pub struct WhichArgs {
@@ -151,7 +160,7 @@ pub enum Cmd {
     Install(CmdArgs),
 
     /// List all installed binaries and their versions
-    List,
+    List(ListArgs),
 
     /// Show which repository provides a binary
     Which(WhichArgs),
