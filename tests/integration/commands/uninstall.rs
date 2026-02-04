@@ -457,3 +457,150 @@ fn test_uninstall_conflicts_version_and_all() -> Result<(), Box<dyn std::error::
 
     Ok(())
 }
+
+// Tests for -v shorthand flag
+
+#[serial]
+#[test]
+fn test_uninstall_with_v_shorthand() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+
+    // Create a fake installation
+    let repo = "testuser/testrepo";
+    let version = "1.0.0";
+    let install_dir = fixture.create_fake_installation(repo, version)?;
+
+    assert!(
+        install_dir.exists(),
+        "Install directory should exist before uninstall"
+    );
+
+    let output = run_uninstall_with_input(&fixture, &[repo, "-v", version], b"yes\n")?;
+
+    assert!(
+        output.status.success(),
+        "Uninstall should succeed with -v shorthand"
+    );
+
+    // Verify the installation was deleted
+    assert!(
+        !install_dir.exists(),
+        "Installation directory should be deleted after confirmation"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.to_lowercase().contains("successfully removed")
+            || stderr.to_lowercase().contains("removed"),
+        "Should confirm removal: {}",
+        stderr
+    );
+
+    Ok(())
+}
+
+#[serial]
+#[test]
+fn test_uninstall_v_shorthand_equivalent_to_version() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+
+    // Create two identical fake installations
+    let repo1 = "testuser/repo1";
+    let repo2 = "testuser/repo2";
+    let version = "1.0.0";
+
+    let install_dir1 = fixture.create_fake_installation(repo1, version)?;
+    let install_dir2 = fixture.create_fake_installation(repo2, version)?;
+
+    // Uninstall one with --version
+    let output1 = run_uninstall_with_input(&fixture, &[repo1, "--version", version], b"yes\n")?;
+
+    // Uninstall the other with -v
+    let output2 = run_uninstall_with_input(&fixture, &[repo2, "-v", version], b"yes\n")?;
+
+    // Both should succeed
+    assert!(
+        output1.status.success(),
+        "Uninstall with --version should succeed"
+    );
+    assert!(output2.status.success(), "Uninstall with -v should succeed");
+
+    // Both should be deleted
+    assert!(
+        !install_dir1.exists(),
+        "First installation should be deleted"
+    );
+    assert!(
+        !install_dir2.exists(),
+        "Second installation should be deleted"
+    );
+
+    Ok(())
+}
+
+#[serial]
+#[test]
+fn test_uninstall_v_conflicts_with_all() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    let output = cmd
+        .arg("uninstall")
+        .arg("user/repo")
+        .arg("-v")
+        .arg("1.0.0")
+        .arg("--all")
+        .output()?;
+
+    // Should fail because -v and --all conflict
+    assert!(
+        !output.status.success(),
+        "Should fail when both -v and --all are provided"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("conflict") || stderr.contains("cannot be used"),
+        "Error should mention conflicting flags: {}",
+        stderr
+    );
+
+    Ok(())
+}
+
+#[serial]
+#[test]
+fn test_uninstall_with_v_and_yes_flag() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+
+    // Create a fake installation
+    let repo = "testuser/testrepo";
+    let version = "1.0.0";
+    let install_dir = fixture.create_fake_installation(repo, version)?;
+
+    assert!(
+        install_dir.exists(),
+        "Install directory should exist before uninstall"
+    );
+
+    // Use -v and -y flags together
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("uninstall")
+        .arg(repo)
+        .arg("-v")
+        .arg(version)
+        .arg("-y");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
+
+    assert!(
+        output.status.success(),
+        "Uninstall should succeed with -v and -y flags"
+    );
+
+    // Verify the installation was deleted
+    assert!(
+        !install_dir.exists(),
+        "Installation should be deleted without prompting"
+    );
+
+    Ok(())
+}

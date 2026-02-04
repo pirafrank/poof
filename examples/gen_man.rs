@@ -57,12 +57,12 @@ fn render_subcommand(sub: &Command, buf: &mut Vec<u8>) -> Result<()> {
     }
     writeln!(buf)?;
 
-    // Arguments / Options - filter out global options (verbose, quiet, help)
+    // Arguments / Options - filter out global options (help)
     let args: Vec<_> = sub
         .get_arguments()
         .filter(|arg| {
             let id = arg.get_id().as_str();
-            id != "verbose" && id != "quiet" && id != "help"
+            id != "help"
         })
         .collect();
 
@@ -156,17 +156,56 @@ fn main() -> Result<()> {
     )?;
     writeln!(&mut buffer)?;
     writeln!(&mut buffer, ".TP")?;
-    writeln!(&mut buffer, "\\fB-v\\fR, \\fB--verbose\\fR")?;
-    writeln!(&mut buffer, "Increase logging verbosity")?;
-    writeln!(&mut buffer, ".TP")?;
-    writeln!(&mut buffer, "\\fB-q\\fR, \\fB--quiet\\fR")?;
-    writeln!(&mut buffer, "Decrease logging verbosity")?;
-    writeln!(&mut buffer, ".TP")?;
     writeln!(&mut buffer, "\\fB-h\\fR, \\fB--help\\fR")?;
     writeln!(&mut buffer, "Print help")?;
     writeln!(&mut buffer, ".TP")?;
     writeln!(&mut buffer, "\\fB-V\\fR, \\fB--version\\fR")?;
     writeln!(&mut buffer, "Print version")?;
+
+    // Add ENVIRONMENT section
+    writeln!(&mut buffer, ".SH \"ENVIRONMENT\"")?;
+    writeln!(&mut buffer, ".TP")?;
+    writeln!(&mut buffer, "\\fBRUST_LOG\\fR")?;
+    writeln!(
+        &mut buffer,
+        "Controls the verbosity of logging output. This is useful for troubleshooting issues."
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "Available log levels (from least to most verbose):"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(&mut buffer, "\\fBerror\\fR - Only show errors")?;
+    writeln!(&mut buffer)?;
+    writeln!(&mut buffer, "\\fBwarn\\fR - Show warnings and errors")?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "\\fBinfo\\fR - Show informational messages (default)"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "\\fBdebug\\fR - Show debug information for troubleshooting"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "\\fBtrace\\fR - Show all available logging information"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(&mut buffer, "Examples:")?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "Enable debug logging: \\fBRUST_LOG=debug poof install user/repo\\fR"
+    )?;
+    writeln!(&mut buffer)?;
+    writeln!(
+        &mut buffer,
+        "Enable trace logging: \\fBRUST_LOG=trace poof install user/repo\\fR"
+    )?;
 
     // Append our custom detailed subcommands section
     writeln!(&mut buffer, ".SH \"SUBCOMMANDS\"")?;

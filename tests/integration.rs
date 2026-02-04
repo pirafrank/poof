@@ -18,8 +18,6 @@ mod help;
 mod info;
 #[path = "integration/commands/init.rs"]
 mod init;
-#[path = "integration/command_handling/verbose_flags.rs"]
-mod verbose_flags;
 #[path = "integration/commands/version.rs"]
 mod version;
 
