@@ -2,11 +2,65 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.6.0] - 2026-02-04
+
+### 🚀 Features
+
+- [**breaking**] `-V` now shows short version. good for scripts
+- Added riscv64gc, arm 32 bit, loongarch64
+- Improved selector's code to support musl
+- New score-based asset selector, rewritten for wider assets support
+- Use GITHUB_TOKEN env var (if available) to avoid rate limit
+- Musl autodetection, override via `POOF_PREFER_MUSL` env var to prefer musl builds
+- Added support for i686, powerpc64le, and s390x
+- One-liner installation script (#135)
+- Handle multi-asset releases (#141)
+- Auto-cleanup cache dir after install (#142)
+- New commands `init` and `completions` (#148)
+- Generate man pages and publish them with releases (#151)
+- New `unlink` and `uninstall` commands (#152)
+- New `which` command to know which repository provides a binary (#154)
+- New `what` command to know what binaries a slug provides (#155)
+- Improved output to sysout to be parsable in scripts (#156)
+- [**breaking**] Removed `debug` in favor of `info` command with same output
+- [**breaking**] Removed `update --self` option to update poof in favor of other install methods (#157)
+- `use` command can run without version to automatically pick and set latest as default (#158)
+- Minor UI changes (#160)
+- Replace -v flags with RUST_LOG env var (#161)
+
+### 🐛 Bug Fixes
+
+- Handle same-named binaries during install (#143)
+
+### 🚜 Refactor
+
+- Rename update internal method
+- Move release pipeline steps into actions for reuse and maintenance
+- Improved tests with better environment setup and linting (#153)
+
+### 🧪 Testing
+
+- Improved code coverage (#145)
+
+### 🔧 Setup & Quality
+
+- Group dependabot PRs
+- Added rust cache
+- Slighty better error messages
+- Release workflows for crates, homebrew, and asdf
+- AUR workflow
+
+### ⚙️ Miscellaneous Tasks
+
+- Update status badge
+- Coderabbit config
+- Cargo update (#163)
+
 ## [0.5.2] - 2025-12-27
 
 ### 🐛 Bug Fixes
 
-- Updated `update --self` logic to replace forked `self_update` crate with `self_replace` to publish poof on crates.io again (#117)
+- Update self command logic to replace self_update crate with self_replace (#117)
 
 ### 🔧 Setup & Quality
 
@@ -43,13 +97,20 @@ All notable changes to the project will be documented in this file.
 - Perform tests on macOS as well and pin runner versions
 - Simplify workflow files and improve consistency (#110)
 - Justfile improvements
+- Just recipe to install cargo plugins
+
+### ◀️ Revert
+
+- Pre-commit recipe as it was to support git partial file commits
 
 ### ⚙️ Miscellaneous Tasks
 
 - *(lint)* Fixed linting error for ambiguous cmp reference
-- Do not commit code coverage reports and allow bzip2-1.0.6 license
+- Ignore code coverage reports and allow bzip2-1.0.6 license
+- Update cargo.lock
 - Added clippy.toml
 - Edited coverage recipe
+- Cargo update
 - Added couple of recipes as utils and split changelog and prepare-release recipes
 - Git-cliff config small update
 - Cargo update
