@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail, Context, Result};
 
 use crate::files::datadirs::{get_data_dir, get_versions_nest};
 use crate::models::slug::Slug;
@@ -95,15 +95,13 @@ pub fn list_installed_spells() -> Vec<Spell> {
 }
 
 /// List all installed versions of a spell for a given slug in the data directory.
-pub fn list_installed_versions_per_slug(slug: &Slug) -> Vec<Spell> {
-    let data_dir: PathBuf = get_data_dir()
-        .ok_or_else(|| anyhow!("Cannot get data directory"))
-        .unwrap();
+pub fn list_installed_versions_per_slug(slug: &Slug) -> Result<Spell> {
+    let data_dir: PathBuf = get_data_dir().context("Cannot get data directory")?;
 
     let versions_dir = get_versions_nest(&data_dir, slug.as_str());
     let version_dirs = match fs::read_dir(&versions_dir) {
         Ok(version_dirs) => version_dirs.flatten().collect::<Vec<_>>(),
-        Err(_) => return Vec::new(),
+        Err(e) => bail!("Cannot read versions directory for {}: {}", slug, e),
     };
 
     let results: Vec<Version> = version_dirs
@@ -118,5 +116,5 @@ pub fn list_installed_versions_per_slug(slug: &Slug) -> Vec<Spell> {
     let spell = Spell::new(slug.as_str().to_string(), results);
     // make an array of one spell with the slug and the versions
     // for compatibility with the rest of the code.
-    vec![spell]
+    Ok(spell)
 }

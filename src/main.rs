@@ -119,7 +119,7 @@ fn run() -> Result<()> {
             let list: Vec<Spell>;
             if let Some(ref repo) = args.repo {
                 let repo = Slug::new(repo)?;
-                list = commands::list::list_installed_versions_per_slug(&repo);
+                list = vec![commands::list::list_installed_versions_per_slug(&repo)?];
             } else {
                 list = commands::list::list_installed_spells();
             }
