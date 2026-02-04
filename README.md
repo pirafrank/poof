@@ -30,7 +30,7 @@ You just run `poof install someuser/somerepo` and... *poof!* it is installed and
 
 For more information read below or check the documentation in the wiki. Got an idea? Let's talk in Discussions!
 
-[![GitHub Wiki](https://img.shields.io/badge/GitHub-Wiki-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://github.com/pirafrank/poof/wiki)
+[![GitHub Wiki](https://img.shields.io/badge/Poof-Documentation-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://poof.fpira.com/docs/intro)
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://github.com/pirafrank/poof/discussions)
 
 ## Features
@@ -86,7 +86,7 @@ More and more often modern tools are built with languages like C/C++, Rust or Go
     curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh
     ```
 
-    or via one of other [install methods](https://github.com/pirafrank/poof/wiki/How-to-install).
+    or via one of other [install methods](https://poof.fpira.com/docs/installation).
 
 2. Add poof's `bin` directory to `$PATH`:
 
@@ -102,8 +102,6 @@ More and more often modern tools are built with languages like C/C++, Rust or Go
     poof install pirafrank/vault-conductor
     ```
 
-Additional information about [installation](https://github.com/pirafrank/poof/wiki/How-to-install) and [supported platforms](https://github.com/pirafrank/poof/wiki/Supported-platforms) is available in the Wiki.
-
 ## Usage
 
 Either run:
@@ -112,7 +110,7 @@ Either run:
 poof help
 ```
 
-or read the [Usage](https://github.com/pirafrank/poof/wiki/Usage) page for additional information.
+or read the [Usage](https://poof.fpira.com/docs/usage) page for additional information.
 
 ## About poof's `bin` directory
 
@@ -133,20 +131,20 @@ poof's `bin` directory by default is added at the beginning of `$PATH` so that i
 
 If you want to halt this behavior, you can either:
 
-- [manually configure](https://github.com/pirafrank/poof/wiki/Configure-your-shell) your shell setup,
-- [disable it](https://github.com/pirafrank/poof/wiki/Disable), temporarily or permanently.
+- [manually configure](https://poof.fpira.com/docs/shell-configuration) your shell setup,
+- [disable it](https://poof.fpira.com/docs/disable), temporarily or permanently.
 
 ## Documentation
 
-Updated documentation for the latest release is available in the [Wiki](https://github.com/pirafrank/poof/wiki).
+Updated documentation for the latest release is available in the [Wiki](https://poof.fpira.com/docs/intro).
 
 ## Project goals and non-goals
 
-Have a look at [our project goals](https://github.com/pirafrank/poof/wiki/Project-goals).
+Have a look at [our project goals](https://poof.fpira.com/docs/project-goals).
 
 ## Roadmap
 
-A list of features implemented and to implement is available [in the Wiki](https://github.com/pirafrank/poof/wiki/Features). The list is not final and may change over time.
+A list of features implemented and to implement is available [in the Wiki](https://poof.fpira.com/docs/roadmap). The list is not final and may change over time.
 
 ## Feature requests and Bug reporting
 
@@ -154,7 +152,7 @@ Want to suggest a feature? Found a bug? Please [open an issue](https://github.co
 
 ## Contributing
 
-Contributions are welcome! Please read the [Development](https://github.com/pirafrank/poof/wiki/Development) page for information about how to build, and the [CONTRIBUTING](CONTRIBUTING.md) file for details on how to contribute to this project.
+Contributions are welcome! Please read the [Development](https://poof.fpira.com/docs/development-guide) page for information about how to build, and the [CONTRIBUTING](CONTRIBUTING.md) file for details on how to contribute to this project.
 Please make sure to follow the [code of conduct](CODE_OF_CONDUCT.md) when contributing. Thank you!
 
 ## License

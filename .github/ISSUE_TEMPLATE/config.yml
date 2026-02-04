@@ -1,9 +1,9 @@
 blank_issues_enabled: false
 contact_links:
   - name: "Documentation"
-    url: "https://github.com/pirafrank/poof/wiki"
-  - name: "Features and Roadmap"
-    url: "https://github.com/pirafrank/poof/wiki/Features"
+    url: "https://poof.fpira.com/docs/intro"
+  - name: "Roadmap"
+    url: "https://poof.fpira.com/docs/roadmap"
   - name: "Report a bug"
     url: "https://github.com/pirafrank/poof/labels/bug"
   - name: "Request a feature"
