@@ -1,4 +1,6 @@
 use crate::cli::UpdateArgs;
+use crate::commands::list::list_installed_versions_per_slug;
+use crate::models::slug::Slug;
 use crate::{
     commands::{self, list::list_installed_spells},
     github::client::get_release,
@@ -13,27 +15,8 @@ use rayon::prelude::*;
 fn update_single_repo(repo: &str) -> Result<()> {
     info!("Checking for updates for {}", repo);
 
-    // 1. get all installed assets
-    let installed_assets: Vec<Spell> = list_installed_spells();
-
-    if installed_assets.is_empty() {
-        info!("No binaries installed yet. Nothing to update.");
-        return Ok(());
-    }
-
-    // find the specific asset for the requested repo
-    let target_asset = installed_assets
-        .iter()
-        .find(|asset: &&Spell| asset.get_name() == repo);
-
-    // handle the None case first by returning early
-    let Some(asset) = target_asset else {
-        info!(
-            "{} is not installed. Use 'poof install {}' first.",
-            repo, repo
-        );
-        return Ok(()); // nothing to update, not an error
-    };
+    // 1. find the specific asset for the requested repo
+    let asset = list_installed_versions_per_slug(&Slug::new(repo)?)?;
 
     // we know asset exists, extract the latest version string using ?
     let highest_installed_str = asset.get_latest_version().ok_or_else(|| {
