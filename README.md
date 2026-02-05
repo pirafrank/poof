@@ -16,7 +16,7 @@
 
 # poof 🪄 - magic manager of pre-built software
 
-Easy-to-use all-in-one binary with zero-config, zero-install, and zero-dependencies.
+Easy-to-use package manager in one-binary. No manifests, formulae, or repositories required.
 
 You just run `poof install someuser/somerepo` and... *poof!* it is installed and available in your shell.
 
@@ -28,9 +28,9 @@ You just run `poof install someuser/somerepo` and... *poof!* it is installed and
 >
 > What poof thinks of itself
 
-For more information read below or check the documentation in the wiki. Got an idea? Let's talk in Discussions!
+For more information read below or check the documentation. Got an idea? Let's talk in Discussions!
 
-[![GitHub Wiki](https://img.shields.io/badge/Poof-Documentation-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://poof.fpira.com/docs/intro)
+[![Poof Documentation website](https://img.shields.io/badge/Poof-Documentation-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://poof.fpira.com/docs/intro)
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://github.com/pirafrank/poof/discussions)
 
 ## Features
@@ -43,17 +43,18 @@ For more information read below or check the documentation in the wiki. Got an i
 - **🧹 Clean management**: XDG-compliant directory structure with separate cache, data, and bin directories
 - **🔍 Helpful error handling**: Fuzzy matching for repository names catches typos, conflict detection warns about existing binaries, and error messages always provide context
 
+### Core Philosophy
+
+- **📃 Zero-maintenance**: Maintainers don’t need to explictly support poof, users don't need to wait for maintainers to add their software to poof
+- **🛠️ Zero-config**: Use it straight away, no yaml, no TOML or other boring configuration
+- **📦 Zero-install**: One self-contained binary you just put in `PATH` and `rm` to uninstall
+- **🔗 Zero-dependencies**: It runs standalone, no additional software needed
+
 ### Platform Support
 
 - **🌍 Cross-platform**: Works on Linux and macOS (FreeBSD support is planned)
 - **🏗️ Wide architecture support**: 8 architectures on Linux, and both Intel and Apple Silicon on macOS
 - **🐚 Shell integration**: Native support for 7 shells (bash, zsh, fish, elvish, nushell, powershell, xonsh) with auto-completions and one-command PATH setup
-
-### Core Philosophy
-
-- **🛠️ Zero-config**: Use it straight away, no yaml, no TOML or other boring configuration
-- **📦 Zero-install**: One self-contained binary you just put in `PATH` and `rm` to uninstall
-- **🔗 Zero-dependencies**: It runs standalone, no additional software needed
 
 ### What's more?
 
@@ -62,10 +63,14 @@ For more information read below or check the documentation in the wiki. Got an i
 
 ## Why
 
-More and more often modern tools are built with languages like C/C++, Rust or Go, and offer pre-built binaries. But they aren't always available in standard package managers. Here's where `poof` helps:
+More and more often modern tools are built with languages like C/C++, Rust or Go, and offer pre-built binaries. But they aren't always available in standard package managers.
 
-- Download and put in `$PATH` binaries from GitHub with a single command
-- Install tools discovered on sites like [Terminal Trove](http://terminaltrove.com) instantly
+Here's where `poof` helps:
+
+- Get software instantly upon release: if it's on GitHub Releases, poof can install it
+- Download and put in `$PATH` CLI and TUI programs with a single command
+- Install tools discovered on sites like [Terminal Trove](http://terminaltrove.com) easily
+- Don't wait for your next favorite tool to be supported by maintainers or community
 - Test newer versions of tools before they reach official repositories without uninstalling your current version
 - Easily install multiple versions of the same tool and switch between them
 - Keep your system clean from unnecessary packages and dependencies installed via system package managers
@@ -136,7 +141,7 @@ If you want to halt this behavior, you can either:
 
 ## Documentation
 
-Updated documentation for the latest release is available in the [Wiki](https://poof.fpira.com/docs/intro).
+Updated documentation for the latest release is available in the [Docs website](https://poof.fpira.com/docs/intro).
 
 ## Project goals and non-goals
 
@@ -144,7 +149,7 @@ Have a look at [our project goals](https://poof.fpira.com/docs/project-goals).
 
 ## Roadmap
 
-A list of features implemented and to implement is available [in the Wiki](https://poof.fpira.com/docs/roadmap). The list is not final and may change over time.
+A list of features implemented and to implement is available [here](https://poof.fpira.com/docs/roadmap). The list is not final and may change over time.
 
 ## Feature requests and Bug reporting
 
