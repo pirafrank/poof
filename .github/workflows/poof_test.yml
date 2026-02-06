@@ -1,0 +1,31 @@
+name: Test Poof
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "Repo to get"
+        required: true
+        default: "user/repo"
+
+jobs:
+    test:
+      name: Test poof
+      runs-on: ubuntu-latest
+      steps:
+        - name: Setup poof
+          run: |
+            curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh
+
+        - name: Add to PATH
+          run: |
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+            
+        - name: Test installed poof
+          run: poof --version
+          
+        - name: Run poof
+          run: |
+            poof download ${{ github.event.inputs.repo }}
+            ls -la
+ 
