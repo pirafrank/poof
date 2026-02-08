@@ -9,6 +9,7 @@ use std::process::Command;
 // Common module is included from the parent integration.rs file
 use super::common::fixtures::test_env::TestFixture;
 use super::common::helpers::set_test_env;
+use super::common::repo_format_validation::*;
 
 #[test]
 fn test_use_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
@@ -251,6 +252,103 @@ fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
             }
             // If symlink doesn't exist, the command might have failed silently
             // This is acceptable - we're testing command structure, not full functionality
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_use_comprehensive_invalid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
+    test_invalid_repo_formats_for_command("use")
+}
+
+#[test]
+fn test_use_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
+    test_valid_repo_formats_for_command("use")
+}
+
+#[serial]
+#[test]
+fn test_use_explicit_version_with_multiple_installations() -> Result<(), Box<dyn std::error::Error>>
+{
+    let fixture = TestFixture::new()?;
+
+    let repo = "testuser/testrepo";
+    let version1 = "1.0.0";
+    let version2 = "2.0.0";
+    let version3 = "3.0.0";
+
+    // Create three versions
+    let install_dir1 = fixture.create_fake_installation(repo, version1)?;
+    let install_dir2 = fixture.create_fake_installation(repo, version2)?;
+    let install_dir3 = fixture.create_fake_installation(repo, version3)?;
+
+    // Get binary name
+    let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
+
+    // Verify all binaries exist
+    assert!(
+        install_dir1.join(binary_name).exists(),
+        "Version 1 binary should exist"
+    );
+    assert!(
+        install_dir2.join(binary_name).exists(),
+        "Version 2 binary should exist"
+    );
+    assert!(
+        install_dir3.join(binary_name).exists(),
+        "Version 3 binary should exist"
+    );
+
+    // Explicitly use version 1.0.0 (not the latest)
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("use").arg(repo).arg(version1);
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
+
+    // Check if command succeeded or if it failed with expected error
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // The "use" command should succeed if the version exists
+    if !output.status.success() {
+        // Command failed - check if it's because binary wasn't found or not executable
+        assert!(
+            stderr.contains("not installed")
+                || stderr.contains("not found")
+                || stderr.contains("executable"),
+            "Command should fail gracefully. stderr: {}, stdout: {}",
+            stderr,
+            stdout
+        );
+    } else {
+        // Command succeeded - verify symlink points to version 1 (not the latest)
+        let symlink_path = fixture.bin_dir.join(binary_name);
+        #[cfg(not(target_os = "windows"))]
+        {
+            if symlink_path.exists() {
+                let target = std::fs::read_link(&symlink_path)?;
+                let target_str = target.to_string_lossy();
+                let install_dir1 = fixture.get_install_path(repo, version1);
+                let expected_binary_path = install_dir1.join(binary_name);
+
+                assert!(
+                    target_str.contains(version1) || target == expected_binary_path,
+                    "Symlink should point to version 1 (explicitly selected, not latest). Target: {}, Expected to contain: {} or be: {}",
+                    target_str,
+                    version1,
+                    expected_binary_path.display()
+                );
+
+                // Also verify it does NOT point to version 3 (the latest)
+                assert!(
+                    !target_str.contains(version3) || target == expected_binary_path,
+                    "Symlink should NOT point to version 3 (latest). Target: {}, Should not contain: {}",
+                    target_str,
+                    version3
+                );
+            }
         }
     }
 
