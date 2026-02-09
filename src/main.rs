@@ -109,11 +109,7 @@ fn run() -> Result<()> {
                     &args.repo
                 );
             }
-            if let Err(e) = commands::make_default::set_default(&args.repo, args.version.as_deref())
-            {
-                error!("Cannot set default version: {}", e);
-                std::process::exit(110);
-            }
+            commands::make_default::set_default(&args.repo, args.version.as_deref())?;
         }
         Cmd::List(args) => {
             let list: Vec<Spell> = if let Some(ref repo) = args.repo {
@@ -155,16 +151,16 @@ fn run() -> Result<()> {
             commands::update::process_update(args)?; // we use ? here, it returns a Result
         }
         Cmd::Check => {
-            commands::check::check_if_bin_in_path();
+            commands::check::check_if_bin_in_path()?;
         }
         Cmd::Version => {
             output!("{}", crate::core::platform_info::long_version());
         }
         Cmd::Info => {
-            commands::info::show_info();
+            commands::info::show_info()?;
         }
         Cmd::Enable(args) => {
-            commands::enable::run(args.shell);
+            commands::enable::run(args.shell)?;
         }
         Cmd::Clean => {
             commands::clean::run_clean()?;
@@ -179,7 +175,7 @@ fn run() -> Result<()> {
             commands::completions::generate_completions(args.shell);
         }
         Cmd::Init(args) => {
-            commands::init::generate_init_script(args.shell);
+            commands::init::generate_init_script(args.shell)?;
         }
     }
     Ok(())

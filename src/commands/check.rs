@@ -1,13 +1,14 @@
 //! Main file handling 'check' command
 
+use anyhow::{Context, Result};
 use log::{debug, warn};
 use std::path::PathBuf;
 
 use crate::core::platform_info;
 use crate::files::datadirs;
 
-pub fn check_if_bin_in_path() {
-    let bin_dir: PathBuf = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+pub fn check_if_bin_in_path() -> Result<()> {
+    let bin_dir: PathBuf = datadirs::get_bin_dir().context("Cannot locate bin directory")?;
     let position = platform_info::check_dir_in_path(bin_dir.to_str().unwrap());
     match position {
         -1 => {
@@ -15,7 +16,7 @@ pub fn check_if_bin_in_path() {
             warn!(
                 "Please add {} to your PATH. For example, run: \n\n{}\n",
                 bin_dir.display(),
-                get_export_command()
+                get_export_command()?
             );
             warn!("This is required to run the installed binaries.");
         }
@@ -28,9 +29,13 @@ pub fn check_if_bin_in_path() {
             );
         }
     }
+    Ok(())
 }
 
-fn get_export_command() -> String {
-    let bin_dir: PathBuf = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
-    format!("export PATH=\"{}:$PATH\"", bin_dir.to_str().unwrap())
+fn get_export_command() -> Result<String> {
+    let bin_dir: PathBuf = datadirs::get_bin_dir().context("Cannot locate bin directory")?;
+    Ok(format!(
+        "export PATH=\"{}:$PATH\"",
+        bin_dir.to_str().unwrap()
+    ))
 }
