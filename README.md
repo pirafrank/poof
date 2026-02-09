@@ -1,5 +1,7 @@
 <div align="center">
-  <img src="./.assets/poof_logo_bg_tx_384.png" alt="poof logo" width="384"/>
+  <img src="./.assets/poof_logo_bg_tx_384.png" alt="poof logo" width="192"/>
+
+  <h1>poof 🪄 - magic manager of pre-built software</h1>
 
   [![GitHub Release](https://img.shields.io/github/v/release/pirafrank/poof)](https://github.com/pirafrank/poof/releases/latest)
   [![Crates.io](https://img.shields.io/crates/v/poof)](https://crates.io/crates/poof)
@@ -13,8 +15,6 @@
   [![Licenses](https://github.com/pirafrank/poof/actions/workflows/licenses.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/licenses.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 </div>
-
-# poof 🪄 - magic manager of pre-built software
 
 Easy-to-use package manager in one-binary. No manifests, formulae, or repositories required.
 
