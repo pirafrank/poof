@@ -179,3 +179,11 @@ issues:
 # Browse coverage report on Codecov
 codecov:
   browse "https://app.codecov.io/github/pirafrank/poof"
+
+# Build poof Docker image
+docker-build:
+  docker build -t poof:latest -f Dockerfile .
+
+# Run a bash shell in the Docker container
+docker-run:
+  docker run -it --rm --env-file .env poof:latest bash
