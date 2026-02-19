@@ -6,6 +6,7 @@
   [![GitHub Release](https://img.shields.io/github/v/release/pirafrank/poof)](https://github.com/pirafrank/poof/releases/latest)
   [![Crates.io](https://img.shields.io/crates/v/poof)](https://crates.io/crates/poof)
   [![Crates.io MSRV](https://img.shields.io/crates/msrv/poof)](https://github.com/pirafrank/poof/blob/main/Cargo.toml)
+  [![MSRV check](https://github.com/pirafrank/poof/actions/workflows/msrv.yml/badge.svg?branch=main)](https://github.com/pirafrank/poof/actions/workflows/msrv.yml)
 
   [![CI](https://github.com/pirafrank/poof/actions/workflows/ci.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/ci.yml)
   [![Security audit](https://github.com/pirafrank/poof/actions/workflows/security.yml/badge.svg)](https://github.com/pirafrank/poof/actions/workflows/security.yml)
