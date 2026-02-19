@@ -22,6 +22,7 @@ install-cargo-plugins:
   cargo install cargo-audit --locked
   cargo install cargo-llvm-cov
   cargo binstall git-cliff
+  cargo install cargo-msrv
 
 # Check for errors in all targets
 check:
@@ -179,6 +180,10 @@ issues:
 # Browse coverage report on Codecov
 codecov:
   browse "https://app.codecov.io/github/pirafrank/poof"
+
+# Rust MSRV check
+msrv:
+  cargo msrv verify
 
 # Build poof Docker image
 docker-build:
