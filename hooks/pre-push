@@ -19,6 +19,10 @@ while read local_ref local_sha remote_ref remote_sha; do
     echo "✅ Pre-tag-push checks passed."
     exit 0
   else
+    if ! git diff $(git rev-parse --abbrev-ref @{upstream})..$(git rev-parse --abbrev-ref HEAD) --name-only | grep -Eq '.rs|.toml|.lock'; then
+        echo "✅ No Rust files, Cargo.toml, or Cargo.lock have changed, skipping pre-push checks."
+        exit 0
+    fi
     # Run just pre-push task
     if ! just pre-push; then
         echo "❌ Pre-push check failed. Please fix the issues before pushing."
