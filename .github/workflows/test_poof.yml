@@ -20,12 +20,11 @@ jobs:
         - name: Add to PATH
           run: |
             echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-            
+
         - name: Test installed poof
           run: poof --version
-          
+
         - name: Run poof
           run: |
             poof download ${{ github.event.inputs.repo }}
             ls -la
- 
