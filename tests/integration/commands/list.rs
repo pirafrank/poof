@@ -500,18 +500,14 @@ fn test_list_with_slug_and_empty_version_dir() -> Result<(), Box<dyn std::error:
         "List command should succeed even with empty version dir"
     );
 
-    // Note: The current implementation of list_installed_versions_per_slug
-    // does NOT filter empty directories (unlike list_installed_spells which does).
-    // This test documents that behavior - empty version directories are shown.
-    // This is arguably inconsistent but is the current implementation.
     assert!(
-        stdout.contains("user/repo"),
-        "Output should contain repository name (current implementation shows empty dirs): {}",
+        !stdout.contains("user/repo"),
+        "Output should NOT contain repository name: {}",
         stdout
     );
     assert!(
-        stdout.contains("1.0.0"),
-        "Output should contain version even if directory is empty (current implementation): {}",
+        !stdout.contains("1.0.0"),
+        "Output should NOT contain version: {}",
         stdout
     );
 

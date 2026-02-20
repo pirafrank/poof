@@ -1,6 +1,5 @@
 //! Main file handling 'list' command
 
-use log::info;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
@@ -103,21 +102,31 @@ pub fn list_installed_versions_per_slug(slug: &Slug) -> Result<Option<Spell>> {
     let version_dirs = match fs::read_dir(&versions_dir) {
         Ok(version_dirs) => version_dirs.flatten().collect::<Vec<_>>(),
         Err(_) => {
-            info!("It looks like '{}' is not installed. Typo?", slug);
-            info!("Repository not found.");
+            // if the directory does not exist, slug is not installed. return None.
             return Ok(None);
         }
     };
 
     let results: Vec<Version> = version_dirs
-        // filter out non-directory entries and map to Spell struct.
+        // filter out non-directory entries and empty directories and map to Spell struct.
         // not going parallel here because it's unlikely the user has that many versions.
         // to go parallel we should implement FromParallelIterator for Spell.
         .into_iter()
-        .filter(|version| version.path().is_dir())
+        .filter(|version| {
+            version.path().is_dir()
+                // assure the directory is not empty
+                && version
+                    .path()
+                    .read_dir()
+                    .map(|mut d| d.next().is_some())
+                    .unwrap_or(false)
+        })
         .map(|version| Version::new(version.file_name().into_string().unwrap_or_default()))
         .collect::<Vec<_>>();
 
-    let spell = Spell::new(slug.as_str().to_string(), results);
-    Ok(Some(spell))
+    // return None if no versions were found, otherwise return the spell.
+    match results.len() {
+        0 => Ok(None),
+        _ => Ok(Some(Spell::new(slug.as_str().to_string(), results))),
+    }
 }
