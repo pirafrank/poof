@@ -125,8 +125,9 @@ pub fn list_installed_versions_per_slug(slug: &Slug) -> Result<Option<Spell>> {
         .collect::<Vec<_>>();
 
     // return None if no versions were found, otherwise return the spell.
-    match results.len() {
-        0 => Ok(None),
-        _ => Ok(Some(Spell::new(slug.as_str().to_string(), results))),
+    if results.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(Spell::new(slug.as_str().to_string(), results)))
     }
 }

@@ -8,7 +8,7 @@ use crate::{
     utils::semver::{SemverStringPrefix, Version},
 };
 use anyhow::{bail, Context, Result};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use rayon::prelude::*;
 
 // updating a single repository
@@ -35,7 +35,7 @@ fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> 
     let asset = match spell.or(loaded_asset.as_ref()) {
         Some(asset) => asset,
         None => {
-            info!("Repository '{}' not found. Doing nothing.", repo);
+            warn!("Repository '{}' not found. Doing nothing.", repo);
             return Ok(());
         }
     };
@@ -44,7 +44,7 @@ fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> 
     let highest_installed_str = match asset.get_latest_version() {
         Some(version) => version,
         None => {
-            info!(
+            warn!(
                 "Repository '{}' found but has no versions listed. Nothing to update.",
                 repo
             );
