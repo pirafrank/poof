@@ -1,47 +1,56 @@
 use crate::cli::UpdateArgs;
+use crate::commands::list::list_installed_versions_per_slug;
+use crate::models::slug::Slug;
 use crate::{
     commands::{self, list::list_installed_spells},
     github::client::get_release,
     models::spell::Spell,
     utils::semver::{SemverStringPrefix, Version},
 };
-use anyhow::{anyhow, bail, Context, Result};
-use log::{debug, error, info};
+use anyhow::{bail, Context, Result};
+use log::{debug, error, info, warn};
 use rayon::prelude::*;
 
 // updating a single repository
 fn update_single_repo(repo: &str) -> Result<()> {
+    update_single_repo_internal(repo, None)
+}
+
+// updating a single repository with a spell
+fn update_single_repo_with_spell(repo: &str, spell: &Spell) -> Result<()> {
+    update_single_repo_internal(repo, Some(spell))
+}
+
+// inner function to update a single repository
+// TODO: not a big fan of the internal function pattern. may refactor later.
+fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> {
     info!("Checking for updates for {}", repo);
 
-    // 1. get all installed assets
-    let installed_assets: Vec<Spell> = list_installed_spells();
-
-    if installed_assets.is_empty() {
-        info!("No binaries installed yet. Nothing to update.");
-        return Ok(());
-    }
-
-    // find the specific asset for the requested repo
-    let target_asset = installed_assets
-        .iter()
-        .find(|asset: &&Spell| asset.get_name() == repo);
-
-    // handle the None case first by returning early
-    let Some(asset) = target_asset else {
-        info!(
-            "{} is not installed. Use 'poof install {}' first.",
-            repo, repo
-        );
-        return Ok(()); // nothing to update, not an error
+    // 1. find the specific asset for the requested repo
+    let loaded_asset = if spell.is_none() {
+        list_installed_versions_per_slug(&Slug::new(repo)?)?
+    } else {
+        None
+    };
+    let asset = match spell.or(loaded_asset.as_ref()) {
+        Some(asset) => asset,
+        None => {
+            warn!("Repository '{}' not found. Doing nothing.", repo);
+            return Ok(());
+        }
     };
 
-    // we know asset exists, extract the latest version string using ?
-    let highest_installed_str = asset.get_latest_version().ok_or_else(|| {
-        anyhow!(
-            "Spell {} found but has no versions listed (internal error)",
-            repo
-        )
-    })?;
+    // we know asset exists, extract the latest version string
+    let highest_installed_str = match asset.get_latest_version() {
+        Some(version) => version,
+        None => {
+            warn!(
+                "Repository '{}' found but has no versions listed. Nothing to update.",
+                repo
+            );
+            return Ok(());
+        }
+    };
 
     let highest_installed = Version::parse(&highest_installed_str).with_context(|| {
         format!(
@@ -120,8 +129,8 @@ fn update_all_repos() -> Result<()> {
         .map(|asset| {
             // extract repo name for the call
             let repo_name = asset.get_name();
-            // call update_single_repo for each asset
-            update_single_repo(repo_name)
+            // call update_single_repo for each asset using the already loaded spell
+            update_single_repo_with_spell(repo_name, asset)
                 // add context specific to this repo in case of failure
                 .with_context(|| format!("Cannot update {}", repo_name))
         })
