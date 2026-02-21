@@ -1,5 +1,6 @@
 use super::*;
 use crate::constants::{APP_NAME, DATA_SUBDIR, GITHUB_SUBDIR};
+use crate::models::spell::Spell;
 use anyhow::Result;
 use mockito::Server;
 use serde_json::json;
@@ -355,6 +356,37 @@ fn test_update_single_repo_github_api_failure() -> Result<()> {
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("Cannot get latest release") || err_msg.contains("500"));
+    });
+
+    Ok(())
+}
+
+#[test]
+fn test_update_single_repo_with_spell_uses_provided_versions() -> Result<()> {
+    let test_env = setup_test_env()?;
+
+    let mut server = Server::new();
+    let _m = mock_release_response(&mut server, "testuser/testrepo", "v1.0.0", 200);
+
+    let server_url = server.url();
+    let mut env_vars: Vec<(&str, Option<&str>)> = test_env
+        .env_vars
+        .iter()
+        .map(|(k, v)| (*k, Some(v.as_str())))
+        .collect();
+    env_vars.push(("POOF_GITHUB_API_URL", Some(server_url.as_str())));
+
+    temp_env::with_vars(env_vars, || {
+        // No filesystem installation is created; this only succeeds if the
+        // spell-aware path uses the provided versions instead of re-reading from disk.
+        let spell = Spell::new_as_string(
+            "testuser/testrepo".to_string(),
+            vec!["invalid-version".to_string()],
+        );
+        let result = update_single_repo_with_spell("testuser/testrepo", &spell);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Cannot parse") || err_msg.contains("semver"));
     });
 
     Ok(())

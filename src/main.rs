@@ -116,19 +116,18 @@ fn run() -> Result<()> {
             }
         }
         Cmd::List(args) => {
-            let list: Vec<Spell>;
-            if let Some(ref repo) = args.repo {
+            let list: Vec<Spell> = if let Some(ref repo) = args.repo {
                 let repo = Slug::new(repo)?;
-                list = match commands::list::list_installed_versions_per_slug(&repo)? {
+                match commands::list::list_installed_versions_per_slug(&repo)? {
                     Some(spell) => vec![spell],
                     None => {
                         info!("Repository '{}' does not seem to be installed.", repo);
                         return Ok(());
                     }
-                };
+                }
             } else {
-                list = commands::list::list_installed_spells();
-            }
+                commands::list::list_installed_spells()
+            };
 
             // output the list
             if list.is_empty() {

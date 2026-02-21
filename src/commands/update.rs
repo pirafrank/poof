@@ -13,11 +13,26 @@ use rayon::prelude::*;
 
 // updating a single repository
 fn update_single_repo(repo: &str) -> Result<()> {
+    update_single_repo_internal(repo, None)
+}
+
+// updating a single repository with a spell
+fn update_single_repo_with_spell(repo: &str, spell: &Spell) -> Result<()> {
+    update_single_repo_internal(repo, Some(spell))
+}
+
+// inner function to update a single repository
+// TODO: not a big fan of the internal function pattern. may refactor later.
+fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> {
     info!("Checking for updates for {}", repo);
 
     // 1. find the specific asset for the requested repo
-    let asset_option = list_installed_versions_per_slug(&Slug::new(repo)?)?;
-    let asset = match asset_option {
+    let loaded_asset = if spell.is_none() {
+        list_installed_versions_per_slug(&Slug::new(repo)?)?
+    } else {
+        None
+    };
+    let asset = match spell.or(loaded_asset.as_ref()) {
         Some(asset) => asset,
         None => {
             info!("Repository '{}' not found. Doing nothing.", repo);
@@ -114,8 +129,8 @@ fn update_all_repos() -> Result<()> {
         .map(|asset| {
             // extract repo name for the call
             let repo_name = asset.get_name();
-            // call update_single_repo for each asset
-            update_single_repo(repo_name)
+            // call update_single_repo for each asset using the already loaded spell
+            update_single_repo_with_spell(repo_name, asset)
                 // add context specific to this repo in case of failure
                 .with_context(|| format!("Cannot update {}", repo_name))
         })

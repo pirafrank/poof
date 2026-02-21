@@ -342,8 +342,9 @@ fn test_use_explicit_version_with_multiple_installations() -> Result<(), Box<dyn
                 );
 
                 // Also verify it does NOT point to version 3 (the latest)
+                let latest_binary_path = install_dir3.join(binary_name);
                 assert!(
-                    !target_str.contains(version3) || target == expected_binary_path,
+                    !target_str.contains(version3) && target != latest_binary_path,
                     "Symlink should NOT point to version 3 (latest). Target: {}, Should not contain: {}",
                     target_str,
                     version3

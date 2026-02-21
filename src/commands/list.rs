@@ -84,7 +84,7 @@ pub fn list_installed_spells() -> Vec<Spell> {
     }
 
     let mut result: Vec<Spell> = versions_map
-        // filter out non-directory entries and map to Spell struct.
+        // map to Spell struct.
         // not going parallel here because it's unlikely the user has that many versions.
         // to go parallel we should implement FromParallelIterator for Spell.
         .into_iter()
