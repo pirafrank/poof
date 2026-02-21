@@ -169,13 +169,16 @@ fn test_which_regular_file_not_symlink() -> Result<(), Box<dyn std::error::Error
 
     assert!(
         output.status.success(),
-        "Command should succeed but indicate it's not managed"
+        "Command should succeed but indicate binary not found"
     );
 
+    // New implementation: the which command now searches the data directory,
+    // not the bin directory. A file in the bin directory that's not managed
+    // by poof (not in data dir) will be reported as "not found".
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("not a symlink") || stderr.contains("foreign binary"),
-        "Output should indicate binary is not a symlink or is foreign: {}",
+        stderr.contains("not found"),
+        "Output should indicate binary is not found in installed repositories: {}",
         stderr
     );
 
@@ -198,7 +201,6 @@ fn test_which_broken_symlink() -> Result<(), Box<dyn std::error::Error>> {
     // This simulates a broken poof-managed binary
     let nonexistent_target = fixture
         .data_dir
-        .join("github.com")
         .join("user")
         .join("repo")
         .join("1.0.0")
@@ -216,8 +218,9 @@ fn test_which_broken_symlink() -> Result<(), Box<dyn std::error::Error>> {
     set_test_env(&mut cmd, &fixture);
     let output = cmd.output()?;
 
-    // The command will report "not found" because .exists() returns false for broken symlinks
-    // This is actually correct behavior - a broken symlink is effectively not usable
+    // New implementation: the which command now searches the data directory,
+    // not the bin directory. A broken symlink will be correctly identified as not found
+    // because the binary doesn't exist in the data directory.
     assert!(
         output.status.success(),
         "Command should succeed even with broken symlink"
@@ -257,15 +260,17 @@ fn test_which_symlink_outside_data_dir() -> Result<(), Box<dyn std::error::Error
     set_test_env(&mut cmd, &fixture);
     let output = cmd.output()?;
 
-    // The command should fail or return an error for external binaries
-    // since the implementation bails when it can't extract the slug
-    let stderr = String::from_utf8_lossy(&output.stderr);
-
-    // Either the command fails or shows an error message
+    // New implementation: the which command now searches the data directory,
+    // not the bin directory. A symlink pointing outside the data directory
+    // won't be found since the binary doesn't exist in the data directory.
     assert!(
-        !output.status.success()
-            || stderr.contains("Cannot determine")
-            || stderr.contains("Internal error"),
+        output.status.success(),
+        "Command should succeed but indicate binary not found"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("not found"),
         "Should indicate error for external binary. stderr: {}, exit: {}",
         stderr,
         output.status
@@ -311,6 +316,117 @@ fn test_which_output_format() -> Result<(), Box<dyn std::error::Error>> {
         "Output should contain version information: {}",
         stdout
     );
+
+    Ok(())
+}
+
+// ============================================================================
+// Unlink Scenario Tests
+// ============================================================================
+
+#[serial]
+#[test]
+#[cfg(not(target_os = "windows"))]
+fn test_which_after_unlink() -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs;
+
+    let fixture = TestFixture::new()?;
+    let binary_name = "unlinktest";
+    let repo = "testuser/testbin";
+    let version = "2.0.0";
+
+    // Create a fake installation (binary in data directory)
+    let install_dir = fixture.create_fake_installation(repo, version)?;
+
+    // Create the binary with the correct name
+    let binary_path = install_dir.join(binary_name);
+    fixture.create_executable_with_perms(&binary_path, b"#!/bin/sh\necho 'test binary'")?;
+
+    // Create symlink in bin_dir (simulating what the install command does)
+    let symlink_path = fixture.bin_dir.join(binary_name);
+    std::os::unix::fs::symlink(&binary_path, &symlink_path)?;
+
+    // Verify which works with the symlink present
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("which").arg(binary_name);
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
+
+    assert!(output.status.success(), "Which should work with symlink");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("testuser/testbin"),
+        "Should show repository"
+    );
+
+    // Now remove the symlink (simulating unlink command)
+    fs::remove_file(&symlink_path)?;
+    assert!(!symlink_path.exists(), "Symlink should be removed");
+
+    // Verify which STILL works after unlink (this is the key improvement)
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("which").arg(binary_name);
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
+
+    assert!(
+        output.status.success(),
+        "Which should still work after unlink"
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("testuser/testbin"),
+        "Should still show repository after unlink: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("2.0.0"),
+        "Should still show version after unlink: {}",
+        stdout
+    );
+
+    Ok(())
+}
+
+#[serial]
+#[test]
+#[cfg(not(target_os = "windows"))]
+fn test_which_multiple_versions() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+    let binary_name = "multiver";
+    let repo = "multiuser/multirepo";
+
+    // Create multiple versions of the same binary
+    for version in &["1.0.0", "1.5.0", "2.0.0"] {
+        let install_dir = fixture.create_fake_installation(repo, version)?;
+        let binary_path = install_dir.join(binary_name);
+        fixture.create_executable_with_perms(&binary_path, b"#!/bin/sh\necho 'test binary'")?;
+    }
+
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("which").arg(binary_name);
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
+
+    assert!(
+        output.status.success(),
+        "Which should work with multiple versions"
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // The command should show the repository
+    assert!(
+        stdout.contains("multiuser/multirepo"),
+        "Should show repository: {}",
+        stdout
+    );
+
+    // Should show at least one version (could show all)
+    let has_version =
+        stdout.contains("1.0.0") || stdout.contains("1.5.0") || stdout.contains("2.0.0");
+    assert!(has_version, "Should show at least one version: {}", stdout);
 
     Ok(())
 }
