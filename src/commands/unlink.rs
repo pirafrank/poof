@@ -13,8 +13,11 @@ pub fn run_unlink(args: &UnlinkArgs) -> Result<()> {
 
     // Check if binary exists
     if !binary_path.exists() {
-        info!("No binary named '{}' found", args.binary_name);
-        return Ok(());
+        bail!(
+            "Binary '{}' not found in bin directory. \
+Check installed binaries using 'list' command.",
+            args.binary_name
+        );
     }
 
     // Verify it's a symlink

@@ -35,8 +35,10 @@ fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> 
     let asset = match spell.or(loaded_asset.as_ref()) {
         Some(asset) => asset,
         None => {
-            warn!("Repository '{}' not found. Doing nothing.", repo);
-            return Ok(());
+            bail!(
+                "Repository '{}' not found. Check installed binaries using 'list' command.",
+                repo
+            );
         }
     };
 

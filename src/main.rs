@@ -117,8 +117,7 @@ fn run() -> Result<()> {
                 match commands::list::list_installed_versions_per_slug(&repo)? {
                     Some(spell) => vec![spell],
                     None => {
-                        info!("Repository '{}' does not seem to be installed.", repo);
-                        return Ok(());
+                        bail!("Repository '{}' not found. Check installed binaries using 'list' command.", repo);
                     }
                 }
             } else {
