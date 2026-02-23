@@ -1,86 +1,104 @@
 //! Main file handling 'which' command
 
-use anyhow::{bail, Context, Result};
-use log::{debug, error};
-use std::path::Path;
+use anyhow::{anyhow, Context, Result};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use crate::cli::WhichArgs;
-use crate::files::datadirs;
-use crate::models::slug::Slug;
+use crate::commands::list::list_installed_spells;
+use crate::files::{datadirs, magic};
+use crate::models::spell::Spell;
 use crate::output;
 
 pub fn run_which(args: &WhichArgs) -> Result<()> {
-    let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory path")?;
-    let binary_path = bin_dir.join(&args.binary_name);
+    let data_dir = datadirs::get_data_dir().context("Cannot get data directory path")?;
+    let spells = list_installed_spells();
 
-    // Check if binary exists
-    if !binary_path.exists() {
-        error!("'{}' not found in poof's bin directory.", args.binary_name);
-        return Ok(());
+    // Find all binaries matching the requested name across all installed repositories.
+    let matches = find_binary_providers(&spells, &data_dir, &args.binary_name);
+
+    if matches.is_empty() {
+        return Err(anyhow!(
+            "'{}' not found in any installed repositories.",
+            args.binary_name
+        ));
     }
 
-    // Try to read the symlink
-    let symlink_target = match binary_path.read_link() {
-        Ok(target) => target,
-        Err(_) => {
-            error!(
-                "'{}' exists in poof's bin directory but is not a symlink.\n\
-                This is likely a foreign binary not managed by poof. Please remove it and try again.",
-                args.binary_name
-            );
-            return Ok(());
-        }
-    };
-
-    // Extract the slug from the symlink target path
-    let (slug, version) = extract_slug_from_path(&symlink_target).with_context(|| {
-        format!(
-            "Cannot determine repository providing '{}'.",
-            args.binary_name
-        )
-    })?;
-
+    // Display results
     output!("{} is provided by:", args.binary_name);
-    output!("{} {}", slug, version);
+    for (slug, version) in matches {
+        output!("{} {}", slug, version);
+    }
 
     Ok(())
 }
 
-/// Extract the repository slug (username/reponame) from a binary path.
-/// The path is expected to be in the format:
-/// ...data_dir/SERVER_NAME/USERNAME/REPO_NAME/VERSION/binary_name
-fn extract_slug_from_path(path: &Path) -> Result<(String, String)> {
-    let path_str = path.to_string_lossy();
+fn find_binary_providers(
+    spells: &[Spell],
+    data_dir: &Path,
+    binary_name: &str,
+) -> Vec<(String, String)> {
+    let symlink_target = resolve_managed_symlink_target(binary_name);
+    let mut matches: Vec<(String, String)> = Vec::new();
 
-    // Find the data dir part and extract what comes after.
-    // IMPORTANT: Do NOT rely on any platform-specific path for data directory.
-    //            Instead, start from the data subdirectory, which is always the same.
-    let marker = "poof/data/";
-    if let Some(pos) = path_str.find(marker) {
-        let after_data_dir = &path_str[pos + marker.len()..];
+    for spell in spells {
+        let slug = spell.get_name().to_owned();
+        let versions_nest = datadirs::get_versions_nest(data_dir, &slug);
 
-        // Split by path separator and take the first two components (username/reponame)
-        let components: Vec<&str> = after_data_dir
-            .split(std::path::MAIN_SEPARATOR)
-            .filter(|s| !s.is_empty())
-            .collect();
+        for version in spell.get_versions() {
+            let version_str = version.to_string();
+            let version_dir = versions_nest.join(&version_str);
+            let has_exact_binary = has_executable_named(&version_dir, binary_name);
+            let has_symlink_for_version = symlink_target
+                .as_ref()
+                .is_some_and(|target| target.starts_with(&version_dir));
 
-        // The path is expected to be in the format:
-        // ...data_dir/SERVER_NAME/USERNAME/REPO_NAME/VERSION/binary_name
-        if components.len() == 5 {
-            return Ok((
-                Slug::from_parts(components[1], components[2]).map(|slug| slug.to_string())?,
-                components[3].to_string(),
-            ));
+            if has_exact_binary || has_symlink_for_version {
+                matches.push((slug.clone(), version_str));
+            }
         }
-        bail!("Internal error");
     }
 
-    debug!(
-        "Cannot determine repository providing '{}'.",
-        path.to_string_lossy()
-    );
-    bail!("Internal error");
+    matches
+}
+
+fn has_executable_named(version_dir: &Path, binary_name: &str) -> bool {
+    let direct_candidate = version_dir.join(binary_name);
+    if is_executable_file(&direct_candidate) {
+        return true;
+    }
+
+    // one day this may be useful
+    #[cfg(target_os = "windows")]
+    {
+        let exe_candidate = version_dir.join(format!("{}.exe", binary_name));
+        if is_executable_file(&exe_candidate) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    path.is_file() && magic::is_exec_by_magic_number(path)
+}
+
+fn resolve_managed_symlink_target(binary_name: &str) -> Option<PathBuf> {
+    let bin_dir = datadirs::get_bin_dir()?;
+    let symlink_path = bin_dir.join(binary_name);
+    let target = fs::read_link(&symlink_path).ok()?;
+    let absolute_target = if target.is_absolute() {
+        target
+    } else {
+        symlink_path.parent()?.join(target)
+    };
+
+    if absolute_target.exists() {
+        Some(absolute_target)
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -88,15 +106,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_extract_slug_from_path() {
-        // note: no need to make this cross-platform since the implementation
-        // does not rely on any platform-specific functionality and it starts from
-        // data subdirectory wherever it is located.
-        let path = Path::new(
-            "/home/user/.local/share/poof/data/github.com/username/reponame/1.0.0/binary_name",
-        );
-        let (slug, version) = extract_slug_from_path(path).unwrap();
-        assert_eq!(slug, "username/reponame");
-        assert_eq!(version, "1.0.0");
+    fn test_find_binary_providers_empty_spells() {
+        let temp_dir = std::env::temp_dir().join("poof_test_which_empty");
+        let spells = Vec::new();
+        let matches = find_binary_providers(&spells, &temp_dir, "some_binary");
+        assert!(matches.is_empty());
     }
 }
