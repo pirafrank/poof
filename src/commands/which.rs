@@ -1,7 +1,6 @@
 //! Main file handling 'which' command
 
-use anyhow::{Context, Result};
-use log::error;
+use anyhow::{anyhow, Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -19,11 +18,10 @@ pub fn run_which(args: &WhichArgs) -> Result<()> {
     let matches = find_binary_providers(&spells, &data_dir, &args.binary_name);
 
     if matches.is_empty() {
-        error!(
+        return Err(anyhow!(
             "'{}' not found in any installed repositories.",
             args.binary_name
-        );
-        return Ok(());
+        ));
     }
 
     // Display results

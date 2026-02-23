@@ -271,7 +271,7 @@ fn test_which_symlink_outside_data_dir() -> Result<(), Box<dyn std::error::Error
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains("not found"),
-        "Should indicate error for external binary. stderr: {}, exit: {}",
+        "Should indicate not found for external binary. stderr: {}, exit: {}",
         stderr,
         output.status
     );
@@ -423,10 +423,22 @@ fn test_which_multiple_versions() -> Result<(), Box<dyn std::error::Error>> {
         stdout
     );
 
-    // Should show at least one version (could show all)
-    let has_version =
-        stdout.contains("1.0.0") || stdout.contains("1.5.0") || stdout.contains("2.0.0");
-    assert!(has_version, "Should show at least one version: {}", stdout);
+    // All three installed versions should be reported
+    assert!(
+        stdout.contains("1.0.0"),
+        "Should show version 1.0.0: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("1.5.0"),
+        "Should show version 1.5.0: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("2.0.0"),
+        "Should show version 2.0.0: {}",
+        stdout
+    );
 
     Ok(())
 }
