@@ -277,9 +277,11 @@ pub fn get_validated_archive_format(archive_path: &Path) -> Result<BinaryContain
 /// - **TAR.GZ/TGZ** (`.tar.gz`, `.tgz`): GZip-compressed TAR archives
 /// - **TAR.XZ/TXZ** (`.tar.xz`, `.txz`): XZ-compressed TAR archives
 /// - **TAR.BZ2/TBZ/TBZ2** (`.tar.bz2`, `.tbz`, `.tbz2`): BZip2-compressed TAR archives
+/// - **TAR.ZST/TZST** (`.tar.zst`, `.tzst`): Zstandard-compressed TAR archives
 /// - **GZ** (`.gz`): Standalone GZip-compressed files (uncommon for distribution)
 /// - **XZ** (`.xz`): Standalone XZ-compressed files (uncommon for distribution)
 /// - **BZ2** (`.bz2`): Standalone BZip2-compressed files (uncommon for distribution)
+/// - **ZST** (`.zst`): Standalone Zstandard-compressed files (uncommon for distribution)
 /// - **7Z** (`.7z`): 7-Zip archives using the `sevenz-rust2` crate
 ///
 /// # Arguments
