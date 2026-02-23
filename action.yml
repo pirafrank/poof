@@ -1,0 +1,147 @@
+name: 'Setup poof'
+description: 'Install pre-built binaries from GitHub Releases using poof'
+
+branding:
+  icon: 'package'
+  color: 'orange'
+
+inputs:
+  packages:
+    description: >
+      Newline or comma-separated list of GitHub repos to install,
+      in USERNAME/REPO format with optional tag after '@' character
+      (e.g. ms-jpq/sad or pirafrank/vault-conductor@v0.3.0).
+    required: true
+  version:
+    description: >
+      Version of poof to bootstrap (e.g. v0.6.0). Defaults to 'latest',
+      which always installs the most recent release.
+    required: false
+    default: 'latest'
+  token:
+    description: >
+      GitHub token used for API requests inside poof to avoid rate limiting.
+      Defaults to the workflow's built-in GITHUB_TOKEN.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install poof
+      shell: bash
+      env:
+        POOF_VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+
+        INSTALL_DIR="$HOME/.local/bin"
+        mkdir -p "$INSTALL_DIR"
+
+        if [ "$POOF_VERSION" = "latest" ]; then
+          echo "Installing latest poof via install.sh..."
+          curl -fsSL \
+            "https://raw.githubusercontent.com/pirafrank/poof/main/install.sh" \
+            | sh
+        else
+          # Normalize: add 'v' prefix if missing
+          TAG="$POOF_VERSION"
+          [[ "$TAG" != v* ]] && TAG="v$TAG"
+          VERSION="${TAG#v}"
+
+          # Detect OS
+          OS="$(uname -s)"
+
+          # Detect and normalize architecture
+          ARCH="$(uname -m)"
+          case "$ARCH" in
+            x86_64|amd64)   ARCH="x86_64"  ;;
+            aarch64|arm64)  ARCH="aarch64" ;;
+            i386|i586|i686) ARCH="i686"    ;;
+            armv7l|armv7)   ARCH="armv7"   ;;
+            *)
+              echo "Unsupported architecture: $ARCH"
+              exit 1
+              ;;
+          esac
+
+          # Build target triple
+          case "$OS" in
+            Linux)
+              LDD_OUT=$(ldd --version 2>&1 || true)
+              if echo "$LDD_OUT" | grep -qi "glibc\|gnu libc"; then
+                TARGET="${ARCH}-unknown-linux-gnu"
+              else
+                TARGET="${ARCH}-unknown-linux-musl"
+              fi
+              ;;
+            Darwin)
+              TARGET="${ARCH}-apple-darwin"
+              ;;
+            *)
+              echo "Unsupported OS: $OS"
+              exit 1
+              ;;
+          esac
+
+          FILENAME="poof-${VERSION}-${TARGET}.tar.gz"
+          URL="https://github.com/pirafrank/poof/releases/download/${TAG}/${FILENAME}"
+
+          echo "Installing poof ${TAG} for ${TARGET}..."
+          TMP="$(mktemp -d)"
+          trap 'rm -rf "$TMP"' EXIT
+
+          curl -fL "$URL" -o "$TMP/$FILENAME"
+          tar -xzf "$TMP/$FILENAME" -C "$TMP"
+
+          mv "$TMP/poof" "$INSTALL_DIR/poof"
+          chmod +x "$INSTALL_DIR/poof"
+        fi
+
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+
+    - name: Add poof bin dir to PATH
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        OS="$(uname -s)"
+        case "$OS" in
+          Darwin)
+            # macOS XDG data_dir: ~/Library/Application Support
+            POOF_BIN_DIR="$HOME/Library/Application Support/poof/bin"
+            ;;
+          *)
+            # Linux XDG data_dir: ~/.local/share
+            POOF_BIN_DIR="$HOME/.local/share/poof/bin"
+            ;;
+        esac
+
+        echo "Adding poof bin dir to PATH: $POOF_BIN_DIR"
+        echo "$POOF_BIN_DIR" >> "$GITHUB_PATH"
+
+    - name: Install packages with poof
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+
+        export PATH="$HOME/.local/bin:$PATH"
+
+        # Split on newlines and commas, trim whitespace, skip empty lines.
+        # Supports optional tag: user/repo@v1.0.0 -> poof install user/repo --tag v1.0.0
+        while IFS= read -r pkg; do
+          pkg="$(echo "$pkg" | xargs 2>/dev/null || echo "$pkg")"
+          [ -z "$pkg" ] && continue
+          if [[ "$pkg" == *@* ]]; then
+            slug="${pkg%%@*}"
+            tag="${pkg##*@}"
+            echo "Installing ${slug}@${tag} with poof..."
+            poof install "$slug" --tag "$tag"
+          else
+            echo "Installing ${pkg} with poof..."
+            poof install "$pkg"
+          fi
+        done < <(echo '${{ inputs.packages }}' | tr ',' '\n')

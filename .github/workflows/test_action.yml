@@ -1,0 +1,64 @@
+name: Test poof GitHub Action
+run-name: Test action on ${{ github.ref_name }}
+
+on:
+  push:
+    paths:
+      - 'action.yml'
+  pull_request:
+    paths:
+      - 'action.yml'
+  workflow_dispatch:
+
+jobs:
+  test_action:
+    name: Test latest poof (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+      fail-fast: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install multiple binaries
+        uses: ./
+        with:
+          packages: |
+            lsd-rs/lsd
+            dandavison/delta@0.18.0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify installed binary is in PATH
+        run: |
+          which poof
+          poof --version
+          which lsd
+          lsd --version
+          which delta
+          delta --version | grep 0.18.0
+
+  test_pinned:
+    name: Test poof version v0.5.2 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+      fail-fast: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install a pinned version of poof
+        uses: ./
+        with:
+          packages: |
+            ms-jpq/sad
+          version: 'v0.5.2'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify pinned install
+        run: |
+          which poof
+          poof --version
