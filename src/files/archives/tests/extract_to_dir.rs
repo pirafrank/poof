@@ -191,6 +191,48 @@ fn test_extract_tbz2_extension() {
 }
 
 #[test]
+fn test_extract_tar_zstd_archive() {
+    let temp_dir = TempDir::new().unwrap();
+    let archive_path = fixtures_dir().join("archive.tar.zst");
+    let extract_path = temp_dir.path().join("extracted");
+
+    // Extract the fixture tar.zst archive
+    let result = extract_to_dir(&archive_path, &extract_path);
+
+    assert!(
+        result.is_ok(),
+        "Extraction failed for .tar.zst: {:?}",
+        result.err()
+    );
+
+    // Verify extracted files exist
+    assert!(extract_path.join("file.txt").exists());
+    assert!(extract_path.join("text.txt").exists());
+    assert!(extract_path.join("README").exists());
+}
+
+#[test]
+fn test_extract_tzst_archive() {
+    let temp_dir = TempDir::new().unwrap();
+    let archive_path = fixtures_dir().join("archive.tzst");
+    let extract_path = temp_dir.path().join("extracted");
+
+    // Extract the fixture tzst archive
+    let result = extract_to_dir(&archive_path, &extract_path);
+
+    assert!(
+        result.is_ok(),
+        "Extraction failed for .tzst: {:?}",
+        result.err()
+    );
+
+    // Verify extracted files exist
+    assert!(extract_path.join("file.txt").exists());
+    assert!(extract_path.join("text.txt").exists());
+    assert!(extract_path.join("README").exists());
+}
+
+#[test]
 fn test_extract_7z_archive() {
     let temp_dir = TempDir::new().unwrap();
     let archive_path = fixtures_dir().join("archive.7z");
@@ -261,6 +303,25 @@ fn test_extract_bz2_compressed_file() {
     assert!(
         result.is_ok(),
         "Extraction failed for .bz2: {:?}",
+        result.err()
+    );
+
+    // Verify extracted file exists (file.* contains just file.txt)
+    assert!(extract_path.join("file.txt").exists());
+}
+
+#[test]
+fn test_extract_zstd_compressed_file() {
+    let temp_dir = TempDir::new().unwrap();
+    let archive_path = fixtures_dir().join("file.txt.zst");
+    let extract_path = temp_dir.path().join("extracted");
+
+    // Extract the fixture zst compressed file (not tar.zst, just zst)
+    let result = extract_to_dir(&archive_path, &extract_path);
+
+    assert!(
+        result.is_ok(),
+        "Extraction failed for .zst: {:?}",
         result.err()
     );
 

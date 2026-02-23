@@ -58,6 +58,27 @@ fn test_tbz2_extension() {
 }
 
 #[test]
+fn test_tar_zstd_extension() {
+    let path = PathBuf::from("archive.tar.zst");
+    let ext = get_file_extension(&path);
+    assert_eq!(ext, "tar.zst");
+}
+
+#[test]
+fn test_tzst_extension() {
+    let path = PathBuf::from("archive.tzst");
+    let ext = get_file_extension(&path);
+    assert_eq!(ext, "tzst");
+}
+
+#[test]
+fn test_zstd_extension() {
+    let path = PathBuf::from("archive.zst");
+    let ext = get_file_extension(&path);
+    assert_eq!(ext, "zst");
+}
+
+#[test]
 fn test_tar_extension() {
     let path = PathBuf::from("archive.tar");
     let ext = get_file_extension(&path);

@@ -18,9 +18,9 @@ pub const GITHUB_SUBDIR: &str = "github.com";
 // file extension constants
 // SUPPORTED_EXTENSIONS is a list of file extensions that are supported by the selector.
 // NOTE: multi-part extensions MUST come before single extension counterparts.
-pub const SUPPORTED_EXTENSIONS: [&str; 12] = [
+pub const SUPPORTED_EXTENSIONS: [&str; 15] = [
     ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz", ".tbz2", ".zip", ".tar", ".gz",
-    ".xz", ".bz2",
+    ".xz", ".bz2", ".zst", ".tar.zst", ".tzst",
 ];
 
 // other constants
