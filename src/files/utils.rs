@@ -20,6 +20,8 @@ pub fn get_file_extension(archive_path: &Path) -> &str {
         return "tar.xz";
     } else if filename.ends_with(".tar.bz2") {
         return "tar.bz2";
+    } else if filename.ends_with(".tar.zst") {
+        return "tar.zst";
     }
 
     // For single extensions, use the standard method

@@ -3,6 +3,7 @@
 
 use crate::files::magic::{
     BZIP2_MAGIC, GZIP_MAGIC, SEVENZ_MAGIC, TAR_MAGIC, TAR_MAGIC_OFFSET, XZ_MAGIC, ZIP_MAGIC,
+    ZSTD_MAGIC,
 };
 use crate::models::binary_container::BinaryContainer;
 use std::fs::File;
@@ -55,6 +56,36 @@ fn test_valid_tgz_archive() {
 
     let format = get_validated_archive_format(&file_path).unwrap();
     assert_eq!(format, BinaryContainer::TarGz);
+}
+
+#[test]
+fn test_valid_zst_archive() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("test.zst");
+    create_file_with_magic(&file_path, ZSTD_MAGIC).unwrap();
+
+    let format = get_validated_archive_format(&file_path).unwrap();
+    assert_eq!(format, BinaryContainer::Zstd);
+}
+
+#[test]
+fn test_valid_tar_zstd_archive() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("test.tar.zst");
+    create_file_with_magic(&file_path, ZSTD_MAGIC).unwrap();
+
+    let format = get_validated_archive_format(&file_path).unwrap();
+    assert_eq!(format, BinaryContainer::TarZstd);
+}
+
+#[test]
+fn test_valid_tzst_archive() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("test.tzst");
+    create_file_with_magic(&file_path, ZSTD_MAGIC).unwrap();
+
+    let format = get_validated_archive_format(&file_path).unwrap();
+    assert_eq!(format, BinaryContainer::TarZstd);
 }
 
 #[test]

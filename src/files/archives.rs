@@ -44,6 +44,7 @@ const OUTPUT_DIR: &str = "output";
 /// - **GZIP** (GZ, TAR.GZ): Checks for GZIP magic bytes at the start
 /// - **XZ** (XZ, TAR.XZ): Checks for XZ magic bytes at the start
 /// - **BZIP2** (BZ2, TAR.BZ2): Checks for BZIP2 magic bytes at the start
+/// - **ZSTD** (ZST, TAR.ZST): Checks for ZSTD magic bytes at the start
 /// - **TAR**: Checks for "ustar" signature at offset 257 (POSIX tar format)
 /// - **7Z**: Checks for 7-Zip signature at the start
 ///
@@ -78,6 +79,7 @@ fn validate_format_against_magic_bytes(
         BinaryContainer::TarGz | BinaryContainer::Gz => buffer.starts_with(GZIP_MAGIC),
         BinaryContainer::TarXz | BinaryContainer::Xz => buffer.starts_with(XZ_MAGIC),
         BinaryContainer::TarBz2 | BinaryContainer::Bz2 => buffer.starts_with(BZIP2_MAGIC),
+        BinaryContainer::TarZstd | BinaryContainer::Zstd => buffer.starts_with(ZSTD_MAGIC),
         BinaryContainer::Tar => {
             // Check for tar magic at offset 257
             bytes_read > TAR_MAGIC_OFFSET + TAR_MAGIC.len()
@@ -105,9 +107,11 @@ fn validate_format_against_magic_bytes(
 /// - `BinaryContainer::TarGz` for `.tar.gz` or `.tgz` files
 /// - `BinaryContainer::TarXz` for `.tar.xz` or `.txz` files
 /// - `BinaryContainer::TarBz2` for `.tar.bz2`, `.tbz`, or `.tbz2` files
+/// - `BinaryContainer::TarZstd` for `.tar.zst` or `.tzst` files
 /// - `BinaryContainer::Gz` for standalone `.gz` files
 /// - `BinaryContainer::Xz` for standalone `.xz` files
 /// - `BinaryContainer::Bz2` for standalone `.bz2` files
+/// - `BinaryContainer::Zstd` for standalone `.zst` files
 /// - `BinaryContainer::Tar` for `.tar` files
 /// - `BinaryContainer::SevenZ` for `.7z` files
 /// - `BinaryContainer::Unknown` for unrecognized extensions
@@ -131,11 +135,13 @@ fn get_archive_format_from_extension(archive_path: &Path) -> BinaryContainer {
         "tar.gz" | "tgz" => BinaryContainer::TarGz,
         "tar.xz" | "txz" => BinaryContainer::TarXz,
         "tar.bz2" | "tbz" | "tbz2" => BinaryContainer::TarBz2,
+        "tar.zst" | "tzst" => BinaryContainer::TarZstd,
         // Single extensions
         "zip" => BinaryContainer::Zip,
         "gz" => BinaryContainer::Gz,
         "xz" => BinaryContainer::Xz,
         "bz2" => BinaryContainer::Bz2,
+        "zst" => BinaryContainer::Zstd,
         "tar" => BinaryContainer::Tar,
         "7z" => BinaryContainer::SevenZ,
         _ => BinaryContainer::Unknown,
@@ -176,9 +182,11 @@ fn get_archive_format_from_extension(archive_path: &Path) -> BinaryContainer {
 /// - **TAR.GZ/TGZ** (`.tar.gz`, `.tgz`): GZip-compressed TAR archive
 /// - **TAR.XZ/TXZ** (`.tar.xz`, `.txz`): XZ-compressed TAR archive
 /// - **TAR.BZ2/TBZ/TBZ2** (`.tar.bz2`, `.tbz`, `.tbz2`): BZip2-compressed TAR archive
+/// - **TAR.ZSTD/TZST** (`.tar.zst`, `.tzst`): Zstandard-compressed TAR archive
 /// - **GZ** (`.gz`): Standalone GZip-compressed file (not commonly used for distribution)
 /// - **XZ** (`.xz`): Standalone XZ-compressed file (not commonly used for distribution)
 /// - **BZ2** (`.bz2`): Standalone BZip2-compressed file (not commonly used for distribution)
+/// - **ZSTD** (`.zst`): Standalone Zstandard-compressed file (not commonly used for distribution)
 /// - **7Z** (`.7z`): 7-Zip archive format
 ///
 /// # Arguments
@@ -269,9 +277,11 @@ pub fn get_validated_archive_format(archive_path: &Path) -> Result<BinaryContain
 /// - **TAR.GZ/TGZ** (`.tar.gz`, `.tgz`): GZip-compressed TAR archives
 /// - **TAR.XZ/TXZ** (`.tar.xz`, `.txz`): XZ-compressed TAR archives
 /// - **TAR.BZ2/TBZ/TBZ2** (`.tar.bz2`, `.tbz`, `.tbz2`): BZip2-compressed TAR archives
+/// - **TAR.ZST/TZST** (`.tar.zst`, `.tzst`): Zstandard-compressed TAR archives
 /// - **GZ** (`.gz`): Standalone GZip-compressed files (uncommon for distribution)
 /// - **XZ** (`.xz`): Standalone XZ-compressed files (uncommon for distribution)
 /// - **BZ2** (`.bz2`): Standalone BZip2-compressed files (uncommon for distribution)
+/// - **ZST** (`.zst`): Standalone Zstandard-compressed files (uncommon for distribution)
 /// - **7Z** (`.7z`): 7-Zip archives using the `sevenz-rust2` crate
 ///
 /// # Arguments
@@ -395,6 +405,17 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
                 extract_to.display()
             );
         }
+        BinaryContainer::TarZstd => {
+            debug!("Extracting tar.zst archive: {}", archive_path.display());
+            let tar_zstd_file = File::open(archive_path)?;
+            let tar = zstd::stream::read::Decoder::new(tar_zstd_file)?;
+            let mut archive = Archive::new(tar);
+            archive.unpack(extract_to)?;
+            debug!(
+                "Successfully extracted tar.zst archive to {}",
+                extract_to.display()
+            );
+        }
         BinaryContainer::Tar => {
             debug!("Extracting tar archive: {}", archive_path.display());
             let tar_file = File::open(archive_path)?;
@@ -459,6 +480,24 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
             std::io::copy(&mut decoder, &mut output_file)?;
             debug!(
                 "Successfully extracted bz2 archive to {}",
+                output_path.display()
+            );
+        }
+        BinaryContainer::Zstd => {
+            debug!("Extracting zst archive: {}", archive_path.display());
+            let zst_file = File::open(archive_path)?;
+            let mut decoder = zstd::stream::read::Decoder::new(zst_file)?;
+            let output_path = extract_to.join(
+                archive_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(OUTPUT_DIR),
+            );
+            std::fs::create_dir_all(extract_to)?;
+            let mut output_file = File::create(&output_path)?;
+            std::io::copy(&mut decoder, &mut output_file)?;
+            debug!(
+                "Successfully extracted zst archive to {}",
                 output_path.display()
             );
         }

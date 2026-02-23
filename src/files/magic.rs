@@ -24,6 +24,7 @@ pub const PE_MAGIC: [u8; 2] = [0x4D, 0x5A]; // MZ
 // Archive format magic numbers
 pub const ZIP_MAGIC: &[u8] = &[0x50, 0x4B, 0x03, 0x04]; // "PK\x03\x04"
 pub const GZIP_MAGIC: &[u8] = &[0x1F, 0x8B]; // gzip
+pub const ZSTD_MAGIC: &[u8] = &[0x28, 0xB5, 0x2F, 0xFD]; // zstd
 pub const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00]; // "\xfd7zXZ\x00"
 pub const BZIP2_MAGIC: &[u8] = &[0x42, 0x5A, 0x68]; // "BZh"
 pub const TAR_MAGIC_OFFSET: usize = 257;

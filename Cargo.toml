@@ -50,6 +50,7 @@ rayon = "1.11.0"
 semver = "1.0.26"
 anyhow = "1.0"
 which = "8.0.0"
+zstd = "0.13.3"
 
 [dev-dependencies]
 clap_mangen = "0.2.31"

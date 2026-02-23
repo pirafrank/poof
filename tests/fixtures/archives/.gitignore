@@ -3,6 +3,8 @@
 # but gitgnore
 !.gitignore
 # multi-part extensions
+!*.tar.zst
+!*.tzst
 !*.tar.gz
 !*.tgz
 !*.tar.xz
@@ -17,3 +19,4 @@
 !*.bz2
 !*.tar
 !*.7z
+!*.zst
