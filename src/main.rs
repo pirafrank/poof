@@ -1,6 +1,7 @@
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use log::{debug, error, info};
+use std::process::ExitCode;
 
 // Declare modules
 mod cli;
@@ -24,17 +25,7 @@ fn is_supported_os() -> bool {
     cfg!(any(target_os = "linux", target_os = "macos"))
 }
 
-fn run() -> Result<()> {
-    if !is_supported_os() {
-        bail!(
-            "Sorry, {} is currently unsupported. Please open an issue at {}/issues to ask for support.",
-            std::env::consts::OS,
-            THIS_REPO_URL
-        );
-    }
-
-    // Parse command-line arguments
-    let cli = Cli::parse();
+fn run() -> Result<ExitCode> {
     // Set up logging using RUST_LOG environment variable (defaults to info level)
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Info)
@@ -58,6 +49,17 @@ fn run() -> Result<()> {
             }
         })
         .init();
+
+    if !is_supported_os() {
+        bail!(
+            "Sorry, {} is currently unsupported. Please open an issue at {}/issues to ask for support.",
+            std::env::consts::OS,
+            THIS_REPO_URL
+        );
+    }
+
+    // Parse command-line arguments
+    let cli = Cli::parse();
 
     // Execute different logic based on command
     match &cli.command {
@@ -150,7 +152,7 @@ fn run() -> Result<()> {
             commands::update::process_update(args)?; // we use ? here, it returns a Result
         }
         Cmd::Check => {
-            commands::check::check_if_bin_in_path()?;
+            return commands::check::check_if_bin_in_path();
         }
         Cmd::Version => {
             output!("{}", crate::core::platform_info::long_version());
@@ -177,18 +179,21 @@ fn run() -> Result<()> {
             commands::init::generate_init_script(args.shell)?;
         }
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
-fn main() {
-    if let Err(e) = run() {
-        if log::log_enabled!(log::Level::Debug) {
-            // Show full chain in debug mode
-            error!("{:?}", e);
-        } else {
-            // Show only top-level error in normal mode
-            error!("{}", e);
+fn main() -> ExitCode {
+    match run() {
+        Ok(code) => code,
+        Err(e) => {
+            if log::log_enabled!(log::Level::Debug) {
+                // Show full chain in debug mode
+                error!("{:?}", e);
+            } else {
+                // Show only top-level error in normal mode
+                error!("{}", e);
+            }
+            ExitCode::FAILURE
         }
-        std::process::exit(1);
     }
 }
