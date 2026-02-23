@@ -498,7 +498,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
             std::io::copy(&mut decoder, &mut output_file)?;
             debug!(
                 "Successfully extracted zst archive to {}",
-                extract_to.display()
+                output_path.display()
             );
         }
         BinaryContainer::SevenZ => {

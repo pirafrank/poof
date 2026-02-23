@@ -20,7 +20,7 @@ pub const GITHUB_SUBDIR: &str = "github.com";
 // NOTE: multi-part extensions MUST come before single extension counterparts.
 pub const SUPPORTED_EXTENSIONS: [&str; 15] = [
     ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz", ".tbz2", ".zip", ".tar", ".gz",
-    ".xz", ".bz2", ".zst", ".tar.zst", ".tzst",
+    ".xz", ".bz2", ".tar.zst", ".tzst", ".zst",
 ];
 
 // other constants
