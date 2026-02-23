@@ -21,13 +21,14 @@ pub fn long_version() -> &'static str {
     let linking_type = "dynamically linked";
     Box::leak(
         format!(
-            "Version   : {}\nCommit    : {}\nBuild Date: {}\nBuilt with: {} ({}){}",
+            "Version   : {}\nCommit    : {}\nBuild Date: {}\nBuilt with: {} ({}){}\n{}",
             VERSION,
             COMMIT,
             BUILD_DATE,
             COMPILE_C_LIB,
             linking_type,
-            get_glibc_version_string()
+            get_glibc_version_string(),
+            release_url()
         )
         .into_boxed_str(),
     )
@@ -50,6 +51,10 @@ pub fn get_glibc_version() -> Option<String> {
 #[cfg(not(all(target_os = "linux", target_env = "gnu")))]
 pub fn get_glibc_version() -> Option<String> {
     None
+}
+
+pub fn release_url() -> String {
+    format!("{}/releases/tag/v{}", THIS_REPO_URL, VERSION)
 }
 
 /// Returns the Glibc string to show in platform info method
