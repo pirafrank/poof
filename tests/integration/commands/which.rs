@@ -87,14 +87,15 @@ fn test_which_nonexistent_binary() -> Result<(), Box<dyn std::error::Error>> {
     let output = cmd.output()?;
 
     assert!(
-        output.status.success(),
-        "Command should succeed even when binary doesn't exist"
+        !output.status.success(),
+        "Command should fail and indicate binary is not found in installed repositories: {}",
+        output.status.code().unwrap_or(-1)
     );
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("not found"),
-        "Output should indicate binary not found: {}",
+        stderr.contains("not found") || stderr.contains("not installed"),
+        "Output should indicate binary is not found in installed repositories: {}",
         stderr
     );
 
@@ -168,8 +169,9 @@ fn test_which_regular_file_not_symlink() -> Result<(), Box<dyn std::error::Error
     let output = cmd.output()?;
 
     assert!(
-        output.status.success(),
-        "Command should succeed but indicate binary not found"
+        !output.status.success(),
+        "Command should fail and indicate binary is not found in installed repositories: {}",
+        output.status.code().unwrap_or(-1)
     );
 
     // New implementation: the which command now searches the data directory,
@@ -222,13 +224,14 @@ fn test_which_broken_symlink() -> Result<(), Box<dyn std::error::Error>> {
     // not the bin directory. A broken symlink will be correctly identified as not found
     // because the binary doesn't exist in the data directory.
     assert!(
-        output.status.success(),
-        "Command should succeed even with broken symlink"
+        !output.status.success(),
+        "Command should fail for broken symlink: {}",
+        output.status.code().unwrap_or(-1)
     );
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("not found"),
+        stderr.contains("not found") || stderr.contains("not installed"),
         "Should indicate binary not found for broken symlink: {}",
         stderr
     );
@@ -264,13 +267,14 @@ fn test_which_symlink_outside_data_dir() -> Result<(), Box<dyn std::error::Error
     // not the bin directory. A symlink pointing outside the data directory
     // won't be found since the binary doesn't exist in the data directory.
     assert!(
-        output.status.success(),
-        "Command should succeed but indicate binary not found"
+        !output.status.success(),
+        "Command should fail and indicate binary not found: {}",
+        output.status.code().unwrap_or(-1)
     );
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("not found"),
+        stderr.contains("not found") || stderr.contains("not installed"),
         "Should indicate not found for external binary. stderr: {}, exit: {}",
         stderr,
         output.status
