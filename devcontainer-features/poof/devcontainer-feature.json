@@ -1,0 +1,16 @@
+{
+  "id": "poof",
+  "version": "1.0.0",
+  "name": "poof",
+  "description": "Installs poof, a zero-config manager of pre-built software",
+  "documentationURL": "https://github.com/pirafrank/poof",
+  "options": {
+    "version": {
+      "type": "string",
+      "proposals": ["latest"],
+      "default": "latest",
+      "description": "Version of poof to install (e.g. 'latest' or '0.6.0')"
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}
