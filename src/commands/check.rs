@@ -1,6 +1,6 @@
 //! Main file handling 'check' command
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use log::{debug, error, warn};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -9,7 +9,13 @@ use crate::core::platform_info;
 use crate::files::datadirs;
 
 pub fn check_if_bin_in_path() -> Result<ExitCode> {
-    let bin_dir: PathBuf = datadirs::get_bin_dir().context("Cannot locate bin directory")?;
+    let bin_dir: PathBuf = match datadirs::get_bin_dir() {
+        Some(dir) => dir,
+        None => {
+            error!("Cannot locate bin directory.");
+            return Ok(ExitCode::from(2u8));
+        }
+    };
     let position = platform_info::check_dir_in_path(bin_dir.to_str().unwrap());
     match position {
         -1 => {
