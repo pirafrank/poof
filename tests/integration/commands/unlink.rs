@@ -67,14 +67,15 @@ fn test_unlink_nonexistent_binary() -> Result<(), Box<dyn std::error::Error>> {
     let output = run_unlink_with_input(&fixture, "nonexistent_binary", b"yes\n")?;
 
     assert!(
-        output.status.success(),
-        "Should succeed when binary doesn't exist"
+        !output.status.success(),
+        "Should not succeed when binary doesn't exist: {}",
+        output.status.code().unwrap_or(-1)
     );
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        stderr.contains("No binary named") || stderr.contains("nonexistent_binary"),
-        "Should indicate binary not found: {}",
+        stderr.contains("not found") || stderr.contains("not installed"),
+        "Should indicate binary is not found in bin directory: {}",
         stderr
     );
 

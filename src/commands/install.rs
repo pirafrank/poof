@@ -84,7 +84,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     info!("{} {} installed successfully.\n", repo, &version);
 
     // check if the binaries are in the PATH by checking if poof's bin directory is in PATH
-    commands::check::check_if_bin_in_path();
+    commands::check::check_if_bin_in_path()?;
     Ok(())
 }
 

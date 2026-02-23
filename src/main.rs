@@ -1,6 +1,7 @@
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use log::{debug, error, info};
+use std::process::ExitCode;
 
 // Declare modules
 mod cli;
@@ -24,17 +25,7 @@ fn is_supported_os() -> bool {
     cfg!(any(target_os = "linux", target_os = "macos"))
 }
 
-fn run() -> Result<()> {
-    if !is_supported_os() {
-        bail!(
-            "Sorry, {} is currently unsupported. Please open an issue at {}/issues to ask for support.",
-            std::env::consts::OS,
-            THIS_REPO_URL
-        );
-    }
-
-    // Parse command-line arguments
-    let cli = Cli::parse();
+fn run() -> Result<ExitCode> {
     // Set up logging using RUST_LOG environment variable (defaults to info level)
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Info)
@@ -58,6 +49,17 @@ fn run() -> Result<()> {
             }
         })
         .init();
+
+    if !is_supported_os() {
+        bail!(
+            "Sorry, {} is currently unsupported. Please open an issue at {}/issues to ask for support.",
+            std::env::consts::OS,
+            THIS_REPO_URL
+        );
+    }
+
+    // Parse command-line arguments
+    let cli = Cli::parse();
 
     // Execute different logic based on command
     match &cli.command {
@@ -109,11 +111,7 @@ fn run() -> Result<()> {
                     &args.repo
                 );
             }
-            if let Err(e) = commands::make_default::set_default(&args.repo, args.version.as_deref())
-            {
-                error!("Cannot set default version: {}", e);
-                std::process::exit(110);
-            }
+            commands::make_default::set_default(&args.repo, args.version.as_deref())?;
         }
         Cmd::List(args) => {
             let list: Vec<Spell> = if let Some(ref repo) = args.repo {
@@ -121,8 +119,7 @@ fn run() -> Result<()> {
                 match commands::list::list_installed_versions_per_slug(&repo)? {
                     Some(spell) => vec![spell],
                     None => {
-                        info!("Repository '{}' does not seem to be installed.", repo);
-                        return Ok(());
+                        bail!("Repository '{}' not found. Check installed binaries using 'list' command.", repo);
                     }
                 }
             } else {
@@ -155,16 +152,16 @@ fn run() -> Result<()> {
             commands::update::process_update(args)?; // we use ? here, it returns a Result
         }
         Cmd::Check => {
-            commands::check::check_if_bin_in_path();
+            return commands::check::check_if_bin_in_path();
         }
         Cmd::Version => {
             output!("{}", crate::core::platform_info::long_version());
         }
         Cmd::Info => {
-            commands::info::show_info();
+            commands::info::show_info()?;
         }
         Cmd::Enable(args) => {
-            commands::enable::run(args.shell);
+            commands::enable::run(args.shell)?;
         }
         Cmd::Clean => {
             commands::clean::run_clean()?;
@@ -179,21 +176,24 @@ fn run() -> Result<()> {
             commands::completions::generate_completions(args.shell);
         }
         Cmd::Init(args) => {
-            commands::init::generate_init_script(args.shell);
+            commands::init::generate_init_script(args.shell)?;
         }
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
-fn main() {
-    if let Err(e) = run() {
-        if log::log_enabled!(log::Level::Debug) {
-            // Show full chain in debug mode
-            error!("{:?}", e);
-        } else {
-            // Show only top-level error in normal mode
-            error!("{}", e);
+fn main() -> ExitCode {
+    match run() {
+        Ok(code) => code,
+        Err(e) => {
+            if log::log_enabled!(log::Level::Debug) {
+                // Show full chain in debug mode
+                error!("{:?}", e);
+            } else {
+                // Show only top-level error in normal mode
+                error!("{}", e);
+            }
+            ExitCode::FAILURE
         }
-        std::process::exit(1);
     }
 }

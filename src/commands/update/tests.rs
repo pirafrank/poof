@@ -122,7 +122,10 @@ fn test_update_single_repo_not_installed() -> Result<()> {
         // Try to update a repo that's not installed
         let result = update_single_repo("user/notinstalled");
         // Should succeed with a message that it's not installed
-        assert!(result.is_ok());
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("not found") || err_msg.contains("not installed"));
+        assert!(err_msg.contains("Check installed binaries using 'list' command."));
     });
 
     Ok(())
@@ -455,7 +458,10 @@ fn test_process_update_with_repo_name() -> Result<()> {
     temp_env::with_vars(env_vars, || {
         // Repo not installed, should succeed with message
         let result = process_update(&args);
-        assert!(result.is_ok());
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("not found") || err_msg.contains("not installed"));
+        assert!(err_msg.contains("Check installed binaries using 'list' command."));
     });
 
     Ok(())

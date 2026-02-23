@@ -393,13 +393,14 @@ fn test_list_with_non_existent_slug() -> Result<(), Box<dyn std::error::Error>> 
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(
-        output.status.success(),
-        "List command should succeed even for non-existent repo"
+        !output.status.success(),
+        "List command should not succeed for non-existent repo: {}",
+        output.status.code().unwrap_or(-1)
     );
 
     // Verify stderr contains "does not seem to be installed" message
     assert!(
-        stderr.contains("does not seem to be installed"),
+        stderr.contains("not found") || stderr.contains("not installed"),
         "stderr should indicate repo is not installed: {}",
         stderr
     );
@@ -433,13 +434,14 @@ fn test_list_with_slug_partial_match() -> Result<(), Box<dyn std::error::Error>>
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(
-        output.status.success(),
-        "List command should succeed even for non-matching repo"
+        !output.status.success(),
+        "List command should not succeed for non-matching repo: {}",
+        output.status.code().unwrap_or(-1)
     );
 
     // Verify message indicating not installed
     assert!(
-        stderr.contains("does not seem to be installed") || stderr.contains("not found"),
+        stderr.contains("not found") || stderr.contains("not installed"),
         "stderr should indicate repo is not installed: {}",
         stderr
     );
@@ -496,8 +498,9 @@ fn test_list_with_slug_and_empty_version_dir() -> Result<(), Box<dyn std::error:
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     assert!(
-        output.status.success(),
-        "List command should succeed even with empty version dir"
+        !output.status.success(),
+        "List command should not succeed for empty version dir: {}",
+        output.status.code().unwrap_or(-1)
     );
 
     assert!(

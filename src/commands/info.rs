@@ -1,10 +1,11 @@
 use crate::constants::*;
 use crate::core::platform_info::*;
 use crate::files::datadirs;
+use anyhow::{Context, Result};
 use std::io::{self, Write};
 
 /// Print platform information useful for debug purposes.
-pub fn show_info() {
+pub fn show_info() -> Result<()> {
     let stdout = io::stdout();
     let mut handle = stdout.lock();
 
@@ -45,7 +46,7 @@ pub fn show_info() {
     output.push_str(&format!("  USER : {}\n", get_env_var("USER")));
     output.push_str(&format!("  HOME : {}\n", get_env_var("HOME")));
 
-    let bin_dir = datadirs::get_bin_dir().ok_or(libc::ENOENT).unwrap();
+    let bin_dir = datadirs::get_bin_dir().context("Cannot locate bin directory")?;
     let path_status = match check_dir_in_path(bin_dir.to_str().unwrap()) {
         -1 => "Not in PATH",
         0 => "In PATH at the beginning",
@@ -63,12 +64,13 @@ pub fn show_info() {
     //TODO: remove .parent() when poof will be updated to support different services apart from GitHub.
     output.push_str(&format!(
         "  Data dir : {}\n",
-        data_dir.parent().unwrap().display()
+        data_dir.parent().unwrap_or(&data_dir).display()
     ));
 
     output.push_str(&format!("  Bin dir  : {}\n", bin_dir.display()));
 
     // Write everything at once
-    let _ = handle.write_all(output.as_bytes());
-    let _ = handle.flush();
+    handle.write_all(output.as_bytes())?;
+    handle.flush()?;
+    Ok(())
 }

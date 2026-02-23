@@ -4,7 +4,8 @@
 use std::path::Path;
 use std::{fs, io::Write, path::PathBuf};
 
-use log::{error, info};
+use anyhow::{Context, Result};
+use log::info;
 
 use crate::files::datadirs::get_bin_dir;
 use crate::models::supported_shells::SupportedShell;
@@ -143,63 +144,41 @@ fn get_reload_instruction(shell: SupportedShell, config_path: &Path) -> String {
     }
 }
 
-pub fn run(shell: SupportedShell) {
+pub fn run(shell: SupportedShell) -> Result<()> {
     /* 1 ─ get the directory that holds poof's executables */
-    let bin_dir = match get_bin_dir() {
-        Some(p) => p,
-        None => {
-            error!("Cannot locate bin directory");
-            return;
-        }
-    };
+    let bin_dir = get_bin_dir().context("Cannot locate bin directory")?;
     let bin = bin_dir.to_string_lossy();
 
     /* 2 ─ get HOME directory */
-    let home = match dirs::home_dir() {
-        Some(h) => h,
-        None => {
-            error!("Cannot find $HOME");
-            return;
-        }
-    };
+    let home = dirs::home_dir().context("Cannot find $HOME")?;
 
     let config_path = get_config_path(shell, &home);
 
     /* 3 ─ if poof is already enabled, do nothing */
     if is_already_enabled(&config_path, shell) {
         info!("poof already enabled in {}", config_path.display());
-        return;
+        return Ok(());
     }
 
     /* 4 ─ create parent directories if needed */
     if let Some(parent) = config_path.parent() {
         if !parent.exists() {
-            if let Err(e) = fs::create_dir_all(parent) {
-                error!("Cannot create directory {}: {}", parent.display(), e);
-                return;
-            }
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Cannot create directory {}", parent.display()))?;
         }
     }
 
     /* 5 ─ append the configuration content */
     let content = generate_config_content(shell, &bin);
 
-    let mut file = match fs::OpenOptions::new()
+    let mut file = fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(&config_path)
-    {
-        Ok(f) => f,
-        Err(e) => {
-            error!("Cannot open {}: {}", config_path.display(), e);
-            return;
-        }
-    };
+        .with_context(|| format!("Cannot open {}", config_path.display()))?;
 
-    if writeln!(file, "{}", content).is_err() {
-        error!("Could not write to {}", config_path.display());
-        return;
-    }
+    writeln!(file, "{}", content)
+        .with_context(|| format!("Could not write to {}", config_path.display()))?;
 
     let reload_cmd = get_reload_instruction(shell, &config_path);
     info!(
@@ -207,6 +186,7 @@ pub fn run(shell: SupportedShell) {
         config_path.display(),
         reload_cmd
     );
+    Ok(())
 }
 
 // ------------------------------------------------------------------
