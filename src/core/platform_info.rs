@@ -1,3 +1,8 @@
+//! Runtime platform inspection helpers.
+//!
+//! Provides functions for querying the OS version, architecture endianness,
+//! shell environment, PATH contents, and build-time version information.
+
 use crate::constants::*;
 use crate::utils::string;
 
@@ -53,6 +58,7 @@ pub fn get_glibc_version() -> Option<String> {
     None
 }
 
+/// Returns the GitHub releases URL for the current version of poof.
 pub fn release_url() -> String {
     format!("{}/releases/tag/v{}", THIS_REPO_URL, VERSION)
 }
@@ -67,14 +73,20 @@ fn get_glibc_version_string() -> String {
     }
 }
 
+/// Returns the short description string of the application.
 pub fn short_description() -> &'static str {
     DESCRIPTION
 }
 
+/// Read an environment variable, returning [`UNKNOWN`] if it is not set.
 pub fn get_env_var(var: &str) -> String {
     std::env::var(var).unwrap_or_else(|_| UNKNOWN.to_string())
 }
 
+/// Return a human-readable string describing the OS name and version.
+///
+/// On Linux, attempts `lsb_release -ds` or `/etc/os-release`. On macOS uses
+/// `sw_vers`. On Windows uses `cmd /c ver`. Returns [`UNKNOWN`] on failure.
 pub fn get_os_version() -> String {
     if cfg!(target_os = "linux") {
         // Try to detect Linux distribution and version
@@ -103,6 +115,7 @@ pub fn get_os_version() -> String {
     }
 }
 
+/// Return a string describing the platform byte order (`"Little Endian"`, `"Big Endian"`, or `"Unknown Endian"`).
 #[cfg(target_endian = "little")]
 pub fn get_platform_endianness() -> String {
     "Little Endian".to_string()
@@ -118,6 +131,11 @@ pub fn get_platform_endianness() -> String {
     "Unknown Endian".to_string()
 }
 
+/// Return a string containing the current shell name and its reported version.
+///
+/// Reads the `SHELL` environment variable and invokes the shell binary with
+/// `--version` to obtain its version string. Returns [`UNKNOWN`] when the
+/// shell cannot be determined or the version query fails.
 pub fn get_shell_info() -> String {
     let shell_name = get_env_var("SHELL");
     let shell_version = if shell_name != UNKNOWN {
@@ -132,6 +150,9 @@ pub fn get_shell_info() -> String {
     format!("{} version: {}", shell_name, shell_version)
 }
 
+/// Return the zero-based position of `dir` in the `PATH` environment variable.
+///
+/// Returns `-1` when `dir` is not present in `PATH`.
 pub fn check_dir_in_path(dir: &str) -> i16 {
     let path = get_env_var("PATH");
     let sep = env_path_separator();

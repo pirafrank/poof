@@ -97,6 +97,11 @@ fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
     Ok(installed_version_dir)
 }
 
+/// Set a specific (or the latest) installed version of `repo` as the default.
+///
+/// Updates the symlinks in the bin directory to point to the requested version.
+/// When `version` is `None`, the highest semantically-versioned installed release
+/// is selected automatically via [`get_latest_version`].
 pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
     // Resolve version: use provided version or get latest
     let resolved_version = match version {

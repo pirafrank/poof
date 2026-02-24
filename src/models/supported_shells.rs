@@ -3,18 +3,26 @@
 use std::fmt;
 use std::str::FromStr;
 
+/// A shell supported by poof's `init` and `completions` commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SupportedShell {
+    /// Bourne-Again SHell.
     Bash,
+    /// Elvish shell.
     Elvish,
+    /// Fish shell.
     Fish,
+    /// Nushell (also accepted as `nu`).
     Nushell,
+    /// PowerShell (also accepted as `pwsh`).
     PowerShell,
+    /// Xonsh shell.
     Xonsh,
+    /// Z Shell.
     Zsh,
 }
 
-/// Error type for shell parsing failures
+/// Error returned when an unrecognised shell name is supplied to [`SupportedShell::from_str`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseShellError {
     input: String,

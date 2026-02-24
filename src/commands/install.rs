@@ -26,6 +26,12 @@ use crate::{
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
 
+/// Download and install a GitHub release binary for `repo`.
+///
+/// When `tag` is `None` the latest release is fetched. The function selects
+/// platform-compatible assets, downloads them to the cache directory, extracts
+/// or copies the executables to the data directory, creates symlinks in the bin
+/// directory, and performs a post-install PATH check.
 pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     let (release, assets) = select_assets(repo, tag)?;
     let version: String = release.tag_name().strip_v();

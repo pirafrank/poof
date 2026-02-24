@@ -10,6 +10,11 @@ use crate::files::{datadirs, magic};
 use crate::models::spell::Spell;
 use crate::output;
 
+/// Find which installed repository (and version) provides a given binary name.
+///
+/// Searches across all installed spells for an executable matching
+/// `args.binary_name`, taking both the file system layout and the current
+/// active symlink target into account.
 pub fn run_which(args: &WhichArgs) -> Result<()> {
     let data_dir = datadirs::get_data_dir().context("Cannot get data directory path")?;
     let spells = list_installed_spells();

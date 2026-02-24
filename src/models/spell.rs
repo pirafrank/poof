@@ -1,4 +1,4 @@
-//! An installed binary having a repo name (in the format <USER>/<REPO>)
+//! An installed binary having a repo name (in the format `USER/REPO`)
 //! and a list of versions is a 'spell'.
 
 use crate::utils::semver::*;
@@ -6,6 +6,10 @@ use std::cmp::Ordering;
 
 use super::slug::Slug;
 
+/// A named collection of installed versions for a GitHub repository.
+///
+/// The name is stored as a [`Slug`] (`user/repo`) and the versions are kept
+/// sorted in ascending semver order.
 #[derive(PartialEq, Eq, Debug)]
 pub struct Spell {
     name: Slug,

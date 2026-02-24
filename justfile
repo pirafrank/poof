@@ -130,6 +130,17 @@ man:
 docs:
   cargo doc --no-deps --open
 
+# Verify that all public items have documentation
+docs-verify-public:
+  cargo doc --no-deps 2>&1 | grep "warning\[missing_docs\]"
+  if [ $? -ne 0 ]; then echo "All public items have documentation" && exit 0;
+  else echo "Some public items are missing documentation" && exit 1
+  fi
+
+# Verify that all items have documentation
+docs-verify-all:
+  cargo clippy --all-targets --no-deps -- -W clippy::missing_docs_in_private_items
+
 # Run benchmarks
 bench:
   cargo bench

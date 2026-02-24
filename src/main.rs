@@ -1,3 +1,10 @@
+//! poof – zero-config, zero-install, zero-dependencies manager of pre-built software.
+//!
+//! poof downloads pre-built binaries from GitHub releases, installs them under the
+//! user's data directory, and manages symlinks so the binaries are available in `PATH`.
+//! It requires no root access and no system-level package manager.
+#![warn(missing_docs)]
+
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use log::{debug, error, info};

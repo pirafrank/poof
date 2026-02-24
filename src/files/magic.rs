@@ -1,8 +1,14 @@
+//! Magic number constants and file-format detection utilities.
+//!
+//! These byte sequences are read from the start (or a fixed offset) of a file
+//! to identify its format without relying on file extensions.
+
 use std::{fs::File, io::Read, path::Path};
 
-// Magic number constants for file format detection
+/// Unix shebang prefix (`#!`) used by interpreted scripts.
 pub const SHEBANG_MAGIC: &[u8] = &[0x23, 0x21]; // "#!"
 
+/// Mach-O magic numbers for 32-bit, 64-bit, and universal ('fat') binaries (macOS only).
 #[cfg(target_os = "macos")]
 pub const MACHO_MAGIC_NUMBERS: &[[u8; 4]] = &[
     [0xFE, 0xED, 0xFA, 0xCE], // Mach-O 32-bit (little-endian)
@@ -13,22 +19,29 @@ pub const MACHO_MAGIC_NUMBERS: &[[u8; 4]] = &[
     [0xBE, 0xBA, 0xFE, 0xCA], // Mach-O universal ('fat') binary (big-endian)
 ];
 
+/// ELF magic number identifying Linux (and most Unix) executables (Linux only).
 #[cfg(target_os = "linux")]
-// ELF magic number for Linux executables
 pub const ELF_MAGIC: [u8; 4] = [0x7F, 0x45, 0x4C, 0x46]; // ELF
 
+/// PE/MZ magic number identifying Windows executables (Windows only).
 #[cfg(target_os = "windows")]
-// PE magic number for Windows executables (MZ header)
 pub const PE_MAGIC: [u8; 2] = [0x4D, 0x5A]; // MZ
 
-// Archive format magic numbers
+/// ZIP archive magic number (`PK\x03\x04`).
 pub const ZIP_MAGIC: &[u8] = &[0x50, 0x4B, 0x03, 0x04]; // "PK\x03\x04"
+/// Gzip stream magic number.
 pub const GZIP_MAGIC: &[u8] = &[0x1F, 0x8B]; // gzip
+/// Zstandard frame magic number.
 pub const ZSTD_MAGIC: &[u8] = &[0x28, 0xB5, 0x2F, 0xFD]; // zstd
+/// XZ stream magic number.
 pub const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00]; // "\xfd7zXZ\x00"
+/// Bzip2 stream magic number (`BZh`).
 pub const BZIP2_MAGIC: &[u8] = &[0x42, 0x5A, 0x68]; // "BZh"
+/// Byte offset within a tar archive where the `ustar` magic string is located.
 pub const TAR_MAGIC_OFFSET: usize = 257;
+/// Tar POSIX magic string (`ustar`) found at [`TAR_MAGIC_OFFSET`].
 pub const TAR_MAGIC: &[u8] = b"ustar";
+/// 7-Zip archive signature bytes.
 pub const SEVENZ_MAGIC: &[u8] = &[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]; // 7z signature
 
 #[cfg(target_os = "linux")]
@@ -51,6 +64,12 @@ fn is_exec_magic(buffer: &[u8; 4]) -> bool {
     MACHO_MAGIC_NUMBERS.contains(buffer)
 }
 
+/// Return `true` when the file at `path` appears to be an executable binary.
+///
+/// Detection is based on magic bytes at the start of the file rather than
+/// file-name extensions. On non-Windows platforms both shebang scripts (`#!`)
+/// and native binary formats (ELF on Linux, Mach-O on macOS) are recognised.
+/// On Windows only `.exe` files with a valid PE/MZ header are accepted.
 #[cfg(not(target_os = "windows"))]
 pub fn is_exec_by_magic_number(path: &Path) -> bool {
     if let Ok(mut file) = File::open(path) {
@@ -65,6 +84,10 @@ pub fn is_exec_by_magic_number(path: &Path) -> bool {
     false
 }
 
+/// Return `true` when the file at `path` appears to be an executable binary (Windows variant).
+///
+/// Only files with an `.exe` extension whose first two bytes match the PE/MZ
+/// magic number are considered executables.
 #[cfg(target_os = "windows")]
 pub fn is_exec_by_magic_number(path: &Path) -> bool {
     // We need to first check the file extension for Windows binaries,

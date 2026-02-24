@@ -126,7 +126,7 @@ impl From<&str> for RawVersion {
 // allowing dead code for the sake of having a complete set
 // of function available for the Asset struct.
 
-/// Trait to extend Vec<String> with semantic version sorting
+/// Trait to extend `Vec<String>` with semantic version sorting
 pub trait SemverSort {
     #[allow(dead_code)]
     /// Sorts the vector of strings in place using semantic versioning rules.

@@ -1,3 +1,9 @@
+//! MUSL libc detection and preference resolution.
+//!
+//! On Linux, poof can prefer MUSL-linked assets over glibc-linked ones when
+//! the running system does not have glibc (e.g. Alpine Linux). The preference
+//! can also be forced by setting `POOF_PREFER_MUSL=1`.
+
 use std::sync::OnceLock;
 
 static CELL: OnceLock<bool> = OnceLock::new();
@@ -14,6 +20,12 @@ fn get_default() -> bool {
     user_value.unwrap_or_else(target_has_no_glibc) && cfg!(target_os = "linux")
 }
 
+/// Return `true` when the current environment should prefer MUSL-linked assets.
+///
+/// The result is computed once and cached for the lifetime of the process.
+/// The value is derived from the `POOF_PREFER_MUSL` environment variable when
+/// set; otherwise it is inferred by checking whether the system's `ldd` reports
+/// glibc. Always returns `false` on non-Linux targets.
 pub fn target_prefers_musl() -> bool {
     *CELL.get_or_init(get_default)
 }

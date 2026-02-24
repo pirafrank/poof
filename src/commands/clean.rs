@@ -6,6 +6,10 @@ use std::io::{self, Write};
 
 use crate::files::datadirs;
 
+/// Interactively delete the download cache directory.
+///
+/// Prompts the user for confirmation before removing the cache. If the cache
+/// directory does not exist the function returns early with a message.
 pub fn run_clean() -> Result<()> {
     let cache_dir = datadirs::get_cache_dir().context("Cannot get cache directory path")?;
 

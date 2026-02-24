@@ -8,6 +8,11 @@ use std::process::ExitCode;
 use crate::core::platform_info;
 use crate::files::datadirs;
 
+/// Check whether poof's bin directory is present in `PATH`.
+///
+/// Returns [`ExitCode::SUCCESS`] (0) when the bin directory is the first entry,
+/// [`ExitCode::FAILURE`] (1) when it is present but not first, and exit code 2 when
+/// it is missing entirely.
 pub fn check_if_bin_in_path() -> Result<ExitCode> {
     let bin_dir: PathBuf = match datadirs::get_bin_dir() {
         Some(dir) => dir,

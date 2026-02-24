@@ -6,6 +6,11 @@ use std::{
 
 use crate::core::musl::target_prefers_musl;
 
+/// A triple that captures the target OS, CPU architecture, and MUSL preference.
+///
+/// The default implementation reflects the current build target and the result
+/// of [`target_prefers_musl`]. A custom triple can be constructed with [`new`](AssetTriple::new)
+/// for testing or cross-compilation scenarios.
 pub struct AssetTriple {
     os: String,
     arch: String,
@@ -13,21 +18,23 @@ pub struct AssetTriple {
 }
 
 #[allow(dead_code)]
-// Allowing dead code to have 'new' used for tests.
 impl AssetTriple {
-    // Create a new AssetTriple instance with the given OS, ARCH, and MUSL.
+    /// Create a new [`AssetTriple`] with explicitly provided `os`, `arch`, and `musl` values.
     pub fn new(os: String, arch: String, musl: bool) -> Self {
         Self { os, arch, musl }
     }
 
+    /// Return the operating system identifier (e.g. `"linux"`, `"macos"`).
     pub fn get_os(&self) -> &String {
         &self.os
     }
 
+    /// Return the CPU architecture identifier (e.g. `"x86_64"`, `"aarch64"`).
     pub fn get_arch(&self) -> &String {
         &self.arch
     }
 
+    /// Return `true` when MUSL-linked assets are preferred over glibc-linked ones.
     pub fn is_musl(&self) -> bool {
         self.musl
     }

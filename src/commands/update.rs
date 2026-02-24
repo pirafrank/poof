@@ -162,7 +162,12 @@ fn update_all_repos() -> Result<()> {
     }
 }
 
-// Main process
+/// Check for newer GitHub releases and update the specified repository (or all).
+///
+/// When `args.all` is `true` every installed repository is checked in parallel
+/// using rayon. When a specific repository is named via `args.repo`, only that
+/// one is updated. A non-fatal error for a single repository is collected and
+/// reported at the end without aborting the rest.
 pub fn process_update(args: &UpdateArgs) -> Result<()> {
     if args.all {
         update_all_repos().context("Failed during update --all")?;

@@ -1,3 +1,5 @@
+//! File path utilities and fuzzy repository name matching.
+
 use crate::constants::FILENAME_SEPARATORS;
 use crate::constants::SUPPORTED_EXTENSIONS;
 use crate::utils::string::levenshtein_distance;
@@ -6,6 +8,11 @@ use std::{
     path::Path,
 };
 
+/// Return the file extension of `archive_path` as a string slice.
+///
+/// Multi-part extensions such as `.tar.gz`, `.tar.xz`, `.tar.bz2`, and
+/// `.tar.zst` are returned whole. For all other paths the standard
+/// single-component extension is returned.
 pub fn get_file_extension(archive_path: &Path) -> &str {
     let filename = archive_path
         .file_name()
@@ -31,6 +38,10 @@ pub fn get_file_extension(archive_path: &Path) -> &str {
         .unwrap_or_default()
 }
 
+/// Return the file name component of `archive_path` as a string slice.
+///
+/// Returns an empty string when the path has no file-name component or when
+/// the name contains non-UTF-8 bytes.
 pub fn get_file_name(archive_path: &Path) -> &str {
     archive_path
         .file_name()
@@ -38,6 +49,10 @@ pub fn get_file_name(archive_path: &Path) -> &str {
         .unwrap_or_default()
 }
 
+/// Strip any recognised archive or compression extension from the file name of `path`.
+///
+/// If no known extension matches the file name is returned as-is (falling back
+/// to the file stem when the path has one).
 pub fn strip_supported_extensions(path: &Path) -> &str {
     let filename = get_file_name(path);
     SUPPORTED_EXTENSIONS
@@ -50,6 +65,12 @@ pub fn strip_supported_extensions(path: &Path) -> &str {
         })
 }
 
+/// Return the "stem" of `file_name` trimmed at the first [`FILENAME_SEPARATORS`] character.
+///
+/// For example, `mytool-1.0.0-linux-x86_64` becomes `mytool`. Trailing ASCII
+/// digits are also removed after the trim. This is used when an asset is a
+/// raw executable (not an archive) so that the installed binary gets a clean,
+/// version-agnostic name.
 pub fn get_stem_name_trimmed_at_first_separator(file_name: &OsStr) -> OsString {
     let x = FILENAME_SEPARATORS
         .iter()

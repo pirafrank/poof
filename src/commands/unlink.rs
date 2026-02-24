@@ -7,6 +7,11 @@ use std::io::{self, Write};
 use crate::cli::UnlinkArgs;
 use crate::files::datadirs;
 
+/// Remove a binary's symlink from the bin directory, making it unavailable in `PATH`.
+///
+/// Only symlinks managed by poof are removed. Regular files are refused to prevent
+/// accidental deletion of foreign binaries. The user is prompted for confirmation
+/// unless the `--yes` / `-y` flag is set.
 pub fn run_unlink(args: &UnlinkArgs) -> Result<()> {
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory path")?;
     let binary_path = bin_dir.join(&args.binary_name);
