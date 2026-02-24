@@ -67,4 +67,4 @@ jobs:
         if: false  # Disable PR submission for now, enable when ready
         run: |
           chmod +x macports/macport_pr.sh
-          ./macports/macport_pr.sh "$HOME/pirafrank/ports/sysutils/poof/Portfile"
+          ./macports/macport_pr.sh "$(pwd -P)/macports/Portfile"

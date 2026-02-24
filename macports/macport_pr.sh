@@ -20,7 +20,7 @@ if [ ! -f "$PORTFILE_PATH" ]; then
     exit 1
 fi
 
-VERSION=$(grep -E "^version\s+" "$PORTFILE_PATH" | sed -E 's/.*version\s+([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+VERSION=$(grep -E "^version\s+" "$PORTFILE_PATH" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
 
 if [ -z "$VERSION" ]; then
     echo "❌ Error: Could not extract version from '$PORTFILE_PATH'."
@@ -43,7 +43,6 @@ if [[ $REPLY =~ ^[Yy]$ || "$IS_GITHUB_ACTIONS" == "true" ]]; then
         #       gh repo fork does not create a new one.
         #       it detects the existing fork and just clones it.
         gh repo fork macports/macports-ports --clone --remote
-        mv /tmp/macports-ports "$MP_DIR"
     fi
 
     cd "$MP_DIR" || exit 1
@@ -69,8 +68,4 @@ if [[ $REPLY =~ ^[Yy]$ || "$IS_GITHUB_ACTIONS" == "true" ]]; then
     git add "$CATEGORY/$NAME/Portfile"
     git commit -m "$NAME: update to $VERSION"
     git push origin "$NAME-$VERSION"
-
-    gh pr create --title "$NAME: update to $VERSION" \
-                 --body "Update $NAME to version $VERSION. Automatically generated via custom release script." \
-                 --repo macports/macports-ports
 fi
