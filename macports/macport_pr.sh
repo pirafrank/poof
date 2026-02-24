@@ -33,6 +33,7 @@ if [ "$IS_GITHUB_ACTIONS" != "true" ]; then
     echo
 fi
 
+REPLY=""
 if [[ $REPLY =~ ^[Yy]$ || "$IS_GITHUB_ACTIONS" == "true" ]]; then
     MP_DIR="/tmp/macports-ports"
 
@@ -55,7 +56,7 @@ if [[ $REPLY =~ ^[Yy]$ || "$IS_GITHUB_ACTIONS" == "true" ]]; then
     fi
 
     git checkout master && git pull upstream master
-    git checkout -b "$NAME-$VERSION"
+    git checkout -B "$NAME-$VERSION"
 
     if [ "$IS_GITHUB_ACTIONS" = "true" ]; then
         git config user.email "${GIT_USER_EMAIL:-actions@github.com}"
@@ -67,12 +68,19 @@ if [[ $REPLY =~ ^[Yy]$ || "$IS_GITHUB_ACTIONS" == "true" ]]; then
 
     git add "$CATEGORY/$NAME/Portfile"
     git commit -m "$NAME: update to $VERSION"
-    git push origin "$NAME-$VERSION"
+    git push --force-with-lease origin "$NAME-$VERSION"
 
-    gh pr create \
-    --repo macports/macports-ports \
-    --base master \
-    --head "$NAME-$VERSION" \
-    --title "$NAME: update to $VERSION" \
-    --body "Automated Portfile update for $NAME $VERSION."
+    # Create PR if one doesn't already exist for this branch
+    if ! gh pr view "$NAME-$VERSION" --repo macports/macports-ports &>/dev/null; then
+        gh pr create \
+            --repo macports/macports-ports \
+            --base master \
+            --head "$NAME-$VERSION" \
+            --title "$NAME: update to $VERSION" \
+            --body "Automated Portfile update for $NAME $VERSION."
+    else
+        echo "ℹ️  PR for branch '$NAME-$VERSION' already exists, skipping creation."
+    fi
+else
+    echo "❌ Aborting PR submission."
 fi

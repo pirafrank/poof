@@ -51,10 +51,10 @@ extract_cargo_lock() {
 }
 
 cleanup_local_dir() {
-    rm -f $SCRIPT_DIR/poof.1
-    rm -f $SCRIPT_DIR/*.tar.gz
-    rm -f $SCRIPT_DIR/Portfile
-    rm -f $SCRIPT_DIR/Cargo.lock
+    rm -f "$SCRIPT_DIR/poof.1"
+    rm -f "$SCRIPT_DIR"/*.tar.gz
+    rm -f "$SCRIPT_DIR/Portfile"
+    rm -f "$SCRIPT_DIR/Cargo.lock"
 }
 
 cleanup_local_tree() {
@@ -67,6 +67,12 @@ cleanup_local_tree() {
 }
 
 # --- Main Execution ---
+
+# validate version
+if [ -z "$VERSION" ]; then
+    echo "❌ Error: Could not determine version. Provide one explicitly."
+    exit 1
+fi
 
 # 1. Cleanup local dir and prepare
 echo "🧹 Cleaning up local directory..."

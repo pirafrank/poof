@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all tags
 
       - name: Setup MacPorts
         uses: melusina-org/setup-macports@v1
