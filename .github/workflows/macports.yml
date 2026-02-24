@@ -56,6 +56,14 @@ jobs:
           chmod +x macports/generate_portfile.sh
           ./macports/generate_portfile.sh
 
+      - name: Clean poof port
+        run: |
+          sudo port clean poof || true
+          sudo rm -rf /opt/local/var/macports/build/poof-* || true
+
+      - name: Show log
+        run: cat /opt/local/var/macports/logs/_*poof*/poof/main.log || true
+
       - name: Test Portfile by installing the package
         run: sudo port -vst install poof
 
