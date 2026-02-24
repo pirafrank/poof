@@ -1,9 +1,15 @@
+//! File system helpers for locating, copying, and symlinking executables.
+
 use log::{debug, warn};
 use std::path::{Path, PathBuf};
 
 use crate::files::magic::is_exec_by_magic_number;
 use crate::files::utils::strip_supported_extensions;
 
+/// Return all executable files found directly inside `dir` (non-recursive).
+///
+/// A file is considered executable when [`is_exec_by_magic_number`] returns
+/// `true` for it. Directories and symlinks are ignored.
 pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     if let Ok(entries) = std::fs::read_dir(dir) {
@@ -21,6 +27,12 @@ pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
     result
 }
 
+/// Return the executable files that were produced after extracting `archive_path`.
+///
+/// Checks whether a directory with the same name as the archive (minus its
+/// extension) exists next to it; if so, searches that directory. Otherwise
+/// searches the archive's parent directory. Useful for archives that unpack
+/// into a top-level directory.
 pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBuf> {
     let archive_parent = archive_path.parent().unwrap();
     // Get the filename without the extension
@@ -37,6 +49,7 @@ pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBu
     }
 }
 
+/// Return `true` when `path` is a regular file with at least one executable bit set (Unix only).
 #[cfg(not(target_os = "windows"))]
 pub fn is_executable(path: &PathBuf) -> bool {
     // Check if the file is executable
@@ -50,6 +63,9 @@ pub fn is_executable(path: &PathBuf) -> bool {
     false
 }
 
+/// Add executable permission bits to `file` (equivalent to `chmod +x`) (Unix only).
+///
+/// Has no effect if `file` is not a regular file.
 #[cfg(not(target_os = "windows"))]
 pub fn make_executable(file: &Path) {
     if !file.is_file() {
@@ -66,6 +82,7 @@ pub fn make_executable(file: &Path) {
     debug!("Set executable permissions for {}", file.display());
 }
 
+/// Copy `source` to `target`, returning a descriptive error string on failure.
 pub fn copy_file(source: &PathBuf, target: &PathBuf) -> Result<(), String> {
     debug!(
         "Copying file from {} to {}",
@@ -85,6 +102,11 @@ pub fn copy_file(source: &PathBuf, target: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
+/// Create a Unix symlink at `target` pointing to `source` (Unix only).
+///
+/// When `remove_existing` is `true` any file already at `target` is deleted
+/// before the symlink is created. When it is `false` and `target` already
+/// exists the operation is skipped with a warning.
 #[cfg(not(target_os = "windows"))]
 pub fn create_symlink(
     source: &PathBuf,

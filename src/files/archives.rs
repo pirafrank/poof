@@ -14,7 +14,7 @@ use zip::read::ZipArchive;
 
 use anyhow::{bail, Context, Result};
 
-// Fallback directory name for extracted files
+/// Fallback subdirectory name used when an archive's own directory cannot be determined.
 const OUTPUT_DIR: &str = "output";
 
 /// Validates an archive file's magic bytes against its expected format.

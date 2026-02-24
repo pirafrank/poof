@@ -12,6 +12,11 @@ use crate::models::slug::Slug;
 use crate::output;
 use crate::utils::semver::SemverSort;
 
+/// List the executables provided by the latest installed version of a repository.
+///
+/// Validates that `args.repo` is an installed slug, resolves the latest version
+/// via semver sorting, and prints all executable files found in that version's
+/// install directory.
 pub fn run_what(args: &WhatArgs) -> Result<()> {
     // Validate slug
     let slug = Slug::new(&args.repo)?;

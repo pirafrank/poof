@@ -40,7 +40,7 @@ lazy_static! {
     };
 }
 
-// Checks if the item has a valid extension.
+/// Returns `true` if `item` has what looks like a real file extension (non-empty, ≤4 chars, not all digits).
 fn has_extension(item: &str) -> bool {
     // if the item does not contain a dot, it does not have an extension,
     if !item.contains(".") {

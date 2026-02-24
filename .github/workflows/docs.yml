@@ -1,0 +1,27 @@
+name: CheckDocs
+run-name: Check docs on ${{ github.ref_name }}
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.rs'
+  workflow_dispatch:
+
+jobs:
+  check_docs:
+    name: Check docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Setup just runner
+        uses: extractions/setup-just@v2
+
+      - name: Check docs
+        run: just docs-verify-all

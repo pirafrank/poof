@@ -26,6 +26,13 @@ use crate::{
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
 
+/// Download and install a GitHub release binary for `repo`.
+///
+/// When `tag` is `None` the latest release is fetched. The function selects
+/// platform-compatible assets, downloads them to the cache directory, extracts
+/// or copies the executables to the data directory, and performs a post-install
+/// PATH check. On Unix-like platforms a symlink is also created in the bin
+/// directory so the binary is available in `PATH`.
 pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     let (release, assets) = select_assets(repo, tag)?;
     let version: String = release.tag_name().strip_v();
@@ -88,6 +95,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Installs a single downloaded asset: extracts archives or copies bare executables into `install_dir`.
 fn process_install(
     slug: &Slug,
     downloaded_file: &PathBuf,
@@ -206,6 +214,7 @@ fn check_if_installed(install_dir: &Path) -> Result<bool> {
     }
 }
 
+/// Finds all executables within an extracted archive and installs each one into `install_dir`.
 fn install_binaries(slug: &Slug, archive_path: &Path, install_dir: &Path) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often

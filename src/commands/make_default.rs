@@ -76,6 +76,7 @@ pub(crate) fn get_latest_version(repo: &str) -> Result<String> {
     Ok(latest_version)
 }
 
+/// Returns the data-directory path for the given repo/version, checking that it exists.
 fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
     // Check repository exists
     check_repo_installed(repo).with_context(|| {
@@ -97,6 +98,11 @@ fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
     Ok(installed_version_dir)
 }
 
+/// Set a specific (or the latest) installed version of `repo` as the default.
+///
+/// Updates the symlinks in the bin directory to point to the requested version.
+/// When `version` is `None`, the highest semantically-versioned installed release
+/// is selected automatically via [`get_latest_version`].
 pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
     // Resolve version: use provided version or get latest
     let resolved_version = match version {

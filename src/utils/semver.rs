@@ -46,10 +46,13 @@ pub fn parse_lenient(version_str: &str) -> Option<semver::Version> {
 /// otherwise be unsupported by semver::Version.
 #[derive(Debug, Clone)]
 pub struct RawVersion {
+    /// The original, unmodified version string as received (e.g. `"v1.2.3"` or `"r35"`).
     pub original: String,
+    /// Parsed semver representation, or `None` if the string could not be normalised.
     pub version: Option<semver::Version>,
 }
 
+/// Convenience alias: every version in poof is stored as a [`RawVersion`].
 pub type Version = RawVersion;
 
 impl RawVersion {
@@ -126,7 +129,7 @@ impl From<&str> for RawVersion {
 // allowing dead code for the sake of having a complete set
 // of function available for the Asset struct.
 
-/// Trait to extend Vec<String> with semantic version sorting
+/// Trait to extend `Vec<String>` with semantic version sorting
 pub trait SemverSort {
     #[allow(dead_code)]
     /// Sorts the vector of strings in place using semantic versioning rules.
@@ -151,6 +154,7 @@ impl SemverSort for Vec<String> {
     }
 }
 
+/// Conversion from a collection of version strings into a vector of [`Version`] objects.
 pub trait SemverArrayConversion {
     /// Converts a vector of strings to a vector of Version objects.
     fn to_version(&self) -> Vec<Version>;
@@ -167,6 +171,7 @@ impl SemverArrayConversion for Vec<String> {
     }
 }
 
+/// Conversion from a single version string into an `Option<`[`Version`]`>`.
 pub trait SemverVersionConversion {
     /// Converts a version String to an optional Version object.
     fn to_version(&self) -> Option<Version>;
@@ -186,6 +191,7 @@ impl SemverVersionConversion for &str {
     }
 }
 
+/// Conversion from a vector of [`Version`] objects back into plain `String` values.
 pub trait SemverStringConversion {
     /// Converts a vector of Version objects to a vector of strings.
     fn to_string_vec(&self) -> Vec<String>;
@@ -198,6 +204,7 @@ impl SemverStringConversion for Vec<Version> {
     }
 }
 
+/// Strip leading `v`/`V` prefixes from version strings.
 pub trait SemverStringPrefix {
     /// Fixes the version strings in the vector by removing any leading 'v' or 'V'.
     /// It returns a new vector without modifying the original.

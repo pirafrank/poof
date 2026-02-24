@@ -1,6 +1,11 @@
+//! `user/repo` slug type with validation.
+
 use anyhow::bail;
 use anyhow::Error;
 
+/// A validated GitHub repository slug in the form `user/repo`.
+///
+/// Both the user and repository parts must be non-empty after trimming.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Slug(pub String);
 
@@ -8,7 +13,8 @@ pub struct Slug(pub String);
 // of function available for the Slug struct.
 #[allow(dead_code)]
 impl Slug {
-    // Create a new Slug from a "user/repo" string with validation
+    /// Parse a `"user/repo"` string into a [`Slug`], returning an error if the
+    /// format is invalid (wrong number of `/` separators or empty components).
     pub fn new(repo_slug: &str) -> Result<Self, Error> {
         let mut parts = repo_slug.split('/');
         match (parts.next(), parts.next(), parts.next()) {
@@ -17,7 +23,9 @@ impl Slug {
         }
     }
 
-    // Create a new Slug from separate username and repository name
+    /// Construct a [`Slug`] from separate `user` and `repo` strings.
+    ///
+    /// Both parts are trimmed and must be non-empty.
     pub fn from_parts(user: &str, repo: &str) -> Result<Self, Error> {
         let user = user.trim();
         let repo = repo.trim();
@@ -27,7 +35,7 @@ impl Slug {
         Ok(Slug(format!("{}/{}", user, repo)))
     }
 
-    // Get the underlying String
+    /// Return the inner slug string as a `&str` (e.g. `"user/repo"`).
     pub fn as_str(&self) -> &str {
         &self.0
     }

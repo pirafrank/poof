@@ -10,6 +10,11 @@ use crate::cli::UninstallArgs;
 use crate::files::datadirs;
 use crate::files::filesys::is_broken_symlink;
 
+/// Remove an installed version (or all versions) of a repository from the data directory.
+///
+/// After deleting the requested files the function also removes any broken
+/// symlinks left behind in the bin directory. The user is prompted for
+/// confirmation unless the `--yes` / `-y` flag is set.
 pub fn run_uninstall(args: &UninstallArgs) -> Result<()> {
     let data_dir = datadirs::get_data_dir().context("Cannot get data directory")?;
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory")?;

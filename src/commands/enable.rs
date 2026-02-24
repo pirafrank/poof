@@ -144,6 +144,11 @@ fn get_reload_instruction(shell: SupportedShell, config_path: &Path) -> String {
     }
 }
 
+/// Persistently add poof's bin directory to the given shell's configuration file.
+///
+/// The function detects the appropriate config file for `shell`, appends the
+/// necessary snippet to it (unless poof is already enabled), and prints the
+/// command needed to reload the shell without opening a new terminal session.
 pub fn run(shell: SupportedShell) -> Result<()> {
     /* 1 ─ get the directory that holds poof's executables */
     let bin_dir = get_bin_dir().context("Cannot locate bin directory")?;

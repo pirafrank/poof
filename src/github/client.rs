@@ -8,10 +8,14 @@ use crate::core::selector::get_env_compatible_assets;
 
 use super::models::{Release, ReleaseAsset};
 
+/// Base URL for the GitHub REST API.
 const GITHUB_API_URL: &str = "https://api.github.com/repos";
+/// `User-Agent` header value sent with every GitHub API request.
 const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
+/// `Accept` header value requesting GitHub API v3 JSON responses.
 const GITHUB_API_ACCEPT: &str = "application/vnd.github.v3+json";
 
+/// Reads the `GITHUB_TOKEN` environment variable and returns it, or errors if unset/empty.
 fn get_github_token() -> Result<String> {
     let token = std::env::var("GITHUB_TOKEN").with_context(|| "GITHUB_TOKEN is not set")?;
     if token.is_empty() {
@@ -25,6 +29,13 @@ fn get_base_api_url() -> String {
     std::env::var("POOF_GITHUB_API_URL").unwrap_or_else(|_| GITHUB_API_URL.to_string())
 }
 
+/// Fetch a GitHub release for `repo`.
+///
+/// When `tag` is `None` the latest release is retrieved. When a tag string is
+/// provided that specific release tag is fetched. Attaches a `Bearer` token
+/// from the `GITHUB_TOKEN` environment variable when available to avoid rate
+/// limiting. The base API URL can be overridden via `POOF_GITHUB_API_URL`
+/// (useful in tests with a mock server).
 pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
     let release_url = get_release_url(repo, tag);
     info!("Release URL: {}", release_url);
@@ -93,6 +104,10 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
     }
 }
 
+/// Build the GitHub API URL for a release.
+///
+/// Returns the `/releases/tags/{tag}` endpoint when a specific tag is requested
+/// or the `/releases/latest` endpoint otherwise.
 pub fn get_release_url(repo: &str, tag: Option<&str>) -> String {
     let base_url = get_base_api_url();
     match tag {
@@ -101,6 +116,10 @@ pub fn get_release_url(repo: &str, tag: Option<&str>) -> String {
     }
 }
 
+/// Filter a release's assets to those compatible with the current platform.
+///
+/// Delegates to [`get_env_compatible_assets`] and returns an error when no
+/// compatible assets are found for the release.
 pub fn get_assets(release: &Release) -> Result<Vec<ReleaseAsset>> {
     let binaries: Option<Vec<ReleaseAsset>> =
         get_env_compatible_assets(release.assets(), |asset| asset.name());

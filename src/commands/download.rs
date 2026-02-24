@@ -4,7 +4,11 @@ use anyhow::{Context, Result};
 use log::{debug, info};
 use std::{fs::File, io::copy, path::PathBuf};
 
-// Function to handle downloading and potentially installing binaries
+/// Download a single release asset to a local directory.
+///
+/// Fetches `download_url` and writes the response body to `download_to/filename`.
+/// The destination directory is created if it does not already exist.
+/// Returns the full path of the saved file on success.
 pub fn download_asset(
     filename: &String,
     download_url: &String,

@@ -1,17 +1,32 @@
+//! poof – zero-config, zero-install, zero-dependencies manager of pre-built software.
+//!
+//! poof downloads pre-built binaries from GitHub releases, installs them under the
+//! user's data directory, and manages symlinks so the binaries are available in `PATH`.
+//! It requires no root access and no system-level package manager.
+#![warn(missing_docs)]
+
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use log::{debug, error, info};
 use std::process::ExitCode;
 
-// Declare modules
+/// CLI argument parsing and command definitions.
 mod cli;
+/// Implementations for each poof subcommand.
 mod commands;
+/// Compile-time and runtime constants shared across the crate.
 mod constants;
+/// Platform detection, musl helpers, and asset-selection logic.
 mod core;
+/// Archive extraction, filesystem, and file-utility helpers.
 mod files;
+/// GitHub API client and response models.
 mod github;
+/// Domain models: slugs, spells, asset triples, and shell definitions.
 mod models;
+/// Convenience macros for user-facing output.
 mod output;
+/// General-purpose utilities (semver parsing, string helpers).
 mod utils;
 
 // Use modules locally
@@ -21,10 +36,12 @@ use crate::models::slug::Slug;
 use crate::models::spell::Spell;
 use crate::utils::semver::SemverStringConversion;
 
+/// Returns `true` if the current OS is supported by poof (Linux or macOS).
 fn is_supported_os() -> bool {
     cfg!(any(target_os = "linux", target_os = "macos"))
 }
 
+/// Initialises logging, parses CLI arguments, and dispatches to the correct subcommand handler.
 fn run() -> Result<ExitCode> {
     // Set up logging using RUST_LOG environment variable (defaults to info level)
     env_logger::Builder::from_default_env()
@@ -182,6 +199,7 @@ fn run() -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
+/// Binary entry point; delegates to [`run`] and maps errors to a non-zero exit code.
 fn main() -> ExitCode {
     match run() {
         Ok(code) => code,
