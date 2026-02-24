@@ -9,7 +9,7 @@ on:
     inputs:
       version:
         description: 'Version to package (e.g. 1.2.3, without v prefix)'
-        required: true
+        required: false
         type: string
 
 permissions:
@@ -61,11 +61,17 @@ jobs:
           sudo port clean poof || true
           sudo rm -rf /opt/local/var/macports/build/poof-* || true
 
-      - name: Show log
+      - name: Test Portfile by installing the package
+        id: install
+        continue-on-error: true  # Continue even if installation fails, to capture the logs
+        run: sudo port -vst install poof
+
+      - name: Show logs
         run: cat /opt/local/var/macports/logs/_*poof*/poof/main.log || true
 
-      - name: Test Portfile by installing the package
-        run: sudo port -vst install poof
+      - name: Setup tmate session
+        if: steps.install.outcome != 'success'  # Only start tmate if installation failed
+        uses: mxschmitt/action-tmate@v3
 
       - name: Add Portfile to artifacts
         uses: actions/upload-artifact@v4
