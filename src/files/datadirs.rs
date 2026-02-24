@@ -87,7 +87,7 @@ pub fn get_versions_nest(base: &Path, repo: &str) -> PathBuf {
 /// Returns `base/username/reponame/version` for the given repository and version string.
 pub fn get_binary_nest(base: &Path, repo: &str, version: &str) -> PathBuf {
     // Creating path as: base_dir/username/reponame/version
-    base.join(get_versions_nest(base, repo)).join(version)
+    get_versions_nest(base, repo).join(version)
 }
 
 #[cfg(test)]

@@ -30,8 +30,9 @@ use log::{debug, info, warn};
 ///
 /// When `tag` is `None` the latest release is fetched. The function selects
 /// platform-compatible assets, downloads them to the cache directory, extracts
-/// or copies the executables to the data directory, creates symlinks in the bin
-/// directory, and performs a post-install PATH check.
+/// or copies the executables to the data directory, and performs a post-install
+/// PATH check. On Unix-like platforms a symlink is also created in the bin
+/// directory so the binary is available in `PATH`.
 pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     let (release, assets) = select_assets(repo, tag)?;
     let version: String = release.tag_name().strip_v();

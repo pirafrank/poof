@@ -26,7 +26,7 @@ Check installed binaries using 'list' command.",
     }
 
     // Verify it's a symlink
-    if binary_path.read_link().is_err() {
+    if !binary_path.is_symlink() {
         bail!(
             "Binary '{}' exists but is not a symlink. \
             Refusing to delete regular files.\n\
