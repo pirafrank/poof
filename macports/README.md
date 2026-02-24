@@ -4,12 +4,11 @@ Scripts and GitHub Actions workflow for generating and submitting a MacPorts Por
 
 ## Prerequisites
 
-### Local use
-
 - macOS with [MacPorts](https://www.macports.org/install.php) installed
 - Rust toolchain (`rustup`)
-- [`cargo-generate-portfile`](https://crates.io/crates/cargo-generate-portfile), install with: `cargo install cargo-generate-portfile`
+- `git`
 - [`gh` CLI](https://cli.github.com), authenticate with: `gh auth login`
+- [`cargo2ports`](https://github.com/herbygillot/cargo2ports) installed
 
 ## Scripts
 
@@ -18,8 +17,9 @@ Scripts and GitHub Actions workflow for generating and submitting a MacPorts Por
 Generates a MacPorts Portfile for a given version of poof.
 
 ```bash
-./macports/generate_portfile.sh <version>
-# e.g.
+# it auto-detects the latest version if no argument is provided
+./macports/generate_portfile.sh
+# or specify a version explicitly (without 'v' prefix), e.g.
 ./macports/generate_portfile.sh 1.2.3
 ```
 
@@ -29,7 +29,7 @@ What it does:
 
 1. Downloads the source tarball and `poof.1` man page from the GitHub release
 2. Computes `rmd160`, `sha256`, and `size` checksums for each file
-3. Generates the Cargo dependency block using `cargo-generate-portfile`
+3. Generates the Cargo dependency block automatically by parsing `Cargo.lock`
 4. Writes the Portfile to `$HOME/pirafrank/ports/sysutils/poof/Portfile`
 5. Runs `portindex` to update the local MacPorts index
 
@@ -57,16 +57,30 @@ What it does:
 4. Creates a branch named `poof-<version>`, copies the Portfile, commits, and pushes
 5. Opens a pull request against `macports/macports-ports`
 
+## Test Locally
+
+Before you can submit a PR, you should test the generated Portfile locally.
+
+Pre-requisites:
+
+Edit `/opt/local/etc/macports/sources.conf` to include the local ports directory at the top:
+
+```conf
+file:///Users/yourusername/pirafrank/ports [nosync]
+# default MacPorts sources follows...
+[default]
+```
+
+Then you can test the generated Portfile:
+
+1. Run `generate_portfile.sh` with the desired version to create the Portfile in your local MacPorts tree.
+2. Run `sudo port -v install poof` to test the installation of the new version.
+
 ## GitHub Actions Workflow
 
 `.github/workflows/macports.yml` automates the full process on a macOS Intel runner.
 
 ### Triggers
-
-| Trigger | When |
-|---|---|
-| `release: [published]` | Automatically after a GitHub release is published |
-| `workflow_dispatch` | Manually — provide the version (e.g. `1.2.3`, no `v` prefix) as input |
 
 The `release` trigger fires after the release is fully published, ensuring the source tarball and `poof.1` man page asset are already available for download.
 

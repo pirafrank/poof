@@ -3,6 +3,7 @@ run-name: MacPorts Portfile ${{ github.ref_name }}
 
 on:
   release:
+    # only for newly published releases, not drafts or updates to existing ones
     types: [published]
   workflow_dispatch:
     inputs:
@@ -22,6 +23,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_PAT }}
       GIT_USER_NAME: pirafrank
       GIT_USER_EMAIL: pirafrank@users.noreply.github.com
+      SOURCES_CONF: "/opt/local/etc/macports/sources.conf"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,24 +34,37 @@ jobs:
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      - name: Install cargo-generate-portfile
-        run: cargo install cargo-generate-portfile
-
-      - name: Resolve version
-        id: version
+      - name: Install cargo2ports
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=$(echo '${{ github.ref_name }}' | sed 's/^v//')" >> "$GITHUB_OUTPUT"
-          fi
+          sudo port selfupdate
+          sudo port install pipx
+          pipx install git+https://github.com/herbygillot/cargo2ports.git
+
+      - name: Configure local ports tree
+        run: |
+          echo "pwd: $(pwd)"
+          echo "home: $HOME"
+          LOCAL_PORTS="file:///$HOME/pirafrank/ports [nosync]"
+          mkdir -p "$HOME/pirafrank/ports/sysutils/poof"
+          sudo bash -c "echo '$LOCAL_PORTS' | cat - '$SOURCES_CONF' > /tmp/sources.conf.tmp && mv /tmp/sources.conf.tmp '$SOURCES_CONF'"
+          echo "Prepended '$LOCAL_PORTS' to $SOURCES_CONF"
 
       - name: Generate Portfile
         run: |
           chmod +x macports/generate_portfile.sh
           ./macports/generate_portfile.sh ${{ steps.version.outputs.version }}
 
+      - name: Add Portfile to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Portfile
+          path: "./macports/Portfile"
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0  # no compression
+
       - name: Submit MacPorts PR
+        if: false  # Disable PR submission for now, enable when ready
         run: |
           chmod +x macports/macport_pr.sh
           ./macports/macport_pr.sh "$HOME/pirafrank/ports/sysutils/poof/Portfile"
