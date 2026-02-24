@@ -99,8 +99,8 @@ PortGroup           cargo 1.0
 name                $NAME
 version             $VERSION
 categories          $CATEGORY
-platforms           darwin
 license             MIT
+homepage            https://poof.fpira.com
 maintainers         $MAINTAINER
 
 description         Magic package manager of pre-built software.
@@ -130,7 +130,7 @@ destroot {
 }
 EOF
 
-# Cleanup local tree before copying the new Portfile
+# Cleanup local tree before copying the new Portfile to local ports directory
 cleanup_local_tree
 mkdir -p "$LOCAL_PORTS_PATH/$CATEGORY/$NAME"
 cp Portfile "$LOCAL_PORTS_PATH/$CATEGORY/$NAME/Portfile"
@@ -146,10 +146,15 @@ sudo chmod +a "user:macports allow search" /Users/$USER/pirafrank
 sudo chmod +a "user:macports allow search" /Users/$USER/pirafrank/ports
 echo "✅ Portfile is ready at $LOCAL_PORTS_PATH/$CATEGORY/$NAME/Portfile"
 
+echo "🌞 Linting the Portfile..."
+(cd "$LOCAL_PORTS_PATH/$CATEGORY/$NAME" && port lint --nitpick)
+echo "🔨 Testing the Portfile locally (this will build the package, it may take a while)..."
+(cd "$LOCAL_PORTS_PATH/$CATEGORY/$NAME" && sudo port test)
+
 # 6. Update Index
 echo "🔄 Updating MacPorts PortIndex..."
 (cd "$LOCAL_PORTS_PATH" && sudo portindex)
 echo "✅ MacPorts PortIndex updated."
 echo "🔄 Getting package info..."
 sudo port -v info $NAME && echo "✅ Package info retrieved successfully."
-echo "👉 Run 'sudo port -v install $NAME' to test the new version."
+echo "👉 Run 'sudo port -vst install $NAME' to test the new version."

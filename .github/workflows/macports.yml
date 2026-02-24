@@ -54,6 +54,9 @@ jobs:
           chmod +x macports/generate_portfile.sh
           ./macports/generate_portfile.sh ${{ steps.version.outputs.version }}
 
+      - name: Test Portfile by installing the package
+        run: sudo port -vst install poof
+
       - name: Add Portfile to artifacts
         uses: actions/upload-artifact@v4
         with:
