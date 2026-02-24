@@ -76,8 +76,7 @@ pub fn get_cache_dir() -> Option<PathBuf> {
     Some(cache_dir)
 }
 
-// Function to get a path for a binary file with the directory
-// structure for a specific repository and version.
+/// Returns `base/username/reponame` for `repo` in `"username/reponame"` format.
 pub fn get_versions_nest(base: &Path, repo: &str) -> PathBuf {
     // Convert repo path to filesystem-friendly format by replacing '/' with OS separator
     // Creating path as: base_dir/username/reponame
@@ -85,8 +84,7 @@ pub fn get_versions_nest(base: &Path, repo: &str) -> PathBuf {
     base.join(&repo_path)
 }
 
-// Function to get a path for a binary file with the directory
-// structure for a specific repository and version.
+/// Returns `base/username/reponame/version` for the given repository and version string.
 pub fn get_binary_nest(base: &Path, repo: &str, version: &str) -> PathBuf {
     // Creating path as: base_dir/username/reponame/version
     base.join(get_versions_nest(base, repo)).join(version)

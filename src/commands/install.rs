@@ -94,6 +94,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Installs a single downloaded asset: extracts archives or copies bare executables into `install_dir`.
 fn process_install(
     slug: &Slug,
     downloaded_file: &PathBuf,
@@ -212,6 +213,7 @@ fn check_if_installed(install_dir: &Path) -> Result<bool> {
     }
 }
 
+/// Finds all executables within an extracted archive and installs each one into `install_dir`.
 fn install_binaries(slug: &Slug, archive_path: &Path, install_dir: &Path) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often

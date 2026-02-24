@@ -8,10 +8,14 @@ use crate::core::selector::get_env_compatible_assets;
 
 use super::models::{Release, ReleaseAsset};
 
+/// Base URL for the GitHub REST API.
 const GITHUB_API_URL: &str = "https://api.github.com/repos";
+/// `User-Agent` header value sent with every GitHub API request.
 const GITHUB_API_USER_AGENT: &str = "pirafrank/poof";
+/// `Accept` header value requesting GitHub API v3 JSON responses.
 const GITHUB_API_ACCEPT: &str = "application/vnd.github.v3+json";
 
+/// Reads the `GITHUB_TOKEN` environment variable and returns it, or errors if unset/empty.
 fn get_github_token() -> Result<String> {
     let token = std::env::var("GITHUB_TOKEN").with_context(|| "GITHUB_TOKEN is not set")?;
     if token.is_empty() {

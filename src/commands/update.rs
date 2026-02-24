@@ -11,18 +11,18 @@ use anyhow::{bail, Context, Result};
 use log::{debug, error, info, warn};
 use rayon::prelude::*;
 
-// updating a single repository
+/// Checks for and applies an update for a single installed repository (by name).
 fn update_single_repo(repo: &str) -> Result<()> {
     update_single_repo_internal(repo, None)
 }
 
-// updating a single repository with a spell
+/// Checks for and applies an update for a single repository using a pre-loaded [`Spell`].
 fn update_single_repo_with_spell(repo: &str, spell: &Spell) -> Result<()> {
     update_single_repo_internal(repo, Some(spell))
 }
 
-// inner function to update a single repository
-// TODO: not a big fan of the internal function pattern. may refactor later.
+/// Core update logic: compares the highest installed version against the latest GitHub release and
+/// installs the new version when one is available.
 fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> {
     info!("Checking for updates for {}", repo);
 
@@ -109,6 +109,7 @@ fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> 
     Ok(())
 }
 
+/// Checks and updates all installed repositories in parallel, reporting any failures.
 fn update_all_repos() -> Result<()> {
     info!("Checking for updates for all installed binaries...");
 

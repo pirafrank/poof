@@ -76,6 +76,7 @@ pub(crate) fn get_latest_version(repo: &str) -> Result<String> {
     Ok(latest_version)
 }
 
+/// Returns the data-directory path for the given repo/version, checking that it exists.
 fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
     // Check repository exists
     check_repo_installed(repo).with_context(|| {

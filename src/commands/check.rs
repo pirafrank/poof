@@ -48,6 +48,7 @@ pub fn check_if_bin_in_path() -> Result<ExitCode> {
     }
 }
 
+/// Returns the shell export command that adds `bin_dir` to `PATH`.
 fn get_export_command(bin_dir: &Path) -> Result<String> {
     Ok(format!("export PATH=\"{}:$PATH\"", bin_dir.display()))
 }

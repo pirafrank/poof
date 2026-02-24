@@ -38,6 +38,7 @@ pub fn run_which(args: &WhichArgs) -> Result<()> {
     Ok(())
 }
 
+/// Searches all installed spells for versions that contain an executable named `binary_name`.
 fn find_binary_providers(
     spells: &[Spell],
     data_dir: &Path,
@@ -67,6 +68,7 @@ fn find_binary_providers(
     matches
 }
 
+/// Returns `true` if `version_dir` contains an executable file named `binary_name`.
 fn has_executable_named(version_dir: &Path, binary_name: &str) -> bool {
     let direct_candidate = version_dir.join(binary_name);
     if is_executable_file(&direct_candidate) {
@@ -85,10 +87,12 @@ fn has_executable_named(version_dir: &Path, binary_name: &str) -> bool {
     false
 }
 
+/// Returns `true` if `path` is a regular file identified as an executable by its magic number.
 fn is_executable_file(path: &Path) -> bool {
     path.is_file() && magic::is_exec_by_magic_number(path)
 }
 
+/// Resolves the symlink for `binary_name` in the poof bin directory to its absolute target path.
 fn resolve_managed_symlink_target(binary_name: &str) -> Option<PathBuf> {
     let bin_dir = datadirs::get_bin_dir()?;
     let symlink_path = bin_dir.join(binary_name);

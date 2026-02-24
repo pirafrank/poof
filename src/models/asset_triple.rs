@@ -12,8 +12,11 @@ use crate::core::musl::target_prefers_musl;
 /// of [`target_prefers_musl`]. A custom triple can be constructed with [`new`](AssetTriple::new)
 /// for testing or cross-compilation scenarios.
 pub struct AssetTriple {
+    /// Target operating system identifier (e.g. `"linux"`, `"macos"`).
     os: String,
+    /// Target CPU architecture identifier (e.g. `"x86_64"`, `"aarch64"`).
     arch: String,
+    /// Whether the target prefers musl-linked binaries.
     musl: bool,
 }
 

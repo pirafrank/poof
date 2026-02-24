@@ -25,10 +25,12 @@ pub enum SupportedShell {
 /// Error returned when an unrecognised shell name is supplied to [`SupportedShell::from_str`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseShellError {
+    /// The unrecognised shell string that caused the parse failure.
     input: String,
 }
 
 impl ParseShellError {
+    /// Creates a new [`ParseShellError`] for the given unrecognised shell `input`.
     fn new(input: impl Into<String>) -> Self {
         Self {
             input: input.into(),

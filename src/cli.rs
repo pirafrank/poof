@@ -13,6 +13,7 @@ lazy_static! {
     static ref BINARY_NAME_REGEX: Regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
 }
 
+/// Validates that `s` is a `USERNAME/REPO` slug and returns it unchanged if valid.
 fn validate_repo_format(s: &str) -> Result<String, String> {
     if REPO_REGEX.is_match(s) {
         Ok(s.to_string())
@@ -24,6 +25,7 @@ fn validate_repo_format(s: &str) -> Result<String, String> {
     }
 }
 
+/// Validates that `s` contains only alphanumeric characters, underscores, and hyphens.
 fn validate_binary_name(s: &str) -> Result<String, String> {
     if BINARY_NAME_REGEX.is_match(s) {
         Ok(s.to_string())
@@ -35,6 +37,7 @@ fn validate_binary_name(s: &str) -> Result<String, String> {
     }
 }
 
+/// Arguments for the `use` subcommand (set a specific installed version as default).
 #[derive(Parser, Clone)]
 pub struct UseArgs {
     /// GitHub user and repository in the format USERNAME/REPO
@@ -47,7 +50,7 @@ pub struct UseArgs {
     pub version: Option<String>,
 }
 
-// Common arguments for repository operations
+/// Common arguments shared by subcommands that operate on a GitHub repository.
 #[derive(Parser, Clone)]
 pub struct CmdArgs {
     /// GitHub user and repository in the format USERNAME/REPO
@@ -60,7 +63,7 @@ pub struct CmdArgs {
     pub tag: Option<String>,
 }
 
-// Specific structure for the update command
+/// Arguments for the `update` subcommand.
 #[derive(Parser, Clone)]
 pub struct UpdateArgs {
     /// Github slug in the format USERNAME/REPO
@@ -72,6 +75,7 @@ pub struct UpdateArgs {
     pub all: bool,
 }
 
+/// Parses a shell name string into a [`SupportedShell`] variant, returning a friendly error on failure.
 fn parse_shell(s: &str) -> Result<SupportedShell, String> {
     s.parse::<SupportedShell>().map_err(|e| {
         format!(
@@ -82,7 +86,7 @@ fn parse_shell(s: &str) -> Result<SupportedShell, String> {
     })
 }
 
-// Structure for the completions command
+/// Arguments for subcommands that require a shell type (completions, enable, init).
 #[derive(Parser, Clone)]
 pub struct ShellIntegrationArgs {
     /// Shell type to generate completions for, integrate via init command, and more.
@@ -91,7 +95,7 @@ pub struct ShellIntegrationArgs {
     pub shell: SupportedShell,
 }
 
-// Structure for the unlink command
+/// Arguments for the `unlink` subcommand.
 #[derive(Parser, Clone)]
 pub struct UnlinkArgs {
     /// Name of the binary to unlink from the bin directory
@@ -103,7 +107,7 @@ pub struct UnlinkArgs {
     pub yes: bool,
 }
 
-// Structure for the list command
+/// Arguments for the `list` subcommand.
 #[derive(Parser, Clone)]
 pub struct ListArgs {
     /// GitHub user and repository in the format USERNAME/REPO
@@ -112,7 +116,7 @@ pub struct ListArgs {
     pub repo: Option<String>,
 }
 
-// Structure for the which command
+/// Arguments for the `which` subcommand.
 #[derive(Parser, Clone)]
 pub struct WhichArgs {
     /// Name of the binary to look up
@@ -120,7 +124,7 @@ pub struct WhichArgs {
     pub binary_name: String,
 }
 
-// Structure for the what command
+/// Arguments for the `what` subcommand.
 #[derive(Parser, Clone)]
 pub struct WhatArgs {
     /// GitHub user and repository in the format USERNAME/REPO
@@ -129,7 +133,7 @@ pub struct WhatArgs {
     pub repo: String,
 }
 
-// Structure for the uninstall command
+/// Arguments for the `uninstall` subcommand.
 #[derive(Parser, Clone)]
 #[command(group(ArgGroup::new("what_to_uninstall").required(true).args(["version", "all"])))]
 pub struct UninstallArgs {
@@ -150,7 +154,7 @@ pub struct UninstallArgs {
     pub yes: bool,
 }
 
-// Command line interface
+/// All available poof subcommands.
 #[derive(Subcommand, Clone)]
 pub enum Cmd {
     /// Only perform download for the platform in current directory. Do not install.
@@ -202,6 +206,7 @@ pub enum Cmd {
     Version,
 }
 
+/// Top-level CLI structure parsed by clap.
 #[derive(Parser)]
 #[command(
   name = APP_NAME,

@@ -6,8 +6,10 @@
 
 use std::sync::OnceLock;
 
+/// One-time initialisation cell that caches the musl-preference result.
 static CELL: OnceLock<bool> = OnceLock::new();
 
+/// Computes the default musl preference: respects `POOF_PREFER_MUSL` env var, then auto-detects.
 fn get_default() -> bool {
     let user_value = std::env::var("POOF_PREFER_MUSL")
         .ok()
@@ -30,6 +32,7 @@ pub fn target_prefers_musl() -> bool {
     *CELL.get_or_init(get_default)
 }
 
+/// Runs `ldd --version` and returns its stdout in lowercase, or an empty string on failure.
 #[cfg(target_os = "linux")]
 fn get_ldd() -> String {
     use std::process::Command;
@@ -45,15 +48,14 @@ fn get_ldd() -> String {
     }
 }
 
+/// Returns `true` when the system's `ldd` output does not mention glibc (indicating musl or other).
 #[cfg(target_os = "linux")]
 fn target_has_no_glibc() -> bool {
     let ldd_output = get_ldd();
     !ldd_output.contains("glibc") && !ldd_output.contains("gnu libc")
 }
 
-// On non-Linux targets, we assume glibc is not relevant.
-// So we return false, otherwise poof would try to prefer
-// musl builds on non-Linux systems, which doesn't make sense.
+/// Always returns `false` on non-Linux targets since musl preference is Linux-only.
 #[cfg(not(target_os = "linux"))]
 fn target_has_no_glibc() -> bool {
     false

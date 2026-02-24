@@ -12,7 +12,9 @@ use super::slug::Slug;
 /// sorted in ascending semver order.
 #[derive(PartialEq, Eq, Debug)]
 pub struct Spell {
+    /// Repository slug identifying the source of the binary.
     name: Slug,
+    /// Sorted list of installed versions.
     versions: Vec<Version>,
 }
 

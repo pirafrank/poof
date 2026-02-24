@@ -1,3 +1,6 @@
+//! Example binary that generates a man page for poof using `clap-mangen`.
+//!
+//! Run with `cargo run --example gen_man` to produce `man/poof.1`.
 #![allow(unused)]
 use clap::{ArgAction, Command, CommandFactory};
 use clap_mangen::Man;
@@ -5,7 +8,7 @@ use std::fs;
 use std::io::{Result, Write};
 use std::path::PathBuf;
 
-// Reconstruct crate module structure for the example to support src/cli.rs inclusion
+/// Re-exported constants module from the main crate.
 #[path = "../src/constants.rs"]
 mod constants;
 
@@ -18,13 +21,13 @@ pub mod platform_info_impl;
 #[path = "../src/models/supported_shells.rs"]
 pub mod supported_shells_impl;
 
-// Define core module acting as a namespace
+/// Namespace module that mirrors the main crate's `core` module layout.
 #[allow(dead_code)]
 mod core {
     pub use super::platform_info_impl as platform_info;
 }
 
-// Define models module acting as a namespace
+/// Namespace module that mirrors the main crate's `models` module layout.
 #[allow(dead_code)]
 mod models {
     pub use super::supported_shells_impl as supported_shells;
@@ -35,18 +38,19 @@ mod models {
 #[path = "../src/utils/string.rs"]
 pub mod string_impl;
 
-// Define utils module acting as a namespace
+/// Namespace module that mirrors the main crate's `utils` module layout.
 #[allow(dead_code)]
 mod utils {
     pub use super::string_impl as string;
 }
 
-// Include cli module
+/// Re-exported CLI module from the main crate.
 #[path = "../src/cli.rs"]
 mod cli;
 
 use cli::Cli;
 
+/// Renders a single clap subcommand as a `.SS` man-page section into `buf`.
 fn render_subcommand(sub: &Command, buf: &mut Vec<u8>) -> Result<()> {
     // Subsection title: Command Name
     writeln!(buf, ".SS \"{}\"", sub.get_name())?;
@@ -119,6 +123,7 @@ fn render_subcommand(sub: &Command, buf: &mut Vec<u8>) -> Result<()> {
     Ok(())
 }
 
+/// Entry point: creates the `man/` directory and generates the man page for `poof`.
 fn main() -> Result<()> {
     // Determine the output directory
     let mut out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

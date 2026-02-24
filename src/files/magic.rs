@@ -44,10 +44,10 @@ pub const TAR_MAGIC: &[u8] = b"ustar";
 /// 7-Zip archive signature bytes.
 pub const SEVENZ_MAGIC: &[u8] = &[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]; // 7z signature
 
+/// Returns `true` if the first four bytes of `buffer` match the ELF magic number.
 #[cfg(target_os = "linux")]
 fn is_exec_magic(buffer: &[u8; 4]) -> bool {
-    // Linux expects ELF binaries
-    buffer == &ELF_MAGIC // ELF
+    buffer == &ELF_MAGIC
 }
 
 #[cfg(target_os = "windows")]

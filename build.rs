@@ -1,9 +1,15 @@
+//! Build script for poof.
+//!
+//! Sets compile-time environment variables: git commit hash, build date,
+//! C library name/version, and linking mode (static vs dynamic).
+
 use chrono::Utc;
 use std::{env, process::Command};
 
 #[macro_use]
 extern crate build_cfg;
 
+/// Returns the glibc version string if targeting GNU, otherwise returns `None`.
 fn get_glibc_version() -> Option<String> {
     // Set the glibc version if applicable
     if build_cfg!(target_env = "gnu") {
@@ -17,6 +23,7 @@ fn get_glibc_version() -> Option<String> {
     }
 }
 
+/// Detects the C library for the target triple and sets linker configuration flags.
 fn c_library_detection() {
     let target = env::var("TARGET").unwrap();
     let is_musl = target.contains("musl");
@@ -58,6 +65,7 @@ fn c_library_detection() {
     println!("cargo::rustc-check-cfg=cfg(dynamic_linking)");
 }
 
+/// Build entry point: embeds git hash, build date, and linking metadata into the binary.
 #[build_cfg_main]
 fn main() {
     // Get the short commit hash

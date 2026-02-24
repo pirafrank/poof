@@ -6,8 +6,10 @@
 use crate::constants::*;
 use crate::utils::string;
 
+/// PATH separator on non-Windows platforms.
 #[cfg(not(target_os = "windows"))]
 const ENV_PATH_SEPARATOR: &str = ":";
+/// PATH separator on Windows.
 #[cfg(target_os = "windows")]
 const ENV_PATH_SEPARATOR: &str = ";";
 
