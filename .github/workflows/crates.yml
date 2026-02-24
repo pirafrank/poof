@@ -1,13 +1,9 @@
 name: Crates.io Publish
 
 on:
-  workflow_run:
-    # this matches the name of the workflow .github/workflows/release.yml
-    workflows: ["Release"]
-    types:
-      - completed
-    branches:
-      - main
+  release:
+    # only for newly published releases, not drafts or updates to existing ones
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
