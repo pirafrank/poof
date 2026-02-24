@@ -1,0 +1,55 @@
+name: MacPorts Portfile
+run-name: MacPorts Portfile ${{ github.ref_name }}
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to package (e.g. 1.2.3, without v prefix)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  macports-portfile:
+    name: Generate and submit Portfile
+    runs-on: macos-13
+    env:
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+      GIT_USER_NAME: pirafrank
+      GIT_USER_EMAIL: pirafrank@users.noreply.github.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MacPorts
+        uses: melusina-org/setup-macports@v1
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install cargo-generate-portfile
+        run: cargo install cargo-generate-portfile
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(echo '${{ github.ref_name }}' | sed 's/^v//')" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate Portfile
+        run: |
+          chmod +x macports/generate_portfile.sh
+          ./macports/generate_portfile.sh ${{ steps.version.outputs.version }}
+
+      - name: Submit MacPorts PR
+        run: |
+          chmod +x macports/macport_pr.sh
+          ./macports/macport_pr.sh "$HOME/pirafrank/ports/sysutils/poof/Portfile"
