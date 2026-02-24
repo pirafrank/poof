@@ -7,7 +7,7 @@ set -euo pipefail
 
 NAME="poof"
 CATEGORY="sysutils"
-PORTFILE_PATH="$1"
+PORTFILE_PATH="${1:-}"
 IS_GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 
 # Validate input
@@ -21,7 +21,10 @@ if [ ! -f "$PORTFILE_PATH" ]; then
     echo "❌ Error: Portfile not found at '$PORTFILE_PATH'."
     exit 1
 fi
+# Resolve to absolute path before any cd
+PORTFILE_PATH="$(cd "$(dirname "$PORTFILE_PATH")" && pwd)/$(basename "$PORTFILE_PATH")"
 
+# Extract version from Portfile
 VERSION=$(grep -E "^version\s+" "$PORTFILE_PATH" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
 
 if [ -z "$VERSION" ]; then

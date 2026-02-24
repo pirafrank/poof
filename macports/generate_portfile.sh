@@ -85,12 +85,12 @@ echo "🚀 Preparing Source + Manpage Portfile for $NAME v$VERSION..."
 
 # 2. Fetch checksums
 echo "📥 Fetching Source & Asset for checksumming..."
-read -r -a SRC_CHKS <<< "$(get_checksums "$SRC_URL" "$SRC_TARBALL")"
-read -r -a MAN_CHKS <<< "$(get_checksums "$MAN_PAGE_URL" "$MAN_PAGE")"
+read -r -a SRC_CHKS <<< "$(get_checksums "$SRC_URL" "$SCRIPT_DIR/$SRC_TARBALL")"
+read -r -a MAN_CHKS <<< "$(get_checksums "$MAN_PAGE_URL" "$SCRIPT_DIR/$MAN_PAGE")"
 
 # 4. Generate Cargo Dependency Block
 echo "📦 Generating Cargo crate list from Cargo.lock..."
-extract_cargo_lock "$SRC_TARBALL"
+extract_cargo_lock "$SCRIPT_DIR/$SRC_TARBALL"
 # Check for Cargo.lock
 if [ ! -f "$SCRIPT_DIR/Cargo.lock" ]; then
     echo "❌ Error: Cargo.lock not found. Cannot generate crate list."
@@ -149,8 +149,8 @@ cleanup_local_tree
 mkdir -p "$LOCAL_PORTS_PATH/$CATEGORY/$NAME"
 cp "$SCRIPT_DIR/Portfile" "$LOCAL_PORTS_PATH/$CATEGORY/$NAME/Portfile"
 # Update permissions for the new Portfile
-sudo find "$HOME/pirafrank/ports" -type d -exec chmod 755 {} +
-sudo find "$HOME/pirafrank/ports" -type f -exec chmod 644 {} +
+sudo find "$LOCAL_PORTS_PATH" -type d -exec chmod 755 {} +
+sudo find "$LOCAL_PORTS_PATH" -type f -exec chmod 644 {} +
 # Note: user:macports is the default group for MacPorts,
 #       it really means the user named 'macports', not the group.
 #       This user is created during MacPorts installation and
