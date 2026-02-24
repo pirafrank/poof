@@ -18,7 +18,7 @@ permissions:
 jobs:
   macports-portfile:
     name: Generate and submit Portfile
-    runs-on: macos-13
+    runs-on: macos-15
     env:
       GH_TOKEN: ${{ secrets.GH_PAT }}
       GIT_USER_NAME: pirafrank
@@ -46,13 +46,13 @@ jobs:
           echo "home: $HOME"
           LOCAL_PORTS="file:///$HOME/pirafrank/ports [nosync]"
           mkdir -p "$HOME/pirafrank/ports/sysutils/poof"
-          sudo bash -c "echo '$LOCAL_PORTS' | cat - '$SOURCES_CONF' > /tmp/sources.conf.tmp && mv /tmp/sources.conf.tmp '$SOURCES_CONF'"
+          sudo bash -c "echo \"$LOCAL_PORTS\" | cat - \"$SOURCES_CONF\" > /tmp/sources.conf.tmp && mv /tmp/sources.conf.tmp \"$SOURCES_CONF\""
           echo "Prepended '$LOCAL_PORTS' to $SOURCES_CONF"
 
       - name: Generate Portfile
         run: |
           chmod +x macports/generate_portfile.sh
-          ./macports/generate_portfile.sh ${{ steps.version.outputs.version }}
+          ./macports/generate_portfile.sh
 
       - name: Test Portfile by installing the package
         run: sudo port -vst install poof

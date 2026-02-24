@@ -68,4 +68,11 @@ if [[ $REPLY =~ ^[Yy]$ || "$IS_GITHUB_ACTIONS" == "true" ]]; then
     git add "$CATEGORY/$NAME/Portfile"
     git commit -m "$NAME: update to $VERSION"
     git push origin "$NAME-$VERSION"
+
+    gh pr create \
+    --repo macports/macports-ports \
+    --base master \
+    --head "$NAME-$VERSION" \
+    --title "$NAME: update to $VERSION" \
+    --body "Automated Portfile update for $NAME $VERSION."
 fi

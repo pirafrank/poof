@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 ### Generate a Portfile for poof and test it locally.
 ### Run with: ./generate_portfile.sh <version>
 
@@ -9,6 +11,8 @@ GH_USER="pirafrank"
 REPO="poof"
 CATEGORY="sysutils"
 MAINTAINER="@pirafrank"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_PORTS_PATH="$HOME/pirafrank/ports"
 
 # --- Version and Source ---
@@ -25,7 +29,7 @@ MAN_PAGE_URL="https://github.com/$GH_USER/$REPO/releases/download/v$VERSION/$MAN
 get_checksums() {
     local url=$1
     local file=$2
-    curl -sSL "$url" -o "$file"
+    curl -fsSL "$url" -o "$file"
     local size=$(stat -f%z "$file")
     local sha256=$(shasum -a 256 "$file" | awk '{print $1}')
     local rmd160=$(openssl dgst -rmd160 "$file" | awk '{print $2}')
@@ -47,10 +51,10 @@ extract_cargo_lock() {
 }
 
 cleanup_local_dir() {
-    rm -f poof.1
-    rm -f *.tar.gz
-    rm -f Portfile
-    rm -f Cargo.lock
+    rm -f $SCRIPT_DIR/poof.1
+    rm -f $SCRIPT_DIR/*.tar.gz
+    rm -f $SCRIPT_DIR/Portfile
+    rm -f $SCRIPT_DIR/Cargo.lock
 }
 
 cleanup_local_tree() {
@@ -90,7 +94,7 @@ fi
 CRATES_BLOCK=$(cargo2ports ./Cargo.lock)
 
 # 5. Write the Portfile
-cat <<EOF > Portfile
+cat <<EOF > $SCRIPT_DIR/Portfile
 # -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
 
 PortSystem          1.0
@@ -133,7 +137,7 @@ EOF
 # Cleanup local tree before copying the new Portfile to local ports directory
 cleanup_local_tree
 mkdir -p "$LOCAL_PORTS_PATH/$CATEGORY/$NAME"
-cp Portfile "$LOCAL_PORTS_PATH/$CATEGORY/$NAME/Portfile"
+cp $SCRIPT_DIR/Portfile "$LOCAL_PORTS_PATH/$CATEGORY/$NAME/Portfile"
 # Update permissions for the new Portfile
 sudo find "$HOME/pirafrank/ports" -type d -exec chmod 755 {} +
 sudo find "$HOME/pirafrank/ports" -type f -exec chmod 644 {} +
