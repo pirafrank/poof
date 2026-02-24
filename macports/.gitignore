@@ -1,0 +1,8 @@
+poof.1
+*.tar.gz
+Portfile
+Cargo.lock
+.venv
+PortIndex
+PortIndex.quick
+work
