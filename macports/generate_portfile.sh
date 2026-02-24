@@ -30,19 +30,23 @@ get_checksums() {
     local url=$1
     local file=$2
     curl -fsSL "$url" -o "$file"
-    local size=$(stat -f%z "$file")
-    local sha256=$(shasum -a 256 "$file" | awk '{print $1}')
-    local rmd160=$(openssl dgst -rmd160 "$file" | awk '{print $2}')
+    local size
+    local sha256
+    local rmd160
+    size=$(stat -f%z "$file")
+    sha256=$(shasum -a 256 "$file" | awk '{print $1}')
+    rmd160=$(openssl dgst -rmd160 "$file" | awk '{print $2}')
     echo "$file $rmd160 $sha256 $size"
     # We keep the file briefly for cargo-generate-portfile if it's the source
 }
 
 extract_cargo_lock() {
     local tarball=$1
-    local temp_dir=$(mktemp -d)
+    local temp_dir
+    temp_dir=$(mktemp -d)
     tar -xzf "$tarball" -C "$temp_dir" --strip-components=1
     if [ -f "$temp_dir/Cargo.lock" ]; then
-        cp "$temp_dir/Cargo.lock" .
+        cp "$temp_dir/Cargo.lock" "$SCRIPT_DIR/Cargo.lock"
     else
         echo "❌ Error: Cargo.lock not found in the source tarball."
         exit 1
@@ -81,14 +85,14 @@ echo "🚀 Preparing Source + Manpage Portfile for $NAME v$VERSION..."
 
 # 2. Fetch checksums
 echo "📥 Fetching Source & Asset for checksumming..."
-SRC_CHKS=($(get_checksums "$SRC_URL" "$SRC_TARBALL"))
-MAN_CHKS=($(get_checksums "$MAN_PAGE_URL" "$MAN_PAGE"))
+read -r -a SRC_CHKS <<< "$(get_checksums "$SRC_URL" "$SRC_TARBALL")"
+read -r -a MAN_CHKS <<< "$(get_checksums "$MAN_PAGE_URL" "$MAN_PAGE")"
 
 # 4. Generate Cargo Dependency Block
 echo "📦 Generating Cargo crate list from Cargo.lock..."
 extract_cargo_lock "$SRC_TARBALL"
 # Check for Cargo.lock
-if [ ! -f "Cargo.lock" ]; then
+if [ ! -f "$SCRIPT_DIR/Cargo.lock" ]; then
     echo "❌ Error: Cargo.lock not found. Cannot generate crate list."
     exit 1
 fi
@@ -97,10 +101,10 @@ if ! command -v cargo2ports &> /dev/null; then
     exit 1
 fi
 # Parse Cargo.lock to extract crate names and versions
-CRATES_BLOCK=$(cargo2ports ./Cargo.lock)
+CRATES_BLOCK=$(cargo2ports "$SCRIPT_DIR/Cargo.lock")
 
 # 5. Write the Portfile
-cat <<EOF > $SCRIPT_DIR/Portfile
+cat <<EOF > "$SCRIPT_DIR/Portfile"
 # -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
 
 PortSystem          1.0
@@ -114,7 +118,7 @@ homepage            https://poof.fpira.com
 maintainers         $MAINTAINER
 
 description         Magic package manager of pre-built software.
-long_description    \${description}
+long_description    Install and manage awesome tools from GitHub Releases in one command. No manifests, formulae, ports, or repositories required.
 
 master_sites        https://github.com/$GH_USER/$REPO/archive/refs/tags/:source \\
                     https://github.com/$GH_USER/$REPO/releases/download/v\${version}/:asset
@@ -123,13 +127,13 @@ distfiles           v\${version}.tar.gz:source \\
                     $MAN_PAGE:asset
 
 checksums           v\${version}.tar.gz \\
-                    rmd160  ${SRC_CHKS[1]} \\
-                    sha256  ${SRC_CHKS[2]} \\
-                    size    ${SRC_CHKS[3]} \\
+                    rmd160  "${SRC_CHKS[1]}" \\
+                    sha256  "${SRC_CHKS[2]}" \\
+                    size    "${SRC_CHKS[3]}" \\
                     $MAN_PAGE \\
-                    rmd160  ${MAN_CHKS[1]} \\
-                    sha256  ${MAN_CHKS[2]} \\
-                    size    ${MAN_CHKS[3]}
+                    rmd160  "${MAN_CHKS[1]}" \\
+                    sha256  "${MAN_CHKS[2]}" \\
+                    size    "${MAN_CHKS[3]}"
 
 ${CRATES_BLOCK}
 
@@ -143,7 +147,7 @@ EOF
 # Cleanup local tree before copying the new Portfile to local ports directory
 cleanup_local_tree
 mkdir -p "$LOCAL_PORTS_PATH/$CATEGORY/$NAME"
-cp $SCRIPT_DIR/Portfile "$LOCAL_PORTS_PATH/$CATEGORY/$NAME/Portfile"
+cp "$SCRIPT_DIR/Portfile" "$LOCAL_PORTS_PATH/$CATEGORY/$NAME/Portfile"
 # Update permissions for the new Portfile
 sudo find "$HOME/pirafrank/ports" -type d -exec chmod 755 {} +
 sudo find "$HOME/pirafrank/ports" -type f -exec chmod 644 {} +
@@ -151,9 +155,9 @@ sudo find "$HOME/pirafrank/ports" -type f -exec chmod 644 {} +
 #       it really means the user named 'macports', not the group.
 #       This user is created during MacPorts installation and
 #       is used for file permissions.
-sudo chmod +a "user:macports allow search" /Users/$USER
-sudo chmod +a "user:macports allow search" /Users/$USER/pirafrank
-sudo chmod +a "user:macports allow search" /Users/$USER/pirafrank/ports
+sudo chmod +a "user:macports allow search" "/Users/$USER"
+sudo chmod +a "user:macports allow search" "/Users/$USER/pirafrank"
+sudo chmod +a "user:macports allow search" "/Users/$USER/pirafrank/ports"
 echo "✅ Portfile is ready at $LOCAL_PORTS_PATH/$CATEGORY/$NAME/Portfile"
 
 echo "🌞 Linting the Portfile..."

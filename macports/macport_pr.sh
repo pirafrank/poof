@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 ### Submit a PR to MacPorts official repo for a new version of poof.
 ### Run with: ./macport_pr.sh <portfile_path>
 
@@ -27,13 +29,14 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
+# Keep REPLY above 'ifs' for interactive prompt and GitHub Actions compatibility
+REPLY=""
 # Submit PR (interactive as script, automatic in GitHub Actions)
 if [ "$IS_GITHUB_ACTIONS" != "true" ]; then
-    read -p "Do you want to submit this to MacPorts official repo now? (y/n) " -n 1 -r
+    read -p "Do you want to submit this to MacPorts official repo now? (y/n) " -n 1 -r REPLY
     echo
 fi
 
-REPLY=""
 if [[ $REPLY =~ ^[Yy]$ || "$IS_GITHUB_ACTIONS" == "true" ]]; then
     MP_DIR="/tmp/macports-ports"
 
