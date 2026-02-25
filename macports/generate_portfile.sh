@@ -10,17 +10,19 @@ NAME="poof"
 GH_USER="pirafrank"
 REPO="poof"
 CATEGORY="sysutils"
-MAINTAINER="@pirafrank"
+MAINTAINER_NAME="@pirafrank"
+MAINTAINER_EMAIL="fpira.com:dev"
+OPENMAINTAINER="true"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_PORTS_PATH="$HOME/pirafrank/ports"
 
 # --- Version and Source ---
 VERSION=${1:-$(git tag  | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | sort -rV | head -n 1 | sed 's/v//')}
-SRC_TARBALL="v${VERSION}.tar.gz"
-MAN_PAGE="poof.1"
+SRC_TARBALL="${NAME}-v${VERSION}.tar.gz"
+MAN_PAGE="${NAME}.1"
 
-SRC_URL="https://github.com/$GH_USER/$REPO/archive/refs/tags/$SRC_TARBALL"
+SRC_URL="https://github.com/$GH_USER/$REPO/archive/refs/tags/v${VERSION}.tar.gz"
 MAN_PAGE_URL="https://github.com/$GH_USER/$REPO/releases/download/v$VERSION/$MAN_PAGE"
 
 # --- Helper functions ---
@@ -115,22 +117,28 @@ version             $VERSION
 categories          $CATEGORY
 license             MIT
 homepage            https://poof.fpira.com
-maintainers         $MAINTAINER
+maintainers         {${MAINTAINER_EMAIL} ${MAINTAINER_NAME}}$([ "${OPENMAINTAINER}" = "true" ] && printf " openmaintainer")
 
 description         Magic package manager of pre-built software.
-long_description    Install and manage awesome tools from GitHub Releases in one command. No manifests, formulae, ports, or repositories required.
+long_description    Install and manage awesome tools from GitHub Releases \
+                    in one command. No manifests, formulae, ports, or \
+                    repositories required.
 
-master_sites        https://github.com/$GH_USER/$REPO/archive/refs/tags/:source \\
-                    https://github.com/$GH_USER/$REPO/releases/download/v\${version}/:asset
+master_sites        https://github.com/$GH_USER/$REPO/archive/refs/tags/v\${version}/:source \\
+                    https://github.com/$GH_USER/$REPO/releases/download/v\${version}/poof.1?dummy=\${version}:asset
 
-distfiles           v\${version}.tar.gz:source \\
-                    $MAN_PAGE:asset
+distname            \${name}-\${version}
+distfiles           \${distname}.tar.gz:source \\
+                    \${name}-\${version}.1:asset
 
-checksums           v\${version}.tar.gz \\
+# Only extract the main source tarball, leave the man page file as-is in
+extract.only        \${distname}.tar.gz
+
+checksums           \${distname}.tar.gz \\
                     rmd160  "${SRC_CHKS[1]}" \\
                     sha256  "${SRC_CHKS[2]}" \\
                     size    "${SRC_CHKS[3]}" \\
-                    $MAN_PAGE \\
+                    \${name}-\${version}.1 \\
                     rmd160  "${MAN_CHKS[1]}" \\
                     sha256  "${MAN_CHKS[2]}" \\
                     size    "${MAN_CHKS[3]}"
@@ -139,8 +147,9 @@ ${CRATES_BLOCK}
 
 # The 'cargo' PortGroup builds the binary; we explicitly install it and the man page.
 destroot {
+    xinstall -d \${destroot}\${prefix}/share/man/man1
     xinstall -m 0755 \${worksrcpath}/target/[option triplet.\${muniversal.build_arch}]/release/\${name} \${destroot}\${prefix}/bin/
-    xinstall -m 0644 \${distpath}/$MAN_PAGE \${destroot}\${prefix}/share/man/man1/
+    xinstall -m 0644 \${distpath}/\${name}-\${version}.1 \${destroot}\${prefix}/share/man/man1/\${name}.1
 }
 EOF
 
