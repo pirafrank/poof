@@ -31,15 +31,16 @@ jobs:
           fetch-depth: 0  # Fetch all tags
 
       - name: Setup MacPorts
-        uses: melusina-org/setup-macports@v1
+        run: |
+          curl -LO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/master/macports-ci
+          source ./macports-ci install
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install pipx
+        run: |
+          sudo port install pipx
 
       - name: Install cargo2ports
         run: |
-          sudo port selfupdate
-          sudo port install pipx
           pipx install git+https://github.com/herbygillot/cargo2ports.git
 
       - name: Configure local ports tree
@@ -51,29 +52,36 @@ jobs:
           sudo bash -c "echo \"$LOCAL_PORTS\" | cat - \"$SOURCES_CONF\" > /tmp/sources.conf.tmp && mv /tmp/sources.conf.tmp \"$SOURCES_CONF\""
           echo "Prepended '$LOCAL_PORTS' to $SOURCES_CONF"
 
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
       - name: Generate Portfile
         run: |
           chmod +x macports/generate_portfile.sh
           ./macports/generate_portfile.sh
 
-      - name: Clean poof port
-        run: |
-          sudo port clean poof || true
-          sudo rm -rf /opt/local/var/macports/build/poof-* || true
-
       - name: Test Portfile by installing the package
         id: install
         continue-on-error: true  # Continue even if installation fails, to capture the logs
-        run: sudo port -vst install poof
+        # IMPORTANT: do NOT use -t (tracemode) flag here, as it will saturate the runner
+        #            resources during extraction of tar.gz sources causing the job to fail.
+        run: sudo port -vs install poof
 
       - name: Show logs
+        if: steps.install.outcome != 'success'  # Only show logs if installation failed
         run: cat /opt/local/var/macports/logs/_*poof*/poof/main.log || true
 
       - name: Setup tmate session
         if: steps.install.outcome != 'success'  # Only start tmate if installation failed
         uses: mxschmitt/action-tmate@v3
 
+      - name: Test poof installation
+        if: steps.install.outcome == 'success'
+        run: |
+          poof --version
+
       - name: Add Portfile to artifacts
+        if: steps.install.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: Portfile
