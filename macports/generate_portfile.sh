@@ -120,9 +120,8 @@ homepage            https://poof.fpira.com
 maintainers         {${MAINTAINER_EMAIL} ${MAINTAINER_NAME}}$([ "${OPENMAINTAINER}" = "true" ] && printf " openmaintainer")
 
 description         Magic package manager of pre-built software.
-long_description    Install and manage awesome tools from GitHub Releases \
-                    in one command. No manifests, formulae, ports, or \
-                    repositories required.
+long_description    Install and manage awesome tools from GitHub Releases\
+ in one command. No manifests, formulae, ports, or repositories required.
 
 master_sites        https://github.com/$GH_USER/$REPO/archive/refs/tags/v\${version}/:source \\
                     https://github.com/$GH_USER/$REPO/releases/download/v\${version}/poof.1?dummy=\${version}:asset
