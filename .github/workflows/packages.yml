@@ -1,0 +1,284 @@
+name: APT/YUM Repository
+run-name: Package repository for ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+
+# Required secrets:
+#   GPG_PRIVATE_KEY     - ASCII-armored GPG private key
+#   GPG_PASSPHRASE      - GPG key passphrase
+#   GPG_KEY_ID          - GPG key ID used in reprepro SignWith and RPM signing
+#   R2_ACCESS_KEY_ID    - Cloudflare R2 access key
+#   R2_SECRET_ACCESS_KEY - Cloudflare R2 secret key
+#   R2_BUCKET_NAME      - R2 bucket name (e.g. poof-packages)
+#   R2_ACCOUNT_ID       - Cloudflare account ID
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build packages for (e.g. v0.6.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  BIN_NAME: poof
+
+jobs:
+  checks:
+    name: Get app info
+    runs-on: ubuntu-latest
+    outputs:
+      APP_NAME: ${{ steps.info.outputs.app_name }}
+      APP_VERSION: ${{ steps.info.outputs.app_version }}
+      RESOLVED_TAG: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+          fetch-depth: 1
+
+      - name: Get app info
+        id: info
+        uses: ./.github/actions/get-info
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+  download_and_package:
+    name: Download and package (${{ matrix.arch }})
+    needs: checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            target: x86_64-unknown-linux-gnu
+            rpm_arch: x86_64
+          - arch: arm64
+            target: aarch64-unknown-linux-gnu
+            rpm_arch: aarch64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.checks.outputs.RESOLVED_TAG }}
+          fetch-depth: 1
+
+      - name: Download release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ needs.checks.outputs.RESOLVED_TAG }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "${{ needs.checks.outputs.APP_NAME }}-*-${{ matrix.target }}.tar.gz" \
+            --dir downloads/
+
+      - name: Extract binary
+        run: |
+          mkdir -p binary
+          tar -xzf downloads/${{ needs.checks.outputs.APP_NAME }}-*-${{ matrix.target }}.tar.gz \
+            -C binary/ "${{ needs.checks.outputs.APP_NAME }}"
+
+      - name: Install fpm and packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev build-essential rpm
+          sudo gem install fpm --no-document
+
+      - name: Create package output directories
+        run: mkdir -p packages/deb packages/rpm
+
+      - name: Build .deb package
+        env:
+          APP_NAME: ${{ needs.checks.outputs.APP_NAME }}
+          APP_VERSION: ${{ needs.checks.outputs.APP_VERSION }}
+        run: |
+          fpm -s dir -t deb \
+            -n "${APP_NAME}" \
+            -v "${APP_VERSION}" \
+            -a "${{ matrix.arch }}" \
+            --maintainer "Francesco Pira <pirafrank@pm.me>" \
+            --description "Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic" \
+            --url "https://github.com/pirafrank/${APP_NAME}" \
+            --license MIT \
+            --category utils \
+            --deb-priority optional \
+            -p "packages/deb/${APP_NAME}_${APP_VERSION}_${{ matrix.arch }}.deb" \
+            "binary/${APP_NAME}=/usr/local/bin/${APP_NAME}"
+
+      - name: Build .rpm packages
+        env:
+          APP_NAME: ${{ needs.checks.outputs.APP_NAME }}
+          APP_VERSION: ${{ needs.checks.outputs.APP_VERSION }}
+        run: |
+          for dist in el8 el9 amzn2 amzn2023; do
+            fpm -s dir -t rpm \
+              -n "${APP_NAME}" \
+              -v "${APP_VERSION}" \
+              -a "${{ matrix.rpm_arch }}" \
+              --rpm-dist "${dist}" \
+              --maintainer "Francesco Pira <pirafrank@pm.me>" \
+              --description "Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic" \
+              --url "https://github.com/pirafrank/${APP_NAME}" \
+              --license MIT \
+              -p "packages/rpm/${APP_NAME}-${APP_VERSION}-1.${dist}.${{ matrix.rpm_arch }}.rpm" \
+              "binary/${APP_NAME}=/usr/local/bin/${APP_NAME}"
+          done
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: poof-packages-${{ matrix.arch }}
+          path: packages/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  publish_apt:
+    name: Publish APT repository
+    needs: [checks, download_and_package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.checks.outputs.RESOLVED_TAG }}
+          fetch-depth: 1
+
+      - name: Download all package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: poof-packages-*
+          path: downloaded-packages
+          merge-multiple: true
+
+      - name: Install reprepro
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y reprepro
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Set up reprepro configuration
+        env:
+          APP_NAME: ${{ needs.checks.outputs.APP_NAME }}
+        run: |
+          mkdir -p apt/conf
+          cat > apt/conf/distributions << EOF
+          Origin: ${APP_NAME}
+          Label: ${APP_NAME}
+          Codename: stable
+          Architectures: amd64 arm64
+          Components: main
+          Description: ${APP_NAME} apt package repository
+          SignWith: ${{ secrets.GPG_KEY_ID }}
+          EOF
+
+      - name: Add .deb packages to repository
+        run: |
+          cd apt
+          for deb in ../downloaded-packages/deb/*.deb; do
+            reprepro --verbose includedeb stable "$deb"
+          done
+
+      - name: Export GPG public key
+        run: gpg --armor --export "${{ secrets.GPG_KEY_ID }}" > apt/gpg.pub
+
+      - name: Sync APT repository to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
+        run: |
+          aws s3 sync apt/ "s3://${R2_BUCKET_NAME}/apt/" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --region auto
+
+  publish_yum:
+    name: Publish YUM repository
+    needs: [checks, download_and_package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: poof-packages-*
+          path: downloaded-packages
+          merge-multiple: true
+
+      - name: Install RPM tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm createrepo-c
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Configure RPM macros for signing
+        run: |
+          cat > ~/.rpmmacros << EOF
+          %_signature gpg
+          %_gpg_name ${{ secrets.GPG_KEY_ID }}
+          %__gpg /usr/bin/gpg
+          %_gpg_digest_algo sha256
+          EOF
+
+      - name: Organize RPMs into distribution directories
+        run: |
+          for dist in el8 el9 amzn2 amzn2023; do
+            mkdir -p "yum/${dist}/x86_64" "yum/${dist}/aarch64"
+            for arch in x86_64 aarch64; do
+              for rpm_file in downloaded-packages/rpm/*"${dist}"*"${arch}"*.rpm; do
+                [ -f "$rpm_file" ] && cp "$rpm_file" "yum/${dist}/${arch}/"
+              done
+            done
+          done
+
+      - name: Sign RPM packages
+        run: |
+          find yum/ -name "*.rpm" -print0 | xargs -0 --no-run-if-empty rpm --addsign
+
+      - name: Generate YUM repository metadata
+        run: |
+          find yum/ -mindepth 2 -maxdepth 2 -type d | while read -r repo_dir; do
+            createrepo_c --verbose "$repo_dir"
+          done
+
+      - name: Sign repository metadata
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          find yum/ -name "repomd.xml" | while read -r repomd; do
+            gpg --batch --passphrase "$GPG_PASSPHRASE" \
+              --pinentry-mode loopback \
+              --detach-sign --armor "$repomd"
+          done
+
+      - name: Export GPG public key
+        run: gpg --armor --export "${{ secrets.GPG_KEY_ID }}" > yum/gpg.pub
+
+      - name: Sync YUM repository to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
+        run: |
+          aws s3 sync yum/ "s3://${R2_BUCKET_NAME}/yum/" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --region auto
