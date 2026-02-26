@@ -161,39 +161,61 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
+    use crate::constants::{APP_NAME, DATA_SUBDIR, GITHUB_SUBDIR};
     use std::path::Path;
-    use std::path::PathBuf;
     use tempfile::TempDir;
 
-    /// Helper function to set up test environment
-    /// Returns (temp_dir, home_path, data_dir)
-    fn setup_test_env() -> (TempDir, PathBuf, PathBuf) {
-        let temp_dir = TempDir::new().unwrap();
-        let home = temp_dir.path().to_path_buf();
-
-        #[cfg(target_os = "linux")]
-        let data_dir = home
-            .join(".local")
-            .join("share")
-            .join("poof")
-            .join("data")
-            .join("github.com");
-
-        #[cfg(target_os = "macos")]
-        let data_dir = home
-            .join("Library")
-            .join("Application Support")
-            .join("poof")
-            .join("data")
-            .join("github.com");
-
-        std::fs::create_dir_all(&data_dir).unwrap();
-
-        (temp_dir, home, data_dir)
+    /// Holds a live temp directory and the env vars required to point
+    /// `dirs::data_dir()` at it for the duration of each test.
+    struct TestEnv {
+        _temp_dir: TempDir,
+        data_dir: std::path::PathBuf,
+        env_vars: Vec<(&'static str, String)>,
     }
 
-    /// Helper to create a version directory
+    /// Create a temporary directory tree that mirrors the poof data layout and
+    /// return the env vars needed to make `dirs::data_dir()` resolve into it.
+    fn setup_test_env() -> TestEnv {
+        let temp_dir = TempDir::new().unwrap();
+
+        #[cfg(target_os = "linux")]
+        let (data_base, env_vars) = {
+            let data_base = temp_dir.path().join("data");
+            let vars = vec![
+                ("HOME", temp_dir.path().to_str().unwrap().to_string()),
+                ("XDG_DATA_HOME", data_base.to_str().unwrap().to_string()),
+            ];
+            (data_base, vars)
+        };
+
+        #[cfg(target_os = "macos")]
+        let (data_base, env_vars) = {
+            let data_base = temp_dir.path().join("Library").join("Application Support");
+            let vars = vec![("HOME", temp_dir.path().to_str().unwrap().to_string())];
+            (data_base, vars)
+        };
+
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        let (data_base, env_vars) = {
+            let data_base = temp_dir.path().join("data");
+            let vars = vec![("HOME", temp_dir.path().to_str().unwrap().to_string())];
+            (data_base, vars)
+        };
+
+        let data_dir = data_base
+            .join(APP_NAME)
+            .join(DATA_SUBDIR)
+            .join(GITHUB_SUBDIR);
+        std::fs::create_dir_all(&data_dir).unwrap();
+
+        TestEnv {
+            _temp_dir: temp_dir,
+            data_dir,
+            env_vars,
+        }
+    }
+
+    /// Helper to create a version directory under the test data tree.
     fn create_version_dir(data_dir: &Path, repo: &str, version: &str) {
         let separator = std::path::MAIN_SEPARATOR.to_string();
         let version_dir = data_dir.join(repo.replace('/', &separator)).join(version);
@@ -201,147 +223,125 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_get_latest_version_with_semver_sorting() {
-        let (_temp_dir, home, data_dir) = setup_test_env();
-
-        // Set environment variables for this test
-        std::env::set_var("HOME", &home);
-        #[cfg(target_os = "linux")]
-        std::env::set_var("XDG_DATA_HOME", home.join(".local").join("share"));
+        let test_env = setup_test_env();
+        let env_vars: Vec<(&str, Option<&str>)> = test_env
+            .env_vars
+            .iter()
+            .map(|(k, v)| (*k, Some(v.as_str())))
+            .collect();
 
         let repo = "testuser/testrepo";
+        create_version_dir(&test_env.data_dir, repo, "1.2.0");
+        create_version_dir(&test_env.data_dir, repo, "2.0.0");
+        create_version_dir(&test_env.data_dir, repo, "1.10.0");
 
-        // Create versions in non-sorted order to test semver sorting
-        create_version_dir(&data_dir, repo, "1.2.0");
-        create_version_dir(&data_dir, repo, "2.0.0");
-        create_version_dir(&data_dir, repo, "1.10.0");
-
-        // Get latest version
-        let result = get_latest_version(repo);
-
-        assert!(result.is_ok(), "Should successfully get latest version");
-        let latest = result.unwrap();
-
-        // Should return 2.0.0 (highest semver), not 1.10.0
-        assert_eq!(
-            latest, "2.0.0",
-            "Should return 2.0.0 as the latest version based on semver sorting"
-        );
+        temp_env::with_vars(env_vars, || {
+            let result = get_latest_version(repo);
+            assert!(result.is_ok(), "Should successfully get latest version");
+            assert_eq!(
+                result.unwrap(),
+                "2.0.0",
+                "Should return 2.0.0 as the latest version based on semver sorting"
+            );
+        });
     }
 
     #[test]
-    #[serial]
     fn test_get_latest_version_repo_not_installed() {
-        let (_temp_dir, home, _data_dir) = setup_test_env();
+        let test_env = setup_test_env();
+        let env_vars: Vec<(&str, Option<&str>)> = test_env
+            .env_vars
+            .iter()
+            .map(|(k, v)| (*k, Some(v.as_str())))
+            .collect();
 
-        // Set environment variables for this test
-        std::env::set_var("HOME", &home);
-        #[cfg(target_os = "linux")]
-        std::env::set_var("XDG_DATA_HOME", home.join(".local").join("share"));
-
-        let repo = "nonexistent/repo";
-
-        // Try to get latest version for non-existent repo
-        let result = get_latest_version(repo);
-
-        assert!(result.is_err(), "Should fail for non-existent repository");
-        let error = result.unwrap_err();
-        let error_msg = error.to_string();
-
-        assert!(
-            error_msg.contains("not found") || error_msg.contains("nonexistent/repo"),
-            "Error message should indicate repository not found: {}",
-            error_msg
-        );
+        temp_env::with_vars(env_vars, || {
+            let result = get_latest_version("nonexistent/repo");
+            assert!(result.is_err(), "Should fail for non-existent repository");
+            let error_msg = result.unwrap_err().to_string();
+            assert!(
+                error_msg.contains("not found") || error_msg.contains("nonexistent/repo"),
+                "Error message should indicate repository not found: {}",
+                error_msg
+            );
+        });
     }
 
     #[test]
-    #[serial]
     fn test_get_latest_version_no_versions() {
-        let (_temp_dir, home, data_dir) = setup_test_env();
-
-        // Set environment variables for this test
-        std::env::set_var("HOME", &home);
-        #[cfg(target_os = "linux")]
-        std::env::set_var("XDG_DATA_HOME", home.join(".local").join("share"));
+        let test_env = setup_test_env();
+        let env_vars: Vec<(&str, Option<&str>)> = test_env
+            .env_vars
+            .iter()
+            .map(|(k, v)| (*k, Some(v.as_str())))
+            .collect();
 
         let repo = "testuser/testrepo";
-
-        // Create the repo directory but leave it empty (no version subdirectories)
         let separator = std::path::MAIN_SEPARATOR.to_string();
-        let repo_dir = data_dir.join(repo.replace('/', &separator));
+        let repo_dir = test_env.data_dir.join(repo.replace('/', &separator));
         std::fs::create_dir_all(&repo_dir).unwrap();
 
-        // Try to get latest version when no versions exist
-        let result = get_latest_version(repo);
-
-        assert!(
-            result.is_err(),
-            "Should fail when repository has no versions"
-        );
-        let error = result.unwrap_err();
-        let error_msg = error.to_string();
-
-        assert!(
-            error_msg.contains("No versions found") || error_msg.contains("no versions"),
-            "Error message should indicate no versions found: {}",
-            error_msg
-        );
+        temp_env::with_vars(env_vars, || {
+            let result = get_latest_version(repo);
+            assert!(
+                result.is_err(),
+                "Should fail when repository has no versions"
+            );
+            let error_msg = result.unwrap_err().to_string();
+            assert!(
+                error_msg.contains("No versions found") || error_msg.contains("no versions"),
+                "Error message should indicate no versions found: {}",
+                error_msg
+            );
+        });
     }
 
     #[test]
-    #[serial]
     fn test_get_latest_version_single_version() {
-        let (_temp_dir, home, data_dir) = setup_test_env();
-
-        // Set environment variables for this test
-        std::env::set_var("HOME", &home);
-        #[cfg(target_os = "linux")]
-        std::env::set_var("XDG_DATA_HOME", home.join(".local").join("share"));
+        let test_env = setup_test_env();
+        let env_vars: Vec<(&str, Option<&str>)> = test_env
+            .env_vars
+            .iter()
+            .map(|(k, v)| (*k, Some(v.as_str())))
+            .collect();
 
         let repo = "testuser/testrepo";
+        create_version_dir(&test_env.data_dir, repo, "1.0.0");
 
-        // Create a single version
-        create_version_dir(&data_dir, repo, "1.0.0");
-
-        // Get latest version
-        let result = get_latest_version(repo);
-
-        assert!(result.is_ok(), "Should successfully get latest version");
-        let latest = result.unwrap();
-
-        assert_eq!(latest, "1.0.0", "Should return the only version available");
+        temp_env::with_vars(env_vars, || {
+            let result = get_latest_version(repo);
+            assert!(result.is_ok(), "Should successfully get latest version");
+            assert_eq!(
+                result.unwrap(),
+                "1.0.0",
+                "Should return the only version available"
+            );
+        });
     }
 
     #[test]
-    #[serial]
     fn test_get_latest_version_with_prerelease() {
-        let (_temp_dir, home, data_dir) = setup_test_env();
-
-        // Set environment variables for this test
-        std::env::set_var("HOME", &home);
-        #[cfg(target_os = "linux")]
-        std::env::set_var("XDG_DATA_HOME", home.join(".local").join("share"));
+        let test_env = setup_test_env();
+        let env_vars: Vec<(&str, Option<&str>)> = test_env
+            .env_vars
+            .iter()
+            .map(|(k, v)| (*k, Some(v.as_str())))
+            .collect();
 
         let repo = "testuser/testrepo";
+        create_version_dir(&test_env.data_dir, repo, "1.0.0");
+        create_version_dir(&test_env.data_dir, repo, "2.0.0-beta.1");
+        create_version_dir(&test_env.data_dir, repo, "1.5.0");
 
-        // Create versions including a pre-release
-        create_version_dir(&data_dir, repo, "1.0.0");
-        create_version_dir(&data_dir, repo, "2.0.0-beta.1");
-        create_version_dir(&data_dir, repo, "1.5.0");
-
-        // Get latest version
-        let result = get_latest_version(repo);
-
-        assert!(result.is_ok(), "Should successfully get latest version");
-        let latest = result.unwrap();
-
-        // Pre-release versions should be sorted correctly
-        // 2.0.0-beta.1 should be higher than 1.5.0 and 1.0.0
-        assert_eq!(
-            latest, "2.0.0-beta.1",
-            "Should correctly handle pre-release versions in semver sorting"
-        );
+        temp_env::with_vars(env_vars, || {
+            let result = get_latest_version(repo);
+            assert!(result.is_ok(), "Should successfully get latest version");
+            assert_eq!(
+                result.unwrap(),
+                "2.0.0-beta.1",
+                "Should correctly handle pre-release versions in semver sorting"
+            );
+        });
     }
 }

@@ -61,6 +61,15 @@
               BUILD_DATE = buildDate;
             };
 
+            # The Nix build sandbox sets HOME=/homeless-shelter (non-writable) and
+            # leaves XDG_DATA_HOME unset. Tests that rely on dirs::data_dir() need a
+            # writable home and a valid XDG_DATA_HOME before the test binary starts.
+            preCheck = ''
+              export HOME=$(mktemp -d)
+              export XDG_DATA_HOME="$HOME/.local/share"
+              mkdir -p "$XDG_DATA_HOME"
+            '';
+
             meta = with pkgs.lib; {
               description = "Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic";
               homepage = "https://github.com/pirafrank/poof";
