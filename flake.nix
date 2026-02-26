@@ -17,6 +17,10 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
+      checks = forAllSystems (system: {
+        poof = self.packages.${system}.poof;
+      });
+
       packages = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
