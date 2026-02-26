@@ -1,7 +1,10 @@
 name: asdf-poof Test
 
 on:
-    workflow_dispatch:
+  release:
+    # only for newly published releases, not drafts or updates to existing ones
+    types: [published]
+  workflow_dispatch:
 
 jobs:
     test:

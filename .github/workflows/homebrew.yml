@@ -1,13 +1,9 @@
 name: Homebrew Formula Update
 
 on:
-  workflow_run:
-    # this matches the name of the workflow .github/workflows/release.yml
-    workflows: ["Release"]
-    types:
-      - completed
-    branches:
-      - main
+  release:
+    # only for newly published releases, not drafts or updates to existing ones
+    types: [published]
 
 jobs:
   trigger-homebrew-update:
@@ -15,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     # Only run if the Release workflow succeeded and was triggered by a tag
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      startsWith(github.event.workflow_run.head_branch, 'v')
+      (github.event_name == 'release' &&
+      github.event.release.draft == false &&
+      github.event.release.prerelease == false)
 
     steps:
       - name: Trigger formula update
@@ -30,4 +26,4 @@ jobs:
 
       - name: Log dispatch
         run: |
-          echo "Dispatched Homebrew formula update for tag: ${{ github.event.workflow_run.head_branch }}"
+          echo "Dispatched Homebrew formula update for tag: ${{ github.event.release.tag_name }}"

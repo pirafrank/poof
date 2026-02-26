@@ -1,0 +1,38 @@
+name: Nix CI
+run-name: Nix on ${{ github.ref_name }}
+
+on:
+  pull_request:
+    branches:
+      - main
+      - release/**
+      - pre/**
+      - '**/*.rs'
+      - '**/*.ron'
+      - '**/*.toml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'nix/**'
+  workflow_dispatch:
+
+jobs:
+  nix-check:
+    name: Nix flake check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # clone tags as well
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Enable Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run nix flake check
+        run: nix flake check

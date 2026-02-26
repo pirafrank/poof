@@ -1,19 +1,19 @@
 name: MSRV check
 
 on:
-    push:
-      branches:
-        - main
-      paths:
-        - '**/Cargo.toml'
-        - '**/Cargo.lock'
-    pull_request:
-      branches:
-        - main
-      paths:
-        - '**/Cargo.toml'
-        - '**/Cargo.lock'
-    workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  workflow_dispatch:
 
 jobs:
   msrv_check:

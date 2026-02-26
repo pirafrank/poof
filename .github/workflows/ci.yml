@@ -5,19 +5,25 @@ on:
   push:
     branches-ignore:
       - main
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.json'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '**/*.txt'
+    paths:
+      - '**/*.rs'
+      - '**/*.ron'
+      - '**/*.toml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'clippy.toml'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
   pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.json'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '**/*.txt'
+    paths:
+      - '**/*.rs'
+      - '**/*.ron'
+      - '**/*.toml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'clippy.toml'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
   workflow_dispatch:
 
 jobs:

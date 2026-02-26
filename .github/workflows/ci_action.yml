@@ -1,4 +1,4 @@
-name: Test poof GitHub Action
+name: CI poof GitHub Action
 run-name: Test action on ${{ github.ref_name }}
 
 on:

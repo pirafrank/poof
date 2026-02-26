@@ -2,13 +2,21 @@ name: Coverage
 
 on:
   push:
-    branches: ["main"]
-    paths-ignore:
-      - '**/*.md'
+    branches:
+      - main
+    paths:
+      - '**/*.rs'
+      - '**/*.toml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   pull_request:
-    branches: ["main"]
-    paths-ignore:
-      - '**/*.md'
+    branches:
+      - main
+    paths:
+      - '**/*.rs'
+      - '**/*.toml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   workflow_dispatch:
 
 jobs:
@@ -37,4 +45,3 @@ jobs:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: pirafrank/poof
-

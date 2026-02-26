@@ -207,6 +207,10 @@ docker-build:
 docker-run:
   docker run -it --rm --env-file .env poof:latest bash
 
+# Run nix flake check
+nix-check:
+  nix flake check
+
 # Build poof on Nix
 nix-build:
   nix build .#default

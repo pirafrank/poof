@@ -6,12 +6,18 @@ on:
     branches:
       - main
       - release/**
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.json'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '**/*.txt'
+      - pre/**
+    paths:
+      - '**/*.rs'
+      - '**/*.ron'
+      - '**/*.toml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'clippy.toml'
+      - 'cross.toml'
+      - 'Cross.toml'
+      - 'matrix.jsonc'
+      - 'rust-toolchain.toml'
   workflow_dispatch:
 
 env:

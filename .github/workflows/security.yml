@@ -5,14 +5,14 @@ on:
     branches:
       - pre/**
     paths:
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   pull_request:
     branches:
       - main
     paths:
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
   schedule:
     - cron: '0 0 * * 1' # Every Monday at midnight
   workflow_dispatch:

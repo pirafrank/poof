@@ -7,12 +7,14 @@ on:
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - 'deny.toml'
   pull_request:
     branches:
       - main
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - 'deny.toml'
   workflow_dispatch:
 
 permissions:
