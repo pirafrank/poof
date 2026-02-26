@@ -88,11 +88,11 @@ changelog version:
   glow CHANGELOG.md | less
 
 # Prepare release
-prepare-release version:
+prepare-release version: flake-update
   git cliff --tag {{version}} -o CHANGELOG.md
   nvim CHANGELOG.md
-  cargo set-version {{version}}
-  git add Cargo.toml Cargo.lock CHANGELOG.md
+  cargo set-version {{version}} && \
+  git add Cargo.toml Cargo.lock CHANGELOG.md flake.lock && \
   git commit -S -m "chore(release): prepare for {{version}}"
 
 # Make and tag a release
@@ -206,3 +206,20 @@ docker-build:
 # Run a bash shell in the Docker container
 docker-run:
   docker run -it --rm --env-file .env poof:latest bash
+
+# Build poof on Nix
+nix-build:
+  nix build .#default
+
+# Run poof --version to test the build on Nix
+nix-run:
+  nix run .#default -- --version
+
+# Update the flake.lock file
+flake-update:
+  docker run --rm \
+  -v "$(pwd):/workspace" \
+  -w /workspace \
+  -e NIX_CONFIG="experimental-features = nix-command flakes" \
+  nixos/nix \
+  sh -c "git config --global --add safe.directory /workspace && nix flake update && chown $(id -u):$(id -g) flake.lock"

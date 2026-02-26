@@ -68,20 +68,29 @@ fn c_library_detection() {
 /// Build entry point: embeds git hash, build date, and linking metadata into the binary.
 #[build_cfg_main]
 fn main() {
-    // Get the short commit hash
-    let output = Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .output()
-        .expect("Cannot execute git command");
+    // GIT_COMMIT_HASH: use the env var when set (e.g. injected by the Nix flake) so
+    // the build does not need git in the sandbox.  Falls back to `git rev-parse HEAD`
+    // for normal cargo builds where git is available.
+    let git_hash = env::var("GIT_COMMIT_HASH").unwrap_or_else(|_| {
+        let output = Command::new("git")
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .expect("Cannot execute git command");
+        String::from_utf8(output.stdout)
+            .expect("Invalid UTF-8 sequence")
+            .trim()
+            .to_string()
+    });
 
-    let git_hash = String::from_utf8(output.stdout).expect("Invalid UTF-8 sequence");
-
-    // today date
-    let now = Utc::now();
-    let build_date = now.format("%Y-%m-%d %H:%M:%S UTC").to_string();
+    // BUILD_DATE: use the env var when set (e.g. injected by the Nix flake for
+    // reproducibility).  Falls back to the current UTC time for normal cargo builds.
+    let build_date = env::var("BUILD_DATE").unwrap_or_else(|_| {
+        let now = Utc::now();
+        now.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+    });
 
     // Set the environment variables
-    println!("cargo:rustc-env=GIT_COMMIT_HASH={}", git_hash.trim());
+    println!("cargo:rustc-env=GIT_COMMIT_HASH={}", git_hash);
     println!("cargo:rustc-env=BUILD_DATE={}", build_date);
 
     // set the linking detection cfg macro

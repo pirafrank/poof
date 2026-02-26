@@ -96,15 +96,25 @@ pub fn get_os_version() -> String {
             .arg("-c")
             .arg("(lsb_release -ds 2>/dev/null) || (cat /etc/os-release | grep PRETTY_NAME | cut -d '=' -f 2 | tr -d '\"')")
             .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-            .unwrap_or_else(|_| UNKNOWN.to_string())
+            .map(|o| {
+                let result = String::from_utf8_lossy(&o.stdout).trim().to_string();
+                if result.is_empty() { UNKNOWN.to_string() } else { result }
+            })
+            .unwrap_or(UNKNOWN.to_string())
     } else if cfg!(target_os = "macos") {
         // Get macOS version
         std::process::Command::new("sw_vers")
             .arg("-productVersion")
             .output()
-            .map(|o| format!("macOS {}", String::from_utf8_lossy(&o.stdout).trim()))
-            .unwrap_or_else(|_| UNKNOWN.to_string())
+            .map(|o| {
+                let result = String::from_utf8_lossy(&o.stdout).trim().to_string();
+                if result.is_empty() {
+                    UNKNOWN.to_string()
+                } else {
+                    format!("macOS {}", result)
+                }
+            })
+            .unwrap_or(UNKNOWN.to_string())
     } else if cfg!(target_os = "windows") {
         // Get Windows version
         std::process::Command::new("cmd")
