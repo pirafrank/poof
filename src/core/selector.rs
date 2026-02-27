@@ -21,7 +21,7 @@ lazy_static! {
     static ref CPU_ARCH: HashMap<&'static str, Vec<&'static str>> = {
         let mut m = HashMap::new();
         m.insert("x86", vec!["x86", "386", "586", "686", "32-bit"]);
-        m.insert("x86_64", vec!["x86_64", "x64", "amd64"]);
+        m.insert("x86_64", vec!["x86_64", "x86-64", "x64", "amd64"]);
         // order matters here, from more specific to less specific
         // arm assets will run on any armv7 device the armv7 poof build target runs on.
         m.insert("armv7", vec!["armv7l", "armhf", "armv7", "armv6", "arm"]);
@@ -42,6 +42,8 @@ lazy_static! {
 
 /// Returns `true` if `item` has what looks like a real file extension (non-empty, ≤4 chars, not all digits).
 fn has_extension(item: &str) -> bool {
+    // going case insensitive to avoid false positives for AppImage assets
+    let item = item.to_lowercase();
     // if the item does not contain a dot, it does not have an extension,
     if !item.contains(".") {
         return false;
@@ -58,8 +60,12 @@ fn has_extension(item: &str) -> bool {
     if last.is_empty() {
         return false;
     }
+    // hotfix to avoid false positives for AppImage assets
+    if last == &"appimage" {
+        return true;
+    }
     // if too long, unlikely to be a real extension. return false.
-    if last.len() > 4 {
+    if last.len() > 5 {
         return false;
     }
     // if only numbers, unlikely to be a real extension. return false.

@@ -32,9 +32,9 @@ pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
                 if file_type.is_dir() {
                     stack.push(entry.path());
                 } else if file_type.is_file() && is_exec_by_magic_number(&entry.path()) {
-                    result.push(entry.path());
                     let s = entry.path().display().to_string();
                     debug!("Found executable file: {}", s);
+                    result.push(entry.path());
                 } // else we don't care
             }
         }
