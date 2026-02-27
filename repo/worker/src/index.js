@@ -5,11 +5,8 @@ export default {
       }
 
       const url = new URL(request.url);
-      const key = url.pathname.slice(1); // strip leading /
-
-      if (!key) {
-        return new Response('Not Found', { status: 404 });
-      }
+      // strip leading / and serve index.html for root path
+      const key = url.pathname.slice(1) || 'index.html';
 
       const object = await env.BUCKET.get(key);
 
