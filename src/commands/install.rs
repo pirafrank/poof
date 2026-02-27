@@ -123,7 +123,7 @@ fn process_install(
         debug!("Extracted {} to {}", asset_name, download_to.display());
 
         // install executables
-        install_binaries(slug, downloaded_file, install_dir)
+        install_binaries(slug, download_to, install_dir)
             .with_context(|| format!("Cannot extract executables from archive {}", asset_name))?;
     }
     Ok(())
@@ -215,11 +215,11 @@ fn check_if_installed(install_dir: &Path) -> Result<bool> {
 }
 
 /// Finds all executables within an extracted archive and installs each one into `install_dir`.
-fn install_binaries(slug: &Slug, archive_path: &Path, install_dir: &Path) -> Result<()> {
+fn install_binaries(slug: &Slug, extracted_path: &Path, install_dir: &Path) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
     let execs_to_install: Vec<PathBuf> =
-        filesys::find_exec_files_from_extracted_archive(archive_path);
+        filesys::find_exec_files_from_extracted_archive(extracted_path);
 
     if execs_to_install.is_empty() {
         // we interpret this as an error

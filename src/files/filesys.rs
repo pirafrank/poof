@@ -4,7 +4,6 @@ use log::{debug, info, warn};
 use std::path::{Path, PathBuf};
 
 use crate::files::magic::is_exec_by_magic_number;
-use crate::files::utils::strip_supported_extensions;
 
 /// Return all executable files found directly inside `dir` (non-recursive).
 ///
@@ -15,6 +14,10 @@ pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
     let mut stack: Vec<PathBuf> = vec![dir.to_path_buf()];
 
     while let Some(dir) = stack.pop() {
+        // move to next iteration if the directory does not exist or is not a directory
+        if !dir.exists() || !dir.is_dir() {
+            continue;
+        }
         let entries = std::fs::read_dir(dir).unwrap();
         for entry in entries.flatten() {
             // going entry.file_type avoid extra stat sys call
@@ -40,26 +43,15 @@ pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
     result
 }
 
-/// Return the executable files that were produced after extracting `archive_path`.
+/// Return the executable files that were produced after extracting archive to
+/// `extracted_path`. Useful for archives that unpack into a top-level directory.
 ///
 /// Checks whether a directory with the same name as the archive (minus its
 /// extension) exists next to it; if so, searches that directory. Otherwise
 /// searches the archive's parent directory. Useful for archives that unpack
 /// into a top-level directory.
-pub fn find_exec_files_from_extracted_archive(archive_path: &Path) -> Vec<PathBuf> {
-    let archive_parent = archive_path.parent().unwrap();
-    // Get the filename without the extension
-    // and create the path of a directory with the same name as the archive, minus the extension.
-    // If it exists, we will search for executables in that directory.
-    // If it doesn't exist, we will search for executables in the parent directory.
-    // This is useful for archives that contain a directory with the same name as the archive.
-    let filename_no_ext_str = strip_supported_extensions(archive_path);
-    let dir = archive_parent.join(filename_no_ext_str);
-    if dir.exists() {
-        find_exec_files_in_dir(&dir)
-    } else {
-        find_exec_files_in_dir(&PathBuf::from(archive_parent))
-    }
+pub fn find_exec_files_from_extracted_archive(extracted_path: &Path) -> Vec<PathBuf> {
+    find_exec_files_in_dir(extracted_path)
 }
 
 /// Return `true` when `path` is a regular file with at least one executable bit set (Unix only).

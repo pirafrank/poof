@@ -42,6 +42,7 @@ pub fn get_file_extension(archive_path: &Path) -> &str {
 ///
 /// Returns an empty string when the path has no file-name component or when
 /// the name contains non-UTF-8 bytes.
+#[allow(unused)]
 pub fn get_file_name(archive_path: &Path) -> &str {
     archive_path
         .file_name()
@@ -53,6 +54,7 @@ pub fn get_file_name(archive_path: &Path) -> &str {
 ///
 /// If no known extension matches the file name is returned as-is (falling back
 /// to the file stem when the path has one).
+#[allow(unused)]
 pub fn strip_supported_extensions(path: &Path) -> &str {
     let filename = get_file_name(path);
     SUPPORTED_EXTENSIONS
