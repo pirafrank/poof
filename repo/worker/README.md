@@ -47,7 +47,7 @@ wrangler r2 bucket list
 ```
 
 > This bucket name must match the `R2_BUCKET_NAME` GitHub secret name
-in [packages.yml](.github/workflows/packages.yml) Actions workflow.
+in [packages.yml](../../.github/workflows/packages.yml) Actions workflow.
 
 ### Step 2 - Create the Worker project
 
@@ -83,7 +83,7 @@ wrangler deployments list
 
 ### Step 5 - Get secrets for GitHub Actions
 
-The [packages.yml](.github/workflows/packages.yml) GitHub Actions workflow
+The [packages.yml](../../.github/workflows/packages.yml) GitHub Actions workflow
 uploads to R2 using the AWS-compatible S3 API. It needs a dedicated API token.
 
 1. Go to **Cloudflare Dashboard → R2 → Manage R2 API Tokens**
@@ -142,5 +142,6 @@ your key.
 
 ## Publish
 
-Run the [packages.yml](.github/workflows/packages.yml) pipeline. It will take
+Run the [packages.yml](../../.github/workflows/packages.yml) pipeline. It will take
 care of the rest.
+

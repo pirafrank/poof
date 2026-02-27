@@ -106,7 +106,7 @@ enabled=1
 gpgcheck=1
 gpgkey=https://poof-pkgs.fpira.com/yum/gpg.pub
 EOF
-sudo dnf install poof
+sudo yum install poof
 ```
 
 ### Uninstall
