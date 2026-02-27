@@ -37,9 +37,7 @@ sudo rm /etc/apt/sources.list.d/poof.list /usr/share/keyrings/poof.gpg
 sudo apt update
 ```
 
----
-
-## RHEL, CentOS, Amazon Linux (DNF/YUM)
+## Fedora, RHEL, CentOS, Amazon Linux (DNF/YUM)
 
 Supported distributions:
 
@@ -51,7 +49,7 @@ Supported distributions:
 
 ### Install
 
-**RHEL 9 / CentOS Stream 9:**
+**RHEL 9 / CentOS Stream 9 / Fedora 36+:**
 
 ```sh
 sudo rpm --import https://poof-pkgs.fpira.com/yum/gpg.pub
@@ -66,7 +64,7 @@ EOF
 sudo dnf install poof
 ```
 
-**RHEL 8 / CentOS 8 / CentOS Stream 8:**
+**RHEL 8 / CentOS 8 / CentOS Stream 8 / Fedora 24-35:**
 
 ```sh
 sudo rpm --import https://poof-pkgs.fpira.com/yum/gpg.pub

@@ -35,7 +35,7 @@ The flake does not ship a dedicated dev shell; use the standard Cargo
 toolchain (see [`rust-toolchain.toml`](../rust-toolchain.toml)) for day-to-day
 development.
 
-`cargo build` and `cargo test` work unchanged — the env-var
+`cargo build` and `cargo test` work unchanged - the env-var
 overrides used by the Nix build are only injected when building through Nix.
 
 ## How the build works

@@ -1,12 +1,15 @@
 # Cloudflare Worker Setup
 
-This guide covers setting up a Cloudflare Worker backed by an R2 bucket to serve the poof APT and YUM repositories at `poof-pkgs.fpira.com`.
+This guide covers setting up a Cloudflare Worker backed by an R2 bucket to serve
+the poof APT and YUM repositories at `poof-pkgs.fpira.com`.
 
-It was inspired by [this article](https://blog.cloudflare.com/using-cloudflare-r2-as-an-apt-yum-repository/), yet I did not use the exactly same scripts in an effort to make the whole process easier and more suited for the poof workflow.
+It was inspired by [this article](https://blog.cloudflare.com/using-cloudflare-r2-as-an-apt-yum-repository/),
+yet I did not use the exactly same scripts in an effort to make the whole process
+easier and more suited for the poof workflow.
 
 ## How it works
 
-The Worker maps every URL path directly to an R2 key:
+The Worker maps every URL path directly to an R2 key. For example:
 
 ```txt
 poof-pkgs.fpira.com/apt/dists/stable/InRelease
@@ -19,7 +22,8 @@ poof-pkgs.fpira.com/yum/el9/x86_64/repodata/repomd.xml
 ## Prerequisites
 
 - A Cloudflare account with `fpira.com` added as a zone
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed and authenticated:
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
+installed and authenticated:
 
   ```sh
   npm install -g wrangler
@@ -30,7 +34,7 @@ poof-pkgs.fpira.com/yum/el9/x86_64/repodata/repomd.xml
 
 Full procedure follows.
 
-### Step 1 — Create the R2 bucket
+### Step 1 - Create the R2 bucket
 
 ```sh
 wrangler r2 bucket create poof-packages
@@ -42,9 +46,10 @@ Confirm it exists:
 wrangler r2 bucket list
 ```
 
-> This bucket name must match the `R2_BUCKET_NAME` GitHub secret in [packages.yml](.github/workflows/packages.yml) Actions workflow.
+> This bucket name must match the `R2_BUCKET_NAME` GitHub secret name
+in [packages.yml](.github/workflows/packages.yml) Actions workflow.
 
-### Step 2 — Create the Worker project
+### Step 2 - Create the Worker project
 
 Create a directory for the Worker alongside the repository (or anywhere convenient):
 
@@ -55,11 +60,11 @@ mkdir poof-pkg-worker && cd poof-pkg-worker
 - Create `wrangler.toml`
 - Create the Worker script at `src/index.js`
 
-### Step 3 — Register DNS
+### Step 3 - Register DNS
 
 Register `poof-pkgs.fpira.com` as a custom domain in Cloudflare DNS.
 
-### Step 4 — Deploy
+### Step 4 - Deploy
 
 ```sh
 wrangler deploy
@@ -76,13 +81,15 @@ Verify the deployment:
 wrangler deployments list
 ```
 
-### Step 5 — Get secrets for GitHub Actions
+### Step 5 - Get secrets for GitHub Actions
 
-The [packages.yml](.github/workflows/packages.yml) GitHub Actions workflow uploads to R2 using the AWS-compatible S3 API. It needs a dedicated API token.
+The [packages.yml](.github/workflows/packages.yml) GitHub Actions workflow
+uploads to R2 using the AWS-compatible S3 API. It needs a dedicated API token.
 
 1. Go to **Cloudflare Dashboard → R2 → Manage R2 API Tokens**
 2. Click **Create API token**
-3. Set permissions to **Object Read & Write** scoped to the `poof-packages` bucket (for security reasons, we make it scoped with the least priviledges)
+3. Set permissions to **Object Read & Write** scoped to the `poof-packages`
+bucket (for security reasons, we make it scoped with the least priviledges)
 4. Save the **Access Key ID** and **Secret Access Key**
 
 Set the following secrets in *Repository settings → Secrets and variables → Actions*:
@@ -115,17 +122,19 @@ gpg --full-generate-key
 # Find the key ID
 gpg --list-secret-keys --keyid-format LONG
 
-# Export the private key (ASCII-armored) — store this as the secret
+# Export the private key (ASCII-armored) - store this as the secret
 gpg --armor --export-secret-keys THE_KEY_ID
 
-# Export the public key — this is what goes into the bucket as gpg.pub
+# Export the public key - this is what goes into the bucket as gpg.pub
 gpg --armor --export THE_KEY_ID
 
 # Important! Generate now a revocation certificate
 gpg --gen-revoke --armor --output revocation-cert.asc THE_KEY_ID
 ```
 
-Nevertheless, store the private key and the revocation certificate securely. Otherwise, an attacker may sign malicious packages on your behalf or revoke your key.
+Nevertheless, store the private key and the revocation certificate securely.
+Otherwise, an attacker may sign malicious packages on your behalf or revoke
+your key.
 
 </details>
 
@@ -133,4 +142,5 @@ Nevertheless, store the private key and the revocation certificate securely. Oth
 
 ## Publish
 
-Run the [packages.yml](.github/workflows/packages.yml) pipeline. It will take care of the rest.
+Run the [packages.yml](.github/workflows/packages.yml) pipeline. It will take
+care of the rest.
