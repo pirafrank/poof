@@ -68,7 +68,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.checks.outputs.RESOLVED_TAG }}
+          # no need to checkout tags, we only need the binary
+          # we checkout main branch to the last repo scripts and setups.
           fetch-depth: 1
 
       - name: Download release asset
@@ -168,12 +169,6 @@ jobs:
     needs: [checks, download_and_package]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.checks.outputs.RESOLVED_TAG }}
-          fetch-depth: 1
-
       - name: Download all package artifacts
         uses: actions/download-artifact@v4
         with:
