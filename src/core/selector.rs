@@ -203,6 +203,21 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     score
 }
 
+/// Return an array of the aliases for the current architecture and operating system.
+pub fn platforms_strings() -> Vec<String> {
+    // get info of the current platform
+    let t: AssetTriple = AssetTriple::default();
+    let current_arch = t.get_arch().as_str();
+    let arch_aliases = CPU_ARCH.get(current_arch).unwrap();
+    let current_os = t.get_os().as_str();
+    let os_aliases = OPERATING_SYSTEM.get(current_os).unwrap();
+    // return the platform strings
+    let mut s: Vec<String> = Vec::new();
+    s.extend(arch_aliases.iter().map(|alias| alias.to_string()));
+    s.extend(os_aliases.iter().map(|alias| alias.to_string()));
+    s
+}
+
 #[cfg(test)]
 mod tests {
     //use super::*;

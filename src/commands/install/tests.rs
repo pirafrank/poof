@@ -718,6 +718,7 @@ mod process_install_tests {
         let asset_name = String::from("mybin-linux-x86_64");
         let result = process_install(
             &slug,
+            "1.0.0",
             &downloaded_file,
             &download_to,
             &install_dir,
@@ -777,6 +778,7 @@ mod process_install_tests {
         let asset_name = String::from("archive.zip");
         let result = process_install(
             &slug,
+            "1.0.0",
             &downloaded_file,
             &download_to,
             &install_dir,
@@ -839,7 +841,7 @@ mod install_binaries_tests {
         fs::write(&archive_path, b"dummy archive")?;
 
         let slug = TestEnv::test_slug();
-        let result = install_binaries(&slug, &archive_path, &install_dir);
+        let result = install_binaries(&slug, "1.0.0", temp_extract.path(), &install_dir);
 
         // Note: This may fail if bin_dir cannot be created
         match result {
@@ -889,7 +891,7 @@ mod install_binaries_tests {
         fs::write(&archive_path, b"dummy archive")?;
 
         let slug = TestEnv::test_slug();
-        let result = install_binaries(&slug, &archive_path, &install_dir);
+        let result = install_binaries(&slug, "1.0.0", &archive_path, &install_dir);
 
         assert!(
             result.is_err(),

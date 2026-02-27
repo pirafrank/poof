@@ -67,6 +67,48 @@ pub fn strip_supported_extensions(path: &Path) -> &str {
         })
 }
 
+/// Strip all instances of double separators from a filename.
+///
+/// # Arguments
+///
+/// * `filename` - The filename to strip double separators from.
+/// * `sep` - The separator to strip.
+///
+/// # Returns
+///
+/// The filename with all instances of double separators removed.
+pub fn strip_double_separator(filename: &str, sep: &str) -> String {
+    let mut result = filename.to_string();
+    while result.contains(&format!("{}{}", sep, sep)) {
+        result = result.replace(sep, "");
+    }
+    result
+}
+
+/// Clean up a filename by removing all instances of the strings in to_remove array
+/// and then removing all instances of double separators.
+///
+/// # Arguments
+///
+/// * `filename` - The filename to clean up.
+/// * `to_remove` - The strings to remove from the filename.
+///
+/// # Returns
+///
+/// The cleaned up filename.
+pub fn clean_up_filename(filename: &str, to_remove: Vec<String>) -> String {
+    let mut result = filename.to_string();
+    // first remove all instances of the strings in to_remove array
+    for remove in to_remove {
+        result = result.replace(&remove, "");
+    }
+    // then remove all instances of double separators
+    for sep in FILENAME_SEPARATORS {
+        result = strip_double_separator(&result, sep);
+    }
+    result
+}
+
 /// Return the "stem" of `file_name` trimmed at the first [`FILENAME_SEPARATORS`] character.
 ///
 /// For example, `mytool-1.0.0-linux-x86_64` becomes `mytool`. Trailing ASCII

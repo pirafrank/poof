@@ -12,9 +12,11 @@ use which::which;
 
 use crate::{
     commands::{self, download::download_asset},
+    core::selector::platforms_strings,
     files::{
-        archives, datadirs, filesys, magic::is_exec_by_magic_number,
-        utils::get_stem_name_trimmed_at_first_separator,
+        archives, datadirs, filesys,
+        magic::is_exec_by_magic_number,
+        utils::{clean_up_filename, get_stem_name_trimmed_at_first_separator},
     },
     github::{
         client::{get_assets, get_release},
@@ -77,6 +79,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
 
         process_install(
             &slug,
+            &version,
             &downloaded_file,
             &download_to,
             &install_dir,
@@ -98,6 +101,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
 /// Installs a single downloaded asset: extracts archives or copies bare executables into `install_dir`.
 fn process_install(
     slug: &Slug,
+    version: &str,
     downloaded_file: &PathBuf,
     download_to: &PathBuf,
     install_dir: &Path,
@@ -123,7 +127,7 @@ fn process_install(
         debug!("Extracted {} to {}", asset_name, download_to.display());
 
         // install executables
-        install_binaries(slug, download_to, install_dir)
+        install_binaries(slug, version, download_to, install_dir)
             .with_context(|| format!("Cannot extract executables from archive {}", asset_name))?;
     }
     Ok(())
@@ -215,11 +219,15 @@ fn check_if_installed(install_dir: &Path) -> Result<bool> {
 }
 
 /// Finds all executables within an extracted archive and installs each one into `install_dir`.
-fn install_binaries(slug: &Slug, extracted_path: &Path, install_dir: &Path) -> Result<()> {
+fn install_binaries(
+    slug: &Slug,
+    version: &str,
+    extracted_path: &Path,
+    install_dir: &Path,
+) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
-    let execs_to_install: Vec<PathBuf> =
-        filesys::find_exec_files_from_extracted_archive(extracted_path);
+    let execs_to_install: Vec<PathBuf> = filesys::find_exec_files_in_dir(extracted_path);
 
     if execs_to_install.is_empty() {
         // we interpret this as an error
@@ -233,6 +241,14 @@ fn install_binaries(slug: &Slug, extracted_path: &Path, install_dir: &Path) -> R
         let exec_name = exec
             .file_name()
             .ok_or_else(|| anyhow!("Cannot get filename from {}", exec.display()))?;
+
+        // get the platform aliases and clean up the executable name
+        // this to avoid installing files with names like "mytool-1.0.0-linux-x86_64" or "mytool-1.0.0-macos-arm64"
+        let mut platform_aliases: Vec<String> = platforms_strings();
+        platform_aliases.push(version.to_string());
+        let exec_name = clean_up_filename(exec_name.to_str().unwrap(), platform_aliases);
+
+        // install the binary
         install_binary(slug, &exec, install_dir, &OsString::from(exec_name))
             .with_context(|| format!("Cannot install executable {}", exec.display()))?;
     }

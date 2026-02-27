@@ -1,6 +1,6 @@
 //! File system helpers for locating, copying, and symlinking executables.
 
-use log::{debug, info, warn};
+use log::{debug, warn};
 use std::path::{Path, PathBuf};
 
 use crate::files::magic::is_exec_by_magic_number;
@@ -34,24 +34,13 @@ pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
                 } else if file_type.is_file() && is_exec_by_magic_number(&entry.path()) {
                     result.push(entry.path());
                     let s = entry.path().display().to_string();
-                    info!("Checking file: {}", s);
+                    debug!("Found executable file: {}", s);
                 } // else we don't care
             }
         }
     }
 
     result
-}
-
-/// Return the executable files that were produced after extracting archive to
-/// `extracted_path`. Useful for archives that unpack into a top-level directory.
-///
-/// Checks whether a directory with the same name as the archive (minus its
-/// extension) exists next to it; if so, searches that directory. Otherwise
-/// searches the archive's parent directory. Useful for archives that unpack
-/// into a top-level directory.
-pub fn find_exec_files_from_extracted_archive(extracted_path: &Path) -> Vec<PathBuf> {
-    find_exec_files_in_dir(extracted_path)
 }
 
 /// Return `true` when `path` is a regular file with at least one executable bit set (Unix only).
