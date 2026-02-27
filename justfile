@@ -227,3 +227,9 @@ flake-update:
   -e NIX_CONFIG="experimental-features = nix-command flakes" \
   nixos/nix \
   sh -c "git config --global --add safe.directory /workspace && nix flake update && chown $(id -u):$(id -g) flake.lock"
+
+# Check the glibc version a binary was built against
+glibc binary:
+  readelf -V {{binary}} | grep -oP '\(GLIBC[^)]*\)' | \
+  grep -oE '[0-9]{1,}\.[0-9]{1,}(\.[0-9]{1,})?' | \
+  sort | uniq | sort -rV | head -n1

@@ -95,7 +95,7 @@ A Personal Access Token (PAT) with `repo` scope is required and must be stored a
 1. Go to **GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)**
 2. Click **Generate new token (classic)**
 3. Give it a name (e.g. `poof-macports-pr`) and set an expiration
-4. Select the **`repo`** scope (full control of public/private repositories — required for forking)
+4. Select the **`repo`** scope (full control of public/private repositories - required for forking)
 5. Click **Generate token** and copy the value immediately
 
 #### 2. Store it as a repository secret

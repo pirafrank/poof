@@ -25,6 +25,7 @@ permissions:
 
 env:
   BIN_NAME: poof
+  GLIBC_MAX: "2.23"
 
 jobs:
   checks:
@@ -68,7 +69,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.checks.outputs.RESOLVED_TAG }}
+          # no need to checkout tags, we only need the binary
+          # we checkout main branch to the last repo scripts and setups.
           fetch-depth: 1
 
       - name: Download release asset
@@ -85,6 +87,32 @@ jobs:
           mkdir -p binary
           tar -xzf downloads/${{ needs.checks.outputs.APP_NAME }}-*-${{ matrix.target }}.tar.gz \
             -C binary/ "${{ needs.checks.outputs.APP_NAME }}"
+
+      - name: Setup just runner
+        uses: extractions/setup-just@v2
+
+      - name: Check glibc version compatibility
+        env:
+          APP_NAME: ${{ needs.checks.outputs.APP_NAME }}
+        run: |
+          # Maximum glibc version allowed in order to support these distros and newer:
+          #   - Ubuntu 16.04 (xenial), which has glibc 2.23
+          #   - Debian 9 (stretch), which has glibc 2.24
+          #   - Fedora 24, which has glibc 2.23
+          #   - RHEL 8 (centos 8), which has glibc 2.28
+          #   - RHEL 9 (centos stream 9), which has glibc 2.34
+          #   - Amazon Linux 2, which has glibc 2.26
+          #   - Amazon Linux 2023, which has glibc 2.34
+          GLIBC_MAX=${{ env.GLIBC_MAX }}
+
+          GLIBC_ACTUAL=$(just glibc "binary/${APP_NAME}")
+          echo "Binary glibc requirement: ${GLIBC_ACTUAL}"
+          HIGHEST=$(printf '%s\n' "$GLIBC_MAX" "$GLIBC_ACTUAL" | sort -rV | head -n1)
+          if [ "$HIGHEST" != "$GLIBC_MAX" ]; then
+            echo "❌ ERROR: Binary requires glibc ${GLIBC_ACTUAL} > ${GLIBC_MAX}"
+            exit 1
+          fi
+          echo "✅ glibc ${GLIBC_ACTUAL} <= ${GLIBC_MAX}"
 
       - name: Install fpm and packaging tools
         run: |
@@ -104,7 +132,7 @@ jobs:
             -n "${APP_NAME}" \
             -v "${APP_VERSION}" \
             -a "${{ matrix.arch }}" \
-            --maintainer "Francesco Pira <pirafrank@pm.me>" \
+            --maintainer "Francesco Pira <dev@fpira.com>" \
             --description "Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic" \
             --url "https://github.com/pirafrank/${APP_NAME}" \
             --license MIT \
@@ -124,7 +152,7 @@ jobs:
               -v "${APP_VERSION}" \
               -a "${{ matrix.rpm_arch }}" \
               --rpm-dist "${dist}" \
-              --maintainer "Francesco Pira <pirafrank@pm.me>" \
+              --maintainer "Francesco Pira <dev@fpira.com>" \
               --description "Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic" \
               --url "https://github.com/pirafrank/${APP_NAME}" \
               --license MIT \
@@ -146,12 +174,6 @@ jobs:
     needs: [checks, download_and_package]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.checks.outputs.RESOLVED_TAG }}
-          fetch-depth: 1
-
       - name: Download all package artifacts
         uses: actions/download-artifact@v4
         with:
