@@ -3,11 +3,12 @@ use clap_complete::{generate, Shell};
 use clap_complete_nushell::Nushell;
 use std::io;
 
+use crate::cli::Cli;
 use crate::models::supported_shells::SupportedShell;
 
 /// Generate shell completions to stdout
 pub fn generate_completions(shell: SupportedShell) {
-    let mut cmd = crate::Cli::command();
+    let mut cmd = Cli::command();
     let bin_name = cmd.get_name().to_string();
 
     match shell {
