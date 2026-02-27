@@ -1,2 +1,6 @@
 .envrc
 .env
+**/.envrc
+**/.env
+**/secrets.sh
+**/*.secrets.sh

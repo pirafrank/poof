@@ -41,7 +41,7 @@ sudo apt update
 
 Supported distributions:
 
-- Fedora 24
+- Fedora 24 and newer
 - RHEL 8 / CentOS 8 / CentOS Stream 8
 - RHEL 9 / CentOS Stream 9
 - Amazon Linux 2
