@@ -10,7 +10,7 @@ Packages are built for **amd64** and **arm64** architectures.
 Supported distributions:
 
 - Debian 9 (stretch) and newer
-- Ubuntu 18.04 (bionic) and newer
+- Ubuntu 16.04 (xenial) and newer
 
 ## Install
 
@@ -43,6 +43,7 @@ sudo apt update
 
 Supported distributions:
 
+- Fedora 24
 - RHEL 8 / CentOS 8 / CentOS Stream 8
 - RHEL 9 / CentOS Stream 9
 - Amazon Linux 2

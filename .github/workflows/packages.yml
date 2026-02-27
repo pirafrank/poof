@@ -25,6 +25,7 @@ permissions:
 
 env:
   BIN_NAME: poof
+  GLIBC_MAX: "2.23"
 
 jobs:
   checks:
@@ -94,20 +95,24 @@ jobs:
         env:
           APP_NAME: ${{ needs.checks.outputs.APP_NAME }}
         run: |
-          # Maximum glibc version allowed to support these and newer:
-          #   - Ubuntu 18.04 (bionic), which has glibc 2.27
-          #   - Debian 10 (buster), which has glibc 2.28
-          GLIBC_MAX="2.27"
+          # Maximum glibc version allowed in order to support these distros and newer:
+          #   - Ubuntu 16.04 (xenial), which has glibc 2.23
+          #   - Debian 9 (stretch), which has glibc 2.24
+          #   - Fedora 24, which has glibc 2.23
+          #   - RHEL 8 (centos 8), which has glibc 2.28
+          #   - RHEL 9 (centos stream 9), which has glibc 2.34
+          #   - Amazon Linux 2, which has glibc 2.26
+          #   - Amazon Linux 2023, which has glibc 2.34
+          GLIBC_MAX=${{ env.GLIBC_MAX }}
 
           GLIBC_ACTUAL=$(just glibc "binary/${APP_NAME}")
           echo "Binary glibc requirement: ${GLIBC_ACTUAL}"
           HIGHEST=$(printf '%s\n' "$GLIBC_MAX" "$GLIBC_ACTUAL" | sort -rV | head -n1)
           if [ "$HIGHEST" != "$GLIBC_MAX" ]; then
-            echo "ERROR: Binary requires glibc ${GLIBC_ACTUAL} > ${GLIBC_MAX}"
-            echo "Not compatible with Ubuntu 18.04+ (glibc 2.27) / Debian 10+ (glibc 2.28)"
+            echo "❌ ERROR: Binary requires glibc ${GLIBC_ACTUAL} > ${GLIBC_MAX}"
             exit 1
           fi
-          echo "✅ glibc ${GLIBC_ACTUAL} <= ${GLIBC_MAX}, compatible with Ubuntu 18.04+ and Debian 10+"
+          echo "✅ glibc ${GLIBC_ACTUAL} <= ${GLIBC_MAX}"
 
       - name: Install fpm and packaging tools
         run: |
@@ -127,7 +132,7 @@ jobs:
             -n "${APP_NAME}" \
             -v "${APP_VERSION}" \
             -a "${{ matrix.arch }}" \
-            --maintainer "Francesco Pira <pirafrank@pm.me>" \
+            --maintainer "Francesco Pira <dev@fpira.com>" \
             --description "Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic" \
             --url "https://github.com/pirafrank/${APP_NAME}" \
             --license MIT \
@@ -147,7 +152,7 @@ jobs:
               -v "${APP_VERSION}" \
               -a "${{ matrix.rpm_arch }}" \
               --rpm-dist "${dist}" \
-              --maintainer "Francesco Pira <pirafrank@pm.me>" \
+              --maintainer "Francesco Pira <dev@fpira.com>" \
               --description "Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic" \
               --url "https://github.com/pirafrank/${APP_NAME}" \
               --license MIT \
