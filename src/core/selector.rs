@@ -236,7 +236,4 @@ pub fn platforms_strings() -> Vec<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    //use super::*;
-    // TODO: add tests
-}
+mod tests;
