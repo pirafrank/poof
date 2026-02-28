@@ -177,7 +177,7 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
 
     // fix to avoid mismatch between the asset and the target architecture
     // due to 'x86' being a substring of 'x86_64'.
-    if item.contains("x86_64") && current_arch == "x86" {
+    if (item.contains("x86_64") || item.contains("x86-64")) && current_arch == "x86" {
         return -1;
     }
 
