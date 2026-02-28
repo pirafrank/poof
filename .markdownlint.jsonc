@@ -1,4 +1,6 @@
 {
-    "MD060": false, # tables
-    "MD024": false, # multiple headers with the same content
+    // tables
+    "MD060": false,
+    // multiple headers with the same content
+    "MD024": false
 }

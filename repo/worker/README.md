@@ -4,7 +4,7 @@ This guide covers setting up a Cloudflare Worker backed by an R2 bucket to serve
 the poof APT and YUM repositories at `poof-pkgs.fpira.com`.
 
 It was inspired by [this article](https://blog.cloudflare.com/using-cloudflare-r2-as-an-apt-yum-repository/),
-yet I did not use the exactly same scripts in an effort to make the whole process
+yet I did not use exactly same scripts in an effort to make the whole process
 easier and more suited for the poof workflow.
 
 ## How it works
@@ -89,7 +89,7 @@ uploads to R2 using the AWS-compatible S3 API. It needs a dedicated API token.
 1. Go to **Cloudflare Dashboard → R2 → Manage R2 API Tokens**
 2. Click **Create API token**
 3. Set permissions to **Object Read & Write** scoped to the `poof-packages`
-bucket (for security reasons, we make it scoped with the least priviledges)
+bucket (for security reasons, we scope it with the least privileges)
 4. Save the **Access Key ID** and **Secret Access Key**
 
 Set the following secrets in *Repository settings → Secrets and variables → Actions*:
@@ -111,7 +111,7 @@ Also, we need to add a (new) dedicated GPG key to sign packages:
 
 <details>
 
-<summary>If you do not have a have a GPG key pair, generate a new one</summary>
+<summary>If you do not have a GPG key pair, generate a new one</summary>
 
 #### How to generate a new GPG key pair
 
