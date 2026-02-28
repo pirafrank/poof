@@ -3,7 +3,7 @@
 use log::{debug, warn};
 use std::path::{Path, PathBuf};
 
-use crate::files::magic::is_exec_by_magic_number;
+use crate::files::magic::is_exec_for_current_arch;
 
 /// Return all executable files found directly inside `dir` (non-recursive).
 ///
@@ -31,7 +31,9 @@ pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
                 // 2. Check if the file is an executable by checking the magic number
                 if file_type.is_dir() {
                     stack.push(entry.path());
-                } else if file_type.is_file() && is_exec_by_magic_number(&entry.path()) {
+                } else if file_type.is_file()
+                    && is_exec_for_current_arch(&entry.path()).unwrap_or(false)
+                {
                     let s = entry.path().display().to_string();
                     debug!("Found executable file: {}", s);
                     result.push(entry.path());

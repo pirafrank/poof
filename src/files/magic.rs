@@ -3,7 +3,10 @@
 //! These byte sequences are read from the start (or a fixed offset) of a file
 //! to identify its format without relying on file extensions.
 
-use std::{fs::File, io::Read, path::Path};
+use anyhow::Result;
+use std::env;
+use std::io::{Read, Seek, SeekFrom};
+use std::{fs::File, path::Path};
 
 /// Unix shebang prefix (`#!`) used by interpreted scripts.
 pub const SHEBANG_MAGIC: &[u8] = &[0x23, 0x21]; // "#!"
@@ -11,12 +14,12 @@ pub const SHEBANG_MAGIC: &[u8] = &[0x23, 0x21]; // "#!"
 /// Mach-O magic numbers for 32-bit, 64-bit, and universal ('fat') binaries (macOS only).
 #[cfg(target_os = "macos")]
 pub const MACHO_MAGIC_NUMBERS: &[[u8; 4]] = &[
-    [0xFE, 0xED, 0xFA, 0xCE], // Mach-O 32-bit (little-endian)
-    [0xFE, 0xED, 0xFA, 0xCF], // Mach-O 64-bit (little-endian)
-    [0xCE, 0xFA, 0xED, 0xFE], // Mach-O 32-bit (big-endian)
-    [0xCF, 0xFA, 0xED, 0xFE], // Mach-O 64-bit (big-endian)
-    [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O universal ('fat') binary (little-endian)
-    [0xBE, 0xBA, 0xFE, 0xCA], // Mach-O universal ('fat') binary (big-endian)
+    [0xFE, 0xED, 0xFA, 0xCE], // Mach-O 32-bit (big-endian)
+    [0xFE, 0xED, 0xFA, 0xCF], // Mach-O 64-bit (big-endian)
+    [0xCE, 0xFA, 0xED, 0xFE], // Mach-O 32-bit (little-endian)
+    [0xCF, 0xFA, 0xED, 0xFE], // Mach-O 64-bit (little-endian)
+    [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O universal ('fat') binary (big-endian)
+    [0xBE, 0xBA, 0xFE, 0xCA], // Mach-O universal ('fat') binary (little-endian)
 ];
 
 /// ELF magic number identifying Linux (and most Unix) executables (Linux only).
@@ -109,4 +112,61 @@ pub fn is_exec_by_magic_number(path: &Path) -> bool {
         }
     }
     false
+}
+
+/// Return `true` when the file at `file_path` appears to be a binary for the current architecture.
+///
+/// The function checks the machine type of the binary to determine if it is for the current architecture.
+/// The function returns `true` if the binary is for the current architecture, `false` otherwise.
+/// The function returns an error if the file cannot be opened or read.
+///
+/// # Arguments
+///
+/// * `file_path` - The path to the file to check.
+///
+/// # Returns
+///
+/// * `true` if the binary is for the current architecture, `false` otherwise.
+pub fn is_exec_for_current_arch(file_path: &Path) -> Result<bool> {
+    #[cfg(target_os = "linux")]
+    {
+        // check if the file is an ELF file
+        if !is_exec_by_magic_number(file_path) {
+            return Ok(false);
+        }
+
+        let mut file = File::open(file_path)?;
+
+        // Seek to the e_machine field at offset 0x12
+        file.seek(SeekFrom::Start(0x12))?;
+        let mut e_machine = [0u8; 2];
+        file.read_exact(&mut e_machine)?;
+
+        // Read as little-endian (standard for both AMD64 and standard ARM64 Linux)
+        let machine_type = u16::from_le_bytes(e_machine);
+
+        let is_match = matches!(
+            (env::consts::ARCH, machine_type),
+            ("x86_64", 0x3E)
+                | ("aarch64", 0xB7)
+                | ("i686", 0x3E)
+                | ("armv7", 0x3E)
+                | ("riscv64", 0xF3)
+                | ("powerpc64le", 0xB7)
+                | ("s390x", 0x15)
+                | ("loongarch64", 0xB7)
+        );
+
+        Ok(is_match)
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        return Ok(is_exec_by_magic_number(file_path));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        return Ok(is_exec_by_magic_number(file_path));
+    }
 }

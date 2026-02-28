@@ -15,7 +15,7 @@ use crate::{
     core::selector::platforms_strings,
     files::{
         archives, datadirs, filesys,
-        magic::is_exec_by_magic_number,
+        magic::is_exec_for_current_arch,
         utils::{clean_up_filename, get_stem_name_trimmed_at_first_separator},
     },
     github::{
@@ -109,7 +109,7 @@ fn process_install(
 ) -> Result<()> {
     // check if downloaded binary is an archive or an executable
     // and proceed accordingly.
-    if is_exec_by_magic_number(downloaded_file) {
+    if is_exec_for_current_arch(downloaded_file)? {
         debug!("Downloaded file {} is an executable binary.", asset_name);
         let file_name = &downloaded_file
             .file_name()

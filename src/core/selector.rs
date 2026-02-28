@@ -87,6 +87,17 @@ where
 }
 
 /// Returns the most compatible asset from the given list of assets
+///
+/// # Arguments
+///
+/// * `assets` - The list of assets to select from.
+/// * `t` - The asset triple to use for scoring.
+/// * `extractor_fn` - The function to extract the asset name from the asset.
+///
+/// # Returns
+///
+/// A vector of the most compatible assets.
+/// If no compatible assets are found, returns `None`.
 pub fn get_triple_compatible_assets<T, F>(
     assets: &[T],
     t: &AssetTriple,
