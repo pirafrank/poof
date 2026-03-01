@@ -14,12 +14,10 @@ pub const SHEBANG_MAGIC: &[u8] = &[0x23, 0x21]; // "#!"
 /// Mach-O magic numbers for 32-bit, 64-bit, and universal ('fat') binaries (macOS only).
 #[cfg(target_os = "macos")]
 pub const MACHO_MAGIC_NUMBERS: &[[u8; 4]] = &[
-    [0xFE, 0xED, 0xFA, 0xCE], // Mach-O 32-bit (big-endian)
-    [0xFE, 0xED, 0xFA, 0xCF], // Mach-O 64-bit (big-endian)
-    [0xCE, 0xFA, 0xED, 0xFE], // Mach-O 32-bit (little-endian)
+    // Both aarch64 and x86_64 are little-endian
     [0xCF, 0xFA, 0xED, 0xFE], // Mach-O 64-bit (little-endian)
+    // Mach-O universal ('fat') binary is always big-endian on disk.
     [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O universal ('fat') binary (big-endian)
-    [0xBE, 0xBA, 0xFE, 0xCA], // Mach-O universal ('fat') binary (little-endian)
 ];
 
 /// ELF magic number identifying Linux (and most Unix) executables (Linux only).
@@ -128,16 +126,39 @@ pub fn is_exec_by_magic_number(path: &Path) -> bool {
 ///
 /// * `true` if the binary is for the current architecture, `false` otherwise.
 pub fn is_exec_for_current_arch(file_path: &Path) -> Result<bool> {
+    let mut file = File::open(file_path)?;
+    let mut buffer = [0u8; 4];
+    if file.read_exact(&mut buffer).is_err() {
+        return Ok(false);
+    }
+
+    // Check if the file is a shebang script,
+    // we won't check the rest of the file in such case.
+    // It's a valid use case for a shebang script to be an executable.
+    if buffer.starts_with(SHEBANG_MAGIC) {
+        return Ok(true);
+    }
+
+    // Note: it's likely ok to make multiple seeks for the sake of readability.
+    //       Performance-wise it's not a big deal since we're reading small chunks of data.
+    //       Data is likely to be already in memory as OS puts everything in memory
+    //       on first read since its page cache is 4kb. It's zero I/O cost.
+
     #[cfg(target_os = "linux")]
     {
-        // check if the file is an ELF file
-        if !is_exec_by_magic_number(file_path) {
+        // Check if the file is an ELF file
+        if !is_exec_magic(&buffer) {
             return Ok(false);
         }
 
-        let mut file = File::open(file_path)?;
+        // No need to check EI_OSABI at offset 0x07.
+        // Most Linux binaries are tagged 0x00, very few use 0x03 (Linux-specific).
+        // Also, we are going to support *BSD which may often use 0x00 instead of
+        // more specific variants (OpenBSD, FreeBSD, NetBSD) for compatibility reasons.
+        // If we got here it's likely we downloaded the correct file thanks to previous checks.
+        // Docs: https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html
 
-        // Seek to the e_machine field at offset 0x12
+        // Check e_machine at offset 0x12 to confirm architecture compatibility
         file.seek(SeekFrom::Start(0x12))?;
         let mut e_machine = [0u8; 2];
         file.read_exact(&mut e_machine)?;
@@ -162,14 +183,79 @@ pub fn is_exec_for_current_arch(file_path: &Path) -> Result<bool> {
                 | ("loongarch64", 0x102) // EM_LOONGARCH = 258
         );
 
+        // Note: to save reading bytes, we do not check for EI_CLASS.
+        //       It is needed only for riscv32/64 and loongarch32/64
+        //       where 32 and 64 bits share the same ELF header.
+        //       Yet it is not needed since there's no real software
+        //       out there that runs on 32-bit riscv or loongarch,
+        //       and even if there was, it would be stopped by other
+        //       checks before we even get to this point.
         Ok(is_match)
     }
 
     #[cfg(target_os = "macos")]
     {
-        return Ok(is_exec_by_magic_number(file_path));
+        // Check if the file is a Mach-O binary
+        if !is_exec_magic(&buffer) {
+            return Ok(false);
+        }
+
+        // Check if the cputype matches the current architecture.
+        // On Mac we have two possible formats: fat binary and 'thin' (single-arch) binary.
+        // Docs:
+        // https://github.com/apple-oss-distributions/xnu/blob/main/EXTERNAL_HEADERS/mach-o/fat.h
+        // https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/mach/machine.h
+        match buffer {
+            // Fat binary — header is always big-endian on disk regardless of host CPU.
+            // Iterate the fat_arch table; each entry is 20 bytes, cputype is the first 4 (BE).
+            [0xCA, 0xFE, 0xBA, 0xBE] => {
+                file.seek(SeekFrom::Start(4))?;
+                let mut n = [0u8; 4];
+                file.read_exact(&mut n)?;
+                let fat_arch = u32::from_be_bytes(n);
+
+                // Iterate the fat_arch table to find a matching cputype.
+                // This because fat binaries do not enforce any specif order of the architectures.
+                // This is different from ELF, where the order is enforced.
+                // If we find a match, return true.
+                for _ in 0..fat_arch {
+                    // Read entries in the fat_arch table, one at time.
+                    // Each entry is 20 bytes wide, cputype is the first 4 (BE).
+                    // Check fat_arch struct definition, which holds 5 fields of 4 bytes each.
+                    let mut entry = [0u8; 20];
+                    file.read_exact(&mut entry)?;
+                    let cputype = u32::from_be_bytes(entry[0..4].try_into().unwrap());
+                    let is_match = matches!(
+                        (env::consts::ARCH, cputype),
+                        ("aarch64", 0x0100_000C)      // CPU_TYPE_ARM64   = 0x0100000C
+                            | ("x86_64", 0x0100_0007) // CPU_TYPE_X86_64  = 0x01000007
+                    );
+                    if is_match {
+                        return Ok(true);
+                    }
+                }
+                Ok(false)
+            }
+            // Single-arch 64-bit little-endian (aarch64 and x86_64).
+            // cputype is at offset 4, stored as little-endian u32.
+            [0xCF, 0xFA, 0xED, 0xFE] => {
+                let mut ct = [0u8; 4];
+                file.read_exact(&mut ct)?;
+                let cputype = u32::from_le_bytes(ct);
+                let is_match = matches!(
+                    (env::consts::ARCH, cputype),
+                    ("aarch64", 0x0100_000C)      // CPU_TYPE_ARM64   = 0x0100000C
+                        | ("x86_64", 0x0100_0007) // CPU_TYPE_X86_64  = 0x01000007
+                );
+                Ok(is_match)
+            }
+            // Safe fallback for unsupported Mach-O formats.
+            _ => Ok(false),
+        }
     }
 
+    // on Windows we call the dedicated variant of is_exec_by_magic_number.
+    // TODO: here in case we ever port poof to Windows.
     #[cfg(target_os = "windows")]
     {
         return Ok(is_exec_by_magic_number(file_path));
