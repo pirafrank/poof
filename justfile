@@ -241,3 +241,7 @@ magic binary:
 # Get the architecture of an ELF binary
 get-elf-arch binary:
   readelf -h {{binary}} | grep "Machine:" | awk -F': ' '{print $2}' | xargs
+
+# Inspect a binary file headers using POSIX od(1)
+inspect binary:
+  scripts/bin-inspect.sh {{binary}}
