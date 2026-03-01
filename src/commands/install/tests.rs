@@ -86,22 +86,30 @@ impl TestEnv {
         {
             use std::io::Write;
             // Write a minimal but valid ELF header (20 bytes).
-            // is_exec_for_current_arch checks e_machine at offset 0x12 (bytes 18-19) as a LE u16,
-            // so the stub must have the correct value there or the arch check returns false.
+            // is_exec_for_current_arch checks:
+            //   - ELF magic at 0x00-0x03
+            //   - EI_DATA at 0x05: 1 = LE, 2 = BE (0 is invalid and causes Ok(false))
+            //   - e_machine at 0x12-0x13 as u16 (byte-order from EI_DATA)
             let mut elf_stub = [0u8; 20];
             elf_stub[0..4].copy_from_slice(&magic::ELF_MAGIC);
-            let e_machine: u16 = match std::env::consts::ARCH {
-                "x86_64" => 0x003E,
-                "aarch64" => 0x00B7,
-                "i686" => 0x0003,
-                "armv7" => 0x0028,
-                "riscv64" => 0x00F3,
-                "powerpc64le" => 0x0015,
-                "s390x" => 0x0016,
-                "loongarch64" => 0x0102,
-                _ => 0x0000,
+            let (e_machine, ei_data): (u16, u8) = match std::env::consts::ARCH {
+                "x86_64" => (0x003E, 1),
+                "aarch64" => (0x00B7, 1),
+                "x86" => (0x0003, 1),
+                "arm" => (0x0028, 1),
+                "riscv64" => (0x00F3, 1),
+                "powerpc64" => (0x0015, 1),
+                "s390x" => (0x0016, 2), // s390x is big-endian
+                "loongarch64" => (0x0102, 1),
+                _ => (0x0000, 1),
             };
-            elf_stub[0x12..0x14].copy_from_slice(&e_machine.to_le_bytes());
+            elf_stub[0x05] = ei_data;
+            let e_machine_bytes = if ei_data == 1 {
+                e_machine.to_le_bytes()
+            } else {
+                e_machine.to_be_bytes()
+            };
+            elf_stub[0x12..0x14].copy_from_slice(&e_machine_bytes);
             file.write_all(&elf_stub)?;
         }
 

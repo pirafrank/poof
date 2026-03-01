@@ -158,27 +158,39 @@ pub fn is_exec_for_current_arch(file_path: &Path) -> Result<bool> {
         // If we got here it's likely we downloaded the correct file thanks to previous checks.
         // Docs: https://refspecs.linuxfoundation.org/elf/gabi4+/ch4.eheader.html
 
+        // Read EI_DATA first (endianness discriminator at offset 0x05)
+        file.seek(SeekFrom::Start(0x05))?;
+        let mut ei_data = [0u8; 1];
+        file.read_exact(&mut ei_data)?;
+
         // Check e_machine at offset 0x12 to confirm architecture compatibility
         file.seek(SeekFrom::Start(0x12))?;
         let mut e_machine = [0u8; 2];
         file.read_exact(&mut e_machine)?;
 
-        // Read as little-endian (standard for both AMD64 and standard ARM64 Linux)
-        let machine_type = u16::from_le_bytes(e_machine);
+        // Read e_machine based on EI_DATA (e.g. s390x is big-endian)
+        let machine_type = match ei_data[0] {
+            1 => u16::from_le_bytes(e_machine), // ELFDATA2LSB
+            2 => u16::from_be_bytes(e_machine), // ELFDATA2MSB
+            _ => return Ok(false),
+        };
 
         // Check if the machine type matches the current architecture.
         // Docs:
         // https://cr0mll.github.io/cyberclopaedia/Reverse%20Engineering/Binary%20Formats/ELF/The%20ELF%20Header.html
         // https://gist.github.com/x0nu11byt3/bcb35c3de461e5fb66173071a2379779
         // https://loongson.github.io/LoongArch-Documentation/LoongArch-ELF-ABI-EN.html
+        //
+        // Note: EM_386 (0x03) is correct for all of i386, i486, i586, and i686.
+        //       poof targets i686 among these.
         let is_match = matches!(
             (env::consts::ARCH, machine_type),
             ("x86_64", 0x3E)             // EM_X86_64    =  62
                 | ("aarch64", 0xB7)      // EM_AARCH64   = 183
-                | ("i686", 0x03)         // EM_386       =   3
-                | ("armv7", 0x28)        // EM_ARM       =  40
+                | ("x86", 0x03)          // EM_386       =   3
+                | ("arm", 0x28)          // EM_ARM       =  40
                 | ("riscv64", 0xF3)      // EM_RISCV     = 243
-                | ("powerpc64le", 0x15)  // EM_PPC64     =  21
+                | ("powerpc64", 0x15)    // EM_PPC64     =  21
                 | ("s390x", 0x16)        // EM_S390      =  22
                 | ("loongarch64", 0x102) // EM_LOONGARCH = 258
         );
