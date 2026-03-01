@@ -246,7 +246,7 @@ fn install_binaries(
         // this to avoid installing files with names like "mytool-1.0.0-linux-x86_64" or "mytool-1.0.0-macos-arm64"
         let mut platform_aliases: Vec<String> = platforms_strings();
         platform_aliases.push(version.to_string());
-        let exec_name = clean_up_filename(exec_name.to_str().unwrap(), platform_aliases);
+        let exec_name = clean_up_filename(&exec_name.to_string_lossy(), platform_aliases);
 
         // install the binary
         install_binary(slug, &exec, install_dir, &OsString::from(exec_name))

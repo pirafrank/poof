@@ -162,6 +162,14 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // current_arch is the architecture from the AssetTriple.
     // AssetTriple defaults to the architecture poof is running on.
     let current_arch: &str = t.get_arch().as_str();
+    // hotfix to allow 'arm' to be used as a alias for 'armv7'.
+    // because Rust ARCH only support 'arm' for all 32 bit arm architectures.
+    // we can do this safely because poof targets armv7 gnu/musl hard-float builds.
+    let current_arch: &str = if current_arch == "arm" {
+        "armv7"
+    } else {
+        current_arch
+    };
     // Check if architecture matches any alias for our current architecture.
     // matching_arch will hold the alias among the values that matched.
     // Aliases are retrieved from CPU_ARCH using current_arch as the key.
@@ -282,9 +290,13 @@ pub fn platforms_strings() -> Vec<String> {
     // get info of the current platform
     let t: AssetTriple = AssetTriple::default();
     let current_arch = t.get_arch().as_str();
-    let arch_aliases = CPU_ARCH.get(current_arch).unwrap();
+    let Some(arch_aliases) = CPU_ARCH.get(current_arch) else {
+        return Vec::new();
+    };
     let current_os = t.get_os().as_str();
-    let os_aliases = OPERATING_SYSTEM.get(current_os).unwrap();
+    let Some(os_aliases) = OPERATING_SYSTEM.get(current_os) else {
+        return Vec::new();
+    };
     // return the platform strings
     let mut s: Vec<String> = Vec::new();
     s.extend(arch_aliases.iter().map(|alias| alias.to_string()));

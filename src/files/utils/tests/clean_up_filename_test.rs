@@ -27,3 +27,17 @@ fn test_clean_up_filename_with_middlename_separator() {
     );
     assert_eq!(result, "some-tool");
 }
+
+#[test]
+fn test_clean_up_filename_with_os_in_name() {
+    let filename = "linuxtool-1.0.0-linux-x86_64";
+    let result = clean_up_filename(
+        filename,
+        vec![
+            "1.0.0".to_string(),
+            "linux".to_string(),
+            "x86_64".to_string(),
+        ],
+    );
+    assert_eq!(result, "linuxtool");
+}

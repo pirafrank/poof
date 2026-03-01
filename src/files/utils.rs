@@ -81,11 +81,30 @@ pub fn strip_supported_extensions(path: &Path) -> &str {
 /// The cleaned up filename.
 pub fn clean_up_filename(filename: &str, to_remove: Vec<String>) -> String {
     let mut result = filename.to_string();
-    // first remove all instances of the strings in to_remove array
+    // Remove tokens only when they are separated by known filename separators.
     for remove in to_remove {
-        result = result.replace(&remove, "");
+        for sep in FILENAME_SEPARATORS {
+            let mid = format!("{sep}{remove}{sep}");
+            while result.contains(&mid) {
+                result = result.replace(&mid, sep);
+            }
+
+            let prefix = format!("{remove}{sep}");
+            while let Some(stripped) = result.strip_prefix(&prefix) {
+                result = stripped.to_owned();
+            }
+
+            let suffix = format!("{sep}{remove}");
+            while let Some(stripped) = result.strip_suffix(&suffix) {
+                result = stripped.to_owned();
+            }
+        }
+
+        if result == remove {
+            result.clear();
+        }
     }
-    // then remove all instances of double separators
+
     for sep in FILENAME_SEPARATORS {
         result = strip_repeated_separator(&result, sep);
     }

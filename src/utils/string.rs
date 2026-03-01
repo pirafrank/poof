@@ -65,6 +65,9 @@ pub fn levenshtein_distance(s1: &str, s2: &str) -> usize {
 }
 
 /// Strip all instances of double separators from a filename.
+/// This method removed the double separators entirely, it
+/// won't just collapse them into a single one.
+/// This is the intended behavior.
 ///
 /// # Arguments
 ///
@@ -75,14 +78,19 @@ pub fn levenshtein_distance(s1: &str, s2: &str) -> usize {
 ///
 /// The filename with all instances of double separators removed.
 pub fn strip_repeated_separator(filename: &str, sep: &str) -> String {
+    // safe guard against empty separator
+    if sep.is_empty() {
+        return filename.to_string();
+    }
+
     let mut result = filename.to_string();
     let double_sep = format!("{}{}", sep, sep);
     while result.contains(&double_sep) {
         result = result.replace(&double_sep, "");
     }
-    // in case the doubles where odd, remove the last separator
-    if !result.is_empty() && result.chars().last().unwrap() == sep.chars().next().unwrap() {
-        result.pop();
+    // if an odd separator remains at the end, remove one full separator token
+    if let Some(stripped) = result.strip_suffix(sep) {
+        result = stripped.to_string();
     }
     result
 }

@@ -22,7 +22,13 @@ pub fn find_exec_files_in_dir(dir: &Path, deep: bool) -> Vec<PathBuf> {
         if !dir.exists() || !dir.is_dir() {
             continue;
         }
-        let entries = std::fs::read_dir(dir).unwrap();
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(e) => {
+                debug!("Skipping unreadable directory {}: {}", dir.display(), e);
+                continue;
+            }
+        };
         for entry in entries.flatten() {
             // going entry.file_type avoid extra stat sys call
             if let Ok(file_type) = entry.file_type() {
@@ -36,8 +42,8 @@ pub fn find_exec_files_in_dir(dir: &Path, deep: bool) -> Vec<PathBuf> {
                 if file_type.is_dir() {
                     stack.push(entry.path());
                 } else if file_type.is_file()
-                    && (deep && is_exec_for_current_arch(&entry.path()).unwrap_or(false))
-                    || (!deep && is_exec_by_magic_number(&entry.path()))
+                    && ((deep && is_exec_for_current_arch(&entry.path()).unwrap_or(false))
+                        || (!deep && is_exec_by_magic_number(&entry.path())))
                 {
                     let s = entry.path().display().to_string();
                     debug!("Found executable file: {}", s);

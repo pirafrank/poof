@@ -181,7 +181,7 @@ mod tests {
     //
 
     #[test]
-    fn test_linux_x86_64_multiple_compatible_binaries_without_extension() {
+    fn test_linux_x86_64_compatible_binaries_without_extension() {
         let assets: Vec<String> = ron::from_str(include_str!("assets/shshemi@tabiew.ron")).unwrap();
         let triple_linux_x64 = AssetTriple::new("linux".to_string(), "x86_64".to_string(), false);
         let binaries = get_triple_compatible_assets(&assets, &triple_linux_x64, |asset| asset);
@@ -286,6 +286,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert_eq!(binaries.len(), 1);
         assert!(binaries[0].contains("fd-v10.3.0-x86_64-unknown-linux-gnu.tar.gz"));
     }
 
@@ -297,6 +298,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert_eq!(binaries.len(), 1);
         assert!(binaries[0].contains("jwtui-linux.tar.gz"));
     }
 
