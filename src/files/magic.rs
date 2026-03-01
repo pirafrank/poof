@@ -145,16 +145,21 @@ pub fn is_exec_for_current_arch(file_path: &Path) -> Result<bool> {
         // Read as little-endian (standard for both AMD64 and standard ARM64 Linux)
         let machine_type = u16::from_le_bytes(e_machine);
 
+        // Check if the machine type matches the current architecture.
+        // Docs:
+        // https://cr0mll.github.io/cyberclopaedia/Reverse%20Engineering/Binary%20Formats/ELF/The%20ELF%20Header.html
+        // https://gist.github.com/x0nu11byt3/bcb35c3de461e5fb66173071a2379779
+        // https://loongson.github.io/LoongArch-Documentation/LoongArch-ELF-ABI-EN.html
         let is_match = matches!(
             (env::consts::ARCH, machine_type),
-            ("x86_64", 0x3E)
-                | ("aarch64", 0xB7)
-                | ("i686", 0x3E)
-                | ("armv7", 0x3E)
-                | ("riscv64", 0xF3)
-                | ("powerpc64le", 0xB7)
-                | ("s390x", 0x15)
-                | ("loongarch64", 0xB7)
+            ("x86_64", 0x3E)             // EM_X86_64    =  62
+                | ("aarch64", 0xB7)      // EM_AARCH64   = 183
+                | ("i686", 0x03)         // EM_386       =   3
+                | ("armv7", 0x28)        // EM_ARM       =  40
+                | ("riscv64", 0xF3)      // EM_RISCV     = 243
+                | ("powerpc64le", 0x15)  // EM_PPC64     =  21
+                | ("s390x", 0x16)        // EM_S390      =  22
+                | ("loongarch64", 0x102) // EM_LOONGARCH = 258
         );
 
         Ok(is_match)
