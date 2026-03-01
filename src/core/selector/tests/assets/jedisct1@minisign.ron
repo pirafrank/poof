@@ -1,0 +1,12 @@
+[
+    "minisign-0.12-linux.tar.gz",
+    "minisign-0.12-linux.tar.gz.minisig",
+    "minisign-0.12-macos.zip",
+    "minisign-0.12-macos.zip.minisig",
+    "minisign-0.12-wasm.gz",
+    "minisign-0.12-wasm.gz.minisig",
+    "minisign-0.12-win64.zip",
+    "minisign-0.12-win64.zip.minisig",
+    "minisign-0.12.tar.gz",
+    "minisign-0.12.tar.gz.minisig",
+]

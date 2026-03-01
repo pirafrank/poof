@@ -277,4 +277,96 @@ mod tests {
         assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("freeze_0.2.2_Linux_arm.tar.gz"));
     }
+
+    #[test]
+    fn test_linux_x86_64_missing_os_label() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/sharkdp@fd.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let triple_linux_x64 = AssetTriple::new("linux".to_string(), "x86_64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("fd-v10.3.0-x86_64-unknown-linux-gnu.tar.gz"));
+    }
+
+    #[test]
+    fn test_linux_x86_64_missing_arch_label() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/jwt-rs@jwt-ui.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let triple_linux_x64 = AssetTriple::new("linux".to_string(), "x86_64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("jwtui-linux.tar.gz"));
+    }
+
+    #[test]
+    fn test_linux_armv7_missing_os_label() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/jwt-rs@jwt-ui.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let triple_linux_x64 = AssetTriple::new("linux".to_string(), "armv7".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("jwtui-armv7-gnu.tar.gz"));
+    }
+
+    #[test]
+    fn test_linux_armv7_musl_missing_os_label() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/jwt-rs@jwt-ui.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let triple_linux_x64 = AssetTriple::new("linux".to_string(), "armv7".to_string(), true);
+        let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("jwtui-armv7-musl.tar.gz"));
+    }
+
+    #[test]
+    fn test_linux_missing_os_label() {
+        let assets: Vec<String> =
+            ron::from_str(include_str!("assets/jedisct1@minisign.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let triple_linux_x64 = AssetTriple::new("linux".to_string(), "x86_64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("minisign-0.12-linux.tar.gz"));
+    }
+
+    #[test]
+    fn test_linux_missing_os_label_no_musl_asset_musl_preferred() {
+        let assets: Vec<String> =
+            ron::from_str(include_str!("assets/jedisct1@minisign.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let triple_linux_x64 = AssetTriple::new("linux".to_string(), "x86_64".to_string(), true);
+        let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("minisign-0.12-linux.tar.gz"));
+    }
+
+    #[test]
+    fn test_macos_intel_missing_os_label() {
+        let assets: Vec<String> =
+            ron::from_str(include_str!("assets/jedisct1@minisign.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let triple_linux_x64 = AssetTriple::new("macos".to_string(), "x86_64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("minisign-0.12-macos.zip"));
+    }
+
+    #[test]
+    fn test_macos_arm64_missing_os_label() {
+        let assets: Vec<String> =
+            ron::from_str(include_str!("assets/jedisct1@minisign.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let triple_linux_x64 = AssetTriple::new("macos".to_string(), "aarch64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &triple_linux_x64, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("minisign-0.12-macos.zip"));
+    }
 }
