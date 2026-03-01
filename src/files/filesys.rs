@@ -3,13 +3,17 @@
 use log::{debug, warn};
 use std::path::{Path, PathBuf};
 
-use crate::files::magic::is_exec_for_current_arch;
+use crate::files::magic::{is_exec_by_magic_number, is_exec_for_current_arch};
 
-/// Return all executable files found directly inside `dir` (non-recursive).
+/// Return all executable files found inside `dir` (recursively).
 ///
-/// A file is considered executable when [`is_exec_by_magic_number`] returns
-/// `true` for it. Directories and symlinks are ignored.
-pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
+/// A file is considered executable when inner checks on the file header
+/// return `true` for it. Directories and symlinks are ignored.
+///
+/// If `deep` is `true`, the function will check if the file is an executable
+/// by checking the magic number AND the architecture.
+/// If `deep` is `false`, it will only check the magic number.
+pub fn find_exec_files_in_dir(dir: &Path, deep: bool) -> Vec<PathBuf> {
     let mut result: Vec<PathBuf> = Vec::new();
     let mut stack: Vec<PathBuf> = vec![dir.to_path_buf()];
 
@@ -32,7 +36,8 @@ pub fn find_exec_files_in_dir(dir: &Path) -> Vec<PathBuf> {
                 if file_type.is_dir() {
                     stack.push(entry.path());
                 } else if file_type.is_file()
-                    && is_exec_for_current_arch(&entry.path()).unwrap_or(false)
+                    && (deep && is_exec_for_current_arch(&entry.path()).unwrap_or(false))
+                    || (!deep && is_exec_by_magic_number(&entry.path()))
                 {
                     let s = entry.path().display().to_string();
                     debug!("Found executable file: {}", s);

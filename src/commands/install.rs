@@ -227,7 +227,7 @@ fn install_binaries(
 ) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
-    let execs_to_install: Vec<PathBuf> = filesys::find_exec_files_in_dir(extracted_path);
+    let execs_to_install: Vec<PathBuf> = filesys::find_exec_files_in_dir(extracted_path, true);
 
     if execs_to_install.is_empty() {
         // we interpret this as an error
