@@ -3,6 +3,7 @@
 use crate::constants::FILENAME_SEPARATORS;
 use crate::constants::SUPPORTED_EXTENSIONS;
 use crate::utils::string::levenshtein_distance;
+use crate::utils::string::strip_repeated_separator;
 use std::{
     ffi::{OsStr, OsString},
     path::Path,
@@ -67,24 +68,6 @@ pub fn strip_supported_extensions(path: &Path) -> &str {
         })
 }
 
-/// Strip all instances of double separators from a filename.
-///
-/// # Arguments
-///
-/// * `filename` - The filename to strip double separators from.
-/// * `sep` - The separator to strip.
-///
-/// # Returns
-///
-/// The filename with all instances of double separators removed.
-pub fn strip_double_separator(filename: &str, sep: &str) -> String {
-    let mut result = filename.to_string();
-    while result.contains(&format!("{}{}", sep, sep)) {
-        result = result.replace(sep, "");
-    }
-    result
-}
-
 /// Clean up a filename by removing all instances of the strings in to_remove array
 /// and then removing all instances of double separators.
 ///
@@ -104,7 +87,7 @@ pub fn clean_up_filename(filename: &str, to_remove: Vec<String>) -> String {
     }
     // then remove all instances of double separators
     for sep in FILENAME_SEPARATORS {
-        result = strip_double_separator(&result, sep);
+        result = strip_repeated_separator(&result, sep);
     }
     result
 }

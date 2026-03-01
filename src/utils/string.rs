@@ -64,6 +64,29 @@ pub fn levenshtein_distance(s1: &str, s2: &str) -> usize {
     matrix[len1][len2]
 }
 
+/// Strip all instances of double separators from a filename.
+///
+/// # Arguments
+///
+/// * `filename` - The filename to strip double separators from.
+/// * `sep` - The separator to strip.
+///
+/// # Returns
+///
+/// The filename with all instances of double separators removed.
+pub fn strip_repeated_separator(filename: &str, sep: &str) -> String {
+    let mut result = filename.to_string();
+    let double_sep = format!("{}{}", sep, sep);
+    while result.contains(&double_sep) {
+        result = result.replace(&double_sep, "");
+    }
+    // in case the doubles where odd, remove the last separator
+    if !result.is_empty() && result.chars().last().unwrap() == sep.chars().next().unwrap() {
+        result.pop();
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,5 +113,16 @@ mod tests {
         assert_eq!(levenshtein_distance("abc", "def"), 3);
         assert_eq!(levenshtein_distance("kitten", "sitting"), 3);
         assert_eq!(levenshtein_distance("saturday", "sunday"), 3);
+    }
+
+    #[test]
+    fn test_strip_double_separator() {
+        assert_eq!(strip_repeated_separator("a-b-c", "-"), "a-b-c");
+        assert_eq!(strip_repeated_separator("a-b--c", "-"), "a-bc");
+        assert_eq!(strip_repeated_separator("a--b--c", "-"), "abc");
+        assert_eq!(strip_repeated_separator("abc---", "-"), "abc");
+        assert_eq!(strip_repeated_separator("a-bc---", "-"), "a-bc");
+        assert_eq!(strip_repeated_separator("a--bc---", "-"), "abc");
+        assert_eq!(strip_repeated_separator("abc", "-"), "abc");
     }
 }
