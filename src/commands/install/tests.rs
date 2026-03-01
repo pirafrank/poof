@@ -85,19 +85,41 @@ impl TestEnv {
         #[cfg(target_os = "linux")]
         {
             use std::io::Write;
-            // Write ELF magic number
-            file.write_all(&magic::ELF_MAGIC)?;
-            // Write some dummy content
-            file.write_all(b"ELF dummy content for testing")?;
+            // Write a minimal but valid ELF header (20 bytes).
+            // is_exec_for_current_arch checks e_machine at offset 0x12 (bytes 18-19) as a LE u16,
+            // so the stub must have the correct value there or the arch check returns false.
+            let mut elf_stub = [0u8; 20];
+            elf_stub[0..4].copy_from_slice(&magic::ELF_MAGIC);
+            let e_machine: u16 = match std::env::consts::ARCH {
+                "x86_64" => 0x003E,
+                "aarch64" => 0x00B7,
+                "i686" => 0x0003,
+                "armv7" => 0x0028,
+                "riscv64" => 0x00F3,
+                "powerpc64le" => 0x0015,
+                "s390x" => 0x0016,
+                "loongarch64" => 0x0102,
+                _ => 0x0000,
+            };
+            elf_stub[0x12..0x14].copy_from_slice(&e_machine.to_le_bytes());
+            file.write_all(&elf_stub)?;
         }
 
         #[cfg(target_os = "macos")]
         {
             use std::io::Write;
-            // Write Mach-O magic number (64-bit little-endian)
-            file.write_all(&magic::MACHO_MAGIC_NUMBERS[1])?;
-            // Write some dummy content
-            file.write_all(b"Mach-O dummy content for testing")?;
+            // Write a minimal valid thin 64-bit LE Mach-O stub (8 bytes).
+            // is_exec_for_current_arch for the thin LE magic [0xCF,0xFA,0xED,0xFE] reads
+            // the next 4 bytes as cputype (LE u32), so the correct value must follow the magic.
+            // MACHO_MAGIC_NUMBERS[0] is the thin 64-bit LE magic; index 1 is the fat binary magic
+            // and requires a completely different (much larger) header layout.
+            file.write_all(&magic::MACHO_MAGIC_NUMBERS[0])?;
+            let cputype: u32 = match std::env::consts::ARCH {
+                "aarch64" => 0x0100_000C,
+                "x86_64" => 0x0100_0007,
+                _ => 0x0000_0000,
+            };
+            file.write_all(&cputype.to_le_bytes())?;
         }
 
         #[cfg(target_os = "windows")]
