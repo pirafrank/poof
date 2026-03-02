@@ -180,7 +180,7 @@ mod tests {
     //
 
     #[test]
-    fn test_linux_x86_64_compatible_binaries_without_extension() {
+    fn test_linux_x86_64_compatible_binary_without_extension() {
         let assets: Vec<String> = ron::from_str(include_str!("assets/shshemi@tabiew.ron")).unwrap();
         let platform_triple = AssetTriple::new("linux".to_string(), "x86_64".to_string(), false);
         let binaries = get_triple_compatible_assets(&assets, &platform_triple, |asset| asset);

@@ -218,13 +218,30 @@ pub fn is_exec_for_current_arch(file_path: &Path) -> Result<bool> {
         // https://github.com/apple-oss-distributions/xnu/blob/main/EXTERNAL_HEADERS/mach-o/fat.h
         // https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/mach/machine.h
         match buffer {
-            // Fat binary — header is always big-endian on disk regardless of host CPU.
-            // Iterate the fat_arch table; each entry is 20 bytes, cputype is the first 4 (BE).
+            // Fat binary (32 bit) - header is always big-endian on disk regardless of host CPU.
+            // Iterate the fat_arch table as many times as the nfat_arch field indicates.
+            // each entry is 20 bytes, cputype is the first 4 bytes (BE) of the entry.
+            // Note: we don't care about fat64 binaries, no one would really release a pre-built
+            //       binary so big to require fat64 (> 4GB).
             [0xCA, 0xFE, 0xBA, 0xBE] => {
+                // 4 bytes after the magic number to know how many architectures are in the file
                 file.seek(SeekFrom::Start(4))?;
                 let mut n = [0u8; 4];
                 file.read_exact(&mut n)?;
                 let nfat_arch = u32::from_be_bytes(n);
+
+                // Check that the file is long enough to contain:
+                // - the magic number (4 bytes)
+                // - the nfat_arch field (4 bytes)
+                // - the fat_arch table (20 bytes per entry * nfat_arch)
+                let file_len = file.metadata()?.len();
+                // Total table size: the table is 20 bytes per entry,
+                // so we multiply the number of entries by 20.
+                let table_bytes: u64 = nfat_arch as u64 * 20;
+                let minimum_required_file_len = 8 + table_bytes;
+                if file_len < minimum_required_file_len {
+                    return Ok(false);
+                }
 
                 // Iterate the fat_arch table to find a matching cputype.
                 // This because fat binaries do not enforce any specif order of the architectures.
@@ -309,7 +326,7 @@ mod tests {
         buf[1] = 0x45;
         buf[2] = 0x4C;
         buf[3] = 0x46;
-        // EI_CLASS = 64-bit (or 32-bit for x86/arm — doesn't matter for the check)
+        // EI_CLASS = 64-bit (or 32-bit for x86/arm - doesn't matter for the check)
         buf[4] = 0x02;
         // EI_DATA
         buf[5] = ei_data;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bin-inspect.sh — Inspect binary file headers using only POSIX od(1).
+# bin-inspect.sh - Inspect binary file headers using only POSIX od(1).
 # Works on Linux, macOS, and BSD without external tools.
 #
 # Usage: bin-inspect.sh <binary_file>
@@ -25,7 +25,7 @@ FILE="$1"
 [[ ! -r "$FILE" ]] && { echo "Error: cannot read file: $FILE" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------
-# Low-level I/O helpers — all reads go through od(1) (POSIX, everywhere).
+# Low-level I/O helpers - all reads go through od(1) (POSIX, everywhere).
 # ---------------------------------------------------------------------------
 
 # _read_bytes OFFSET COUNT
@@ -207,7 +207,7 @@ _scan_elf_notes() {
 
             case "$name_hex" in
                 474e5500*)
-                    # "GNU\0" — type 1 is NT_GNU_ABI_TAG; desc[0] holds the OS.
+                    # "GNU\0" - type 1 is NT_GNU_ABI_TAG; desc[0] holds the OS.
                     if [[ "$note_type" == "1" ]]; then
                         local desc_off os_val
                         desc_off=$(( note_off + 12 + pad_namesz ))
@@ -244,7 +244,7 @@ _detect_elf_os() {
     ei_osabi=$(u8 7)
 
     case "$ei_osabi" in
-        0)  # ELFOSABI_NONE — most Linux and some BSD binaries; scan notes.
+        0)  # ELFOSABI_NONE - most Linux and some BSD binaries; scan notes.
             local from_notes
             from_notes=$(_scan_elf_notes "$ei_class" "$endian")
             if [[ -n "$from_notes" ]]; then
