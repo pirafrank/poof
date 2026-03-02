@@ -1,3 +1,4 @@
+pub mod clean_up_filename_test;
 pub mod find_similar_repos;
 pub mod get_file_extension;
 pub mod get_file_name;

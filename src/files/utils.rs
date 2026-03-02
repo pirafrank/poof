@@ -3,6 +3,7 @@
 use crate::constants::FILENAME_SEPARATORS;
 use crate::constants::SUPPORTED_EXTENSIONS;
 use crate::utils::string::levenshtein_distance;
+use crate::utils::string::strip_repeated_separator;
 use std::{
     ffi::{OsStr, OsString},
     path::Path,
@@ -42,6 +43,7 @@ pub fn get_file_extension(archive_path: &Path) -> &str {
 ///
 /// Returns an empty string when the path has no file-name component or when
 /// the name contains non-UTF-8 bytes.
+#[allow(unused)]
 pub fn get_file_name(archive_path: &Path) -> &str {
     archive_path
         .file_name()
@@ -53,6 +55,7 @@ pub fn get_file_name(archive_path: &Path) -> &str {
 ///
 /// If no known extension matches the file name is returned as-is (falling back
 /// to the file stem when the path has one).
+#[allow(unused)]
 pub fn strip_supported_extensions(path: &Path) -> &str {
     let filename = get_file_name(path);
     SUPPORTED_EXTENSIONS
@@ -63,6 +66,49 @@ pub fn strip_supported_extensions(path: &Path) -> &str {
                 .and_then(|s| s.to_str())
                 .unwrap_or(filename)
         })
+}
+
+/// Clean up a filename by removing all instances of the strings in to_remove array
+/// and then removing all instances of double separators.
+///
+/// # Arguments
+///
+/// * `filename` - The filename to clean up.
+/// * `to_remove` - The strings to remove from the filename.
+///
+/// # Returns
+///
+/// The cleaned up filename.
+pub fn clean_up_filename(filename: &str, to_remove: Vec<String>) -> String {
+    let mut result = filename.to_string();
+    // Remove tokens only when they are separated by known filename separators.
+    for remove in to_remove {
+        for sep in FILENAME_SEPARATORS {
+            let mid = format!("{sep}{remove}{sep}");
+            while result.contains(&mid) {
+                result = result.replace(&mid, sep);
+            }
+
+            let prefix = format!("{remove}{sep}");
+            while let Some(stripped) = result.strip_prefix(&prefix) {
+                result = stripped.to_owned();
+            }
+
+            let suffix = format!("{sep}{remove}");
+            while let Some(stripped) = result.strip_suffix(&suffix) {
+                result = stripped.to_owned();
+            }
+        }
+
+        if result == remove {
+            result.clear();
+        }
+    }
+
+    for sep in FILENAME_SEPARATORS {
+        result = strip_repeated_separator(&result, sep);
+    }
+    result
 }
 
 /// Return the "stem" of `file_name` trimmed at the first [`FILENAME_SEPARATORS`] character.

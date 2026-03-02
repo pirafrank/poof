@@ -42,7 +42,7 @@ done
 html_escape() {
   # Use sed so that '&' in replacements is treated as a literal character
   # (bash ${var//pat/rep} treats '&' as the matched string, like sed does
-  # without escaping — so we avoid bash substitution here entirely).
+  # without escaping - so we avoid bash substitution here entirely).
   printf '%s' "$1" \
     | sed \
         -e 's/&/\&amp;/g' \
@@ -303,7 +303,7 @@ emit_head() {
       padding: 20px;
     }
 
-    /* Standalone code block — not beneath a tab bar */
+    /* Standalone code block - not beneath a tab bar */
     .code-block.standalone {
       border-top: 1px solid var(--border);
       border-radius: var(--radius);
@@ -414,7 +414,7 @@ emit_body() {
       continue
     fi
 
-    # ---- h3 (checked before h2 — more specific pattern) ----
+    # ---- h3 (checked before h2 - more specific pattern) ----
     if [[ "$line" =~ ^###[[:space:]](.+)$ ]]; then
       h3_text="${BASH_REMATCH[1]}"
       close_inline

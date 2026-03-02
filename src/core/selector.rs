@@ -21,10 +21,13 @@ lazy_static! {
     static ref CPU_ARCH: HashMap<&'static str, Vec<&'static str>> = {
         let mut m = HashMap::new();
         m.insert("x86", vec!["x86", "386", "586", "686", "32-bit"]);
-        m.insert("x86_64", vec!["x86_64", "x64", "amd64"]);
+        m.insert("x86_64", vec!["x86_64", "x86-64", "x64", "amd64"]);
         // order matters here, from more specific to less specific
         // arm assets will run on any armv7 device the armv7 poof build target runs on.
-        m.insert("armv7", vec!["armv7l", "armhf", "armv7", "armv6", "arm"]);
+        // armhf is a more specific alias for armv7, so it should be listed before armv7,
+        // yet it may be some armv6 asset, which armv7 would run anyway, so we list it
+        // but after armv7 to let it have less priority than armv7.
+        m.insert("armv7", vec!["armv7l", "armv7", "armhf", "armv6", "arm"]);
         m.insert("aarch64", vec!["aarch64", "arm64"]);
         // powerpc64le support
         m.insert("powerpc", vec!["powerpcle", "ppcle"]);
@@ -42,6 +45,8 @@ lazy_static! {
 
 /// Returns `true` if `item` has what looks like a real file extension (non-empty, ≤4 chars, not all digits).
 fn has_extension(item: &str) -> bool {
+    // going case insensitive to avoid false positives for AppImage assets
+    let item = item.to_lowercase();
     // if the item does not contain a dot, it does not have an extension,
     if !item.contains(".") {
         return false;
@@ -58,12 +63,18 @@ fn has_extension(item: &str) -> bool {
     if last.is_empty() {
         return false;
     }
+    // hotfix to avoid false positives for AppImage assets
+    if last == &"appimage" {
+        return true;
+    }
     // if too long, unlikely to be a real extension. return false.
-    if last.len() > 4 {
+    if last.len() > 9 {
         return false;
     }
-    // if only numbers, unlikely to be a real extension. return false.
-    if last.chars().all(|c| c.is_ascii_digit()) {
+    // must be alphanumeric (a-z, 0-9) but not purely numeric,
+    // otherwise it's likely a false positive.
+    if !last.chars().all(|c| c.is_ascii_alphanumeric()) || last.chars().all(|c| c.is_ascii_digit())
+    {
         return false;
     }
     // if we got this far, let's assume it's a real one.
@@ -81,6 +92,17 @@ where
 }
 
 /// Returns the most compatible asset from the given list of assets
+///
+/// # Arguments
+///
+/// * `assets` - The list of assets to select from.
+/// * `t` - The asset triple to use for scoring.
+/// * `extractor_fn` - The function to extract the asset name from the asset.
+///
+/// # Returns
+///
+/// A vector of the most compatible assets.
+/// If no compatible assets are found, returns `None`.
 pub fn get_triple_compatible_assets<T, F>(
     assets: &[T],
     t: &AssetTriple,
@@ -118,49 +140,72 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // MUSL
     if t.is_musl() && item.contains("musl") {
         // First of all, bonus point if the binary is musl and user asked for it.
-        score += 1;
+        score += 2;
     } else if !t.is_musl() && item.contains("musl") {
-        // minus one point if the binary is musl but user didn't ask for it.
-        score -= 1;
+        // less points if the binary is musl but user didn't ask for it.
+        score -= 2;
     }
 
     // OPERATING_SYSTEM
     // Check if this OS matches our current OS
-    if OPERATING_SYSTEM
+    let found_os: bool = if OPERATING_SYSTEM
         .get(t.get_os().as_str())
         .is_some_and(|aliases| aliases.iter().any(|alias| item.contains(alias)))
     {
-        score += 1;
+        score += 5;
+        true
     } else {
-        // If no matching OS is found, return -1 as deal-breaker
+        false
+    };
+
+    // CPU_ARCH
+    // current_arch is the architecture from the AssetTriple.
+    // AssetTriple defaults to the architecture poof is running on.
+    let current_arch: &str = t.get_arch().as_str();
+    // hotfix to allow 'arm' to be used as a alias for 'armv7'.
+    // because Rust ARCH only support 'arm' for all 32 bit arm architectures.
+    // we can do this safely because poof targets armv7 gnu/musl hard-float builds.
+    let current_arch: &str = if current_arch == "arm" {
+        "armv7"
+    } else {
+        current_arch
+    };
+    // Check if architecture matches any alias for our current architecture.
+    // matching_arch will hold the alias among the values that matched.
+    // Aliases are retrieved from CPU_ARCH using current_arch as the key.
+    // If a match is found, matching_arch holds the matched alias;
+    // otherwise it stays "unknown".
+    let mut matching_arch: &str = "unknown";
+    let mut found_arch: bool = false;
+    if let Some(aliases) = CPU_ARCH.get(current_arch) {
+        // We iterate over the aliases in reverse order to give more priority to
+        // the more specific aliases.
+        let mut num_aliases = aliases.len();
+        for alias in aliases {
+            num_aliases -= 1;
+            if item.contains(alias) {
+                // We also add a base 5 points bonus in case of a match, like for OS matching.
+                // Then we add the number of aliases remaining to the score to give more priority
+                // to the earlier aliases in the array.
+                // This is to avoid false positives for assets that have multiple options for
+                // the same architecture, e.g. armv7, armv6 and armhf when running on armv7.
+                score = score + 5 + (num_aliases as i32);
+                found_arch = true;
+                matching_arch = alias;
+                break;
+            }
+        }
+    } else {
+        // If current architecture is not in the CPU_ARCH hashmap, return -1
+        // as deal-breaker. 'None' case happens when the hashmap misses the
+        // architecture poof is currently running on. This is unlikely to happen,
+        // unless the user is running a built poof on a yet unsupported architecture.
         return -1;
     }
 
-    // CPU_ARCH
-    // current_arch is the architecture poof is running on.
-    let current_arch: &str = t.get_arch().as_str();
-    // Check if architecture matches any alias for our current architecture
-    // matching_arch will hold the alias among the values that matched.
-    // values are read from CPU_ARCH HashMap defined above and loaded
-    // depending on the arch poof runs on, which is the HashMap key.
-    let matching_arch = match CPU_ARCH.get(current_arch) {
-        Some(aliases) => {
-            let found = aliases.iter().find(|&&alias| item.contains(alias));
-            if found.is_none() {
-                return -1;
-            }
-            score += 1;
-            found.unwrap()
-        }
-        // If no matching alias is found, return -1 as deal-breaker
-        None => {
-            return -1;
-        }
-    };
-
     // fix to avoid mismatch between the asset and the target architecture
     // due to 'x86' being a substring of 'x86_64'.
-    if item.contains("x86_64") && current_arch == "x86" {
+    if (item.contains("x86_64") || item.contains("x86-64")) && current_arch == "x86" {
         return -1;
     }
 
@@ -188,23 +233,76 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // as executables without an archive. if so, bonus point.
     // if the executable name does not contain a dot, it does not have an extension,
     // so it's likely a compatible non-archived executable. we give it a bonus point.
-    if item.ends_with(*matching_arch) || !item.contains(".") {
-        score += 1;
+    if item.ends_with(matching_arch) || !item.contains(".") {
+        score += 2;
     }
 
     // Avoid checksum files as false positive binary assets.
     // if the asset name contains .sha256 or .sha1 or .md5, it's likely not a real asset,
     // it's a checksum file. we discard it by returning -1 as deal-breaker.
-    if item.contains(".sha256") || item.contains(".sha1") || item.contains(".md5") {
+    if item.ends_with(".sha256")
+        || item.ends_with(".sha256sum")
+        || item.ends_with(".sha1")
+        || item.ends_with(".sha1sum")
+        || item.ends_with(".md5")
+        || item.ends_with(".md5sum")
+        || item.ends_with(".sha512")
+        || item.ends_with(".sha512sum")
+        || item.ends_with(".crc32")
+        || item.ends_with(".crc64")
+        || item.ends_with(".crc")
+        || item.ends_with(".sfv")
+    {
         return -1;
+    }
+
+    // Avoid signature files as false positive binary assets.
+    // if the asset name contains what is usually a signature file extension,
+    // it's likely not a real asset. we discard it by returning -1 as deal-breaker.
+    if item.ends_with(".asc")
+        || item.ends_with(".sig")
+        || item.ends_with(".pem")
+        || item.ends_with(".minisign")
+        || item.ends_with(".pgp")
+        || item.ends_with(".gpg")
+    {
+        return -1;
+    }
+
+    // Patch assets missing OS label.
+    // Usually these are linux x86_64 assets missing the OS tag.
+    if !found_os && t.get_os() == "linux" {
+        score += 1;
+    }
+
+    // Patch assets missing architecture label.
+    // Usually these are linux x86_64 assets missing the architecture tag.
+    if !found_arch && current_arch == "x86_64" {
+        score += 1;
     }
 
     // finally, return the score
     score
 }
 
-#[cfg(test)]
-mod tests {
-    //use super::*;
-    // TODO: add tests
+/// Return an array of the aliases for the current architecture and operating system.
+pub fn platforms_strings() -> Vec<String> {
+    // get info of the current platform
+    let t: AssetTriple = AssetTriple::default();
+    let current_arch = t.get_arch().as_str();
+    let Some(arch_aliases) = CPU_ARCH.get(current_arch) else {
+        return Vec::new();
+    };
+    let current_os = t.get_os().as_str();
+    let Some(os_aliases) = OPERATING_SYSTEM.get(current_os) else {
+        return Vec::new();
+    };
+    // return the platform strings
+    let mut s: Vec<String> = Vec::new();
+    s.extend(arch_aliases.iter().map(|alias| alias.to_string()));
+    s.extend(os_aliases.iter().map(|alias| alias.to_string()));
+    s
 }
+
+#[cfg(test)]
+mod tests;

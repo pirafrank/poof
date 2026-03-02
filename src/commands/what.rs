@@ -78,7 +78,7 @@ pub fn run_what(args: &WhatArgs) -> Result<()> {
     let latest_version_dir = datadirs::get_binary_nest(&data_dir, slug.as_str(), &latest_version);
 
     // Find all executables in the latest version directory
-    let binaries = filesys::find_exec_files_in_dir(&latest_version_dir);
+    let binaries = filesys::find_exec_files_in_dir(&latest_version_dir, false);
 
     // Check if any binaries were found
     if binaries.is_empty() {

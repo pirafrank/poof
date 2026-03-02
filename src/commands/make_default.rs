@@ -124,7 +124,7 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
     // List of binaries to set as default
     let mut binaries: Vec<String> = Vec::new();
     // Process each binary in wanted_dir
-    for path in filesys::find_exec_files_in_dir(&install_dir) {
+    for path in filesys::find_exec_files_in_dir(&install_dir, false) {
         // Skip non-executable files (they all should be since they have
         // been installed, but just in case).
         // Note: Windows does not require setting executable permissions
