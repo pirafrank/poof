@@ -192,6 +192,18 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
+      - name: Download existing APT repository from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
+        run: |
+          mkdir -p apt
+          aws s3 sync "s3://${R2_BUCKET_NAME}/apt/" apt/ \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --region auto || true
+
       - name: Set up reprepro configuration
         env:
           APP_NAME: ${{ needs.checks.outputs.APP_NAME }}
@@ -208,11 +220,18 @@ jobs:
           EOF
 
       - name: Add .deb packages to repository
+        env:
+          APP_NAME: ${{ needs.checks.outputs.APP_NAME }}
+          APP_VERSION: ${{ needs.checks.outputs.APP_VERSION }}
         run: |
           cd apt
-          for deb in ../downloaded-packages/deb/*.deb; do
-            reprepro --verbose includedeb stable "$deb"
-          done
+          if reprepro list stable "${APP_NAME}" | grep -q "${APP_VERSION}"; then
+            echo "Version ${APP_VERSION} already registered in APT repo, skipping includedeb"
+          else
+            for deb in ../downloaded-packages/deb/*.deb; do
+              reprepro --verbose includedeb stable "$deb"
+            done
+          fi
 
       - name: Export GPG public key
         run: gpg --armor --export "${{ secrets.GPG_KEY_ID }}" > apt/gpg.pub
@@ -260,6 +279,18 @@ jobs:
           %_gpg_digest_algo sha256
           EOF
 
+      - name: Download existing YUM repository from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
+        run: |
+          mkdir -p yum
+          aws s3 sync "s3://${R2_BUCKET_NAME}/yum/" yum/ \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --region auto || true
+
       - name: Organize RPMs into distribution directories
         run: |
           for dist in el8 el9 amzn2 amzn2023; do
@@ -273,12 +304,12 @@ jobs:
 
       - name: Sign RPM packages
         run: |
-          find yum/ -name "*.rpm" -print0 | xargs -0 --no-run-if-empty rpm --addsign
+          find downloaded-packages/rpm/ -name "*.rpm" -print0 | xargs -0 --no-run-if-empty rpm --addsign
 
       - name: Generate YUM repository metadata
         run: |
           find yum/ -mindepth 2 -maxdepth 2 -type d | while read -r repo_dir; do
-            createrepo_c --verbose "$repo_dir"
+            createrepo_c --verbose --update "$repo_dir"
           done
 
       - name: Sign repository metadata
@@ -286,7 +317,7 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           find yum/ -name "repomd.xml" | while read -r repomd; do
-            gpg --batch --passphrase "$GPG_PASSPHRASE" \
+            gpg --batch --yes --passphrase "$GPG_PASSPHRASE" \
               --pinentry-mode loopback \
               --detach-sign --armor "$repomd"
           done
