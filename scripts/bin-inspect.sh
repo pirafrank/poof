@@ -23,6 +23,7 @@ FILE="$1"
 [[ ! -e "$FILE" ]] && { echo "Error: no such file: $FILE" >&2; exit 1; }
 [[ ! -f "$FILE" ]] && { echo "Error: not a regular file: $FILE" >&2; exit 1; }
 [[ ! -r "$FILE" ]] && { echo "Error: cannot read file: $FILE" >&2; exit 1; }
+FILE_SIZE=$(wc -c < "$FILE")
 
 # ---------------------------------------------------------------------------
 # Low-level I/O helpers - all reads go through od(1) (POSIX, everywhere).
@@ -146,9 +147,22 @@ _scan_elf_notes() {
         fi
     fi
 
+    # Clamp phnum: a u16 can reach 65535 but real binaries have a few dozen.
+    local MAX_PHNUM=4096
+    (( phnum > MAX_PHNUM )) && phnum=$MAX_PHNUM
+
+    # phentsize must be within the expected range for ELF32 (32 B) / ELF64 (56 B).
+    # Bail on obviously wrong values to avoid reading at garbage offsets.
+    if [[ "$ei_class" == "1" ]]; then
+        if (( phentsize < 20 || phentsize > 128 )); then return; fi
+    else
+        if (( phentsize < 40 || phentsize > 256 )); then return; fi
+    fi
+
     local i phdr_off p_type p_offset p_filesz
     for (( i = 0; i < phnum; i++ )); do
         phdr_off=$(( phoff + i * phentsize ))
+        (( phdr_off + phentsize > FILE_SIZE )) && break
 
         if [[ "$endian" == "little" ]]; then
             p_type=$(u32_le "$phdr_off")
@@ -186,6 +200,8 @@ _scan_elf_notes() {
         local note_off note_end namesz descsz note_type pad_namesz pad_descsz name_hex
         note_off="$p_offset"
         note_end=$(( p_offset + p_filesz ))
+        # Clamp to actual file size so the while loop never attempts reads past EOF.
+        (( note_end > FILE_SIZE )) && note_end=$FILE_SIZE
 
         while (( note_off + 12 <= note_end )); do
             if [[ "$endian" == "little" ]]; then
@@ -198,8 +214,9 @@ _scan_elf_notes() {
                 note_type=$(u32_be $(( note_off + 8 )))
             fi
 
-            # Sanity guard against corrupt/huge namesz values.
+            # Sanity guards against corrupt/huge field values.
             if (( namesz == 0 || namesz > 256 )); then break; fi
+            if (( descsz > 65536 )); then break; fi
 
             pad_namesz=$(_align4 "$namesz")
             pad_descsz=$(_align4 "$descsz")
@@ -289,10 +306,16 @@ handle_elf() {
 
     if [[ "$endian" == "little" ]]; then
         e_machine=$(u16_le 18)
-    else
+    elif [[ "$endian" == "big" ]]; then
         e_machine=$(u16_be 18)
+    else
+        e_machine="unknown"
     fi
-    printf "e_machine: %s (0x%04x)\n" "$(e_machine_name "$e_machine")" "$e_machine"
+    if [[ "$e_machine" == "unknown" ]]; then
+        printf "e_machine: unknown (EI_DATA unrecognised)\n"
+    else
+        printf "e_machine: %s (0x%04x)\n" "$(e_machine_name "$e_machine")" "$e_machine"
+    fi
     printf "OS:        %s\n" "$(_detect_elf_os "$ei_class" "$endian")"
 }
 
@@ -336,10 +359,37 @@ handle_macho_fat() {
     nfat_arch=$(u32_be 4)
     printf "nfat_arch: %d\n" "$nfat_arch"
 
+    # Clamp nfat_arch: a u32 could be huge; real FAT binaries have ≤ a handful.
+    local MAX_FAT_ARCH=4096
+    (( nfat_arch > MAX_FAT_ARCH )) && nfat_arch=$MAX_FAT_ARCH
+
     # Each fat_arch struct is 20 bytes; the table starts at offset 8.
     local i arch_offset cputype
     for (( i = 0; i < nfat_arch; i++ )); do
         arch_offset=$(( 8 + i * 20 ))
+        (( arch_offset + 20 > FILE_SIZE )) && break
+        cputype=$(u32_be "$arch_offset")
+        printf "cputype[%d]: %s (0x%x)\n" "$i" "$(macho_cpu_name "$cputype")" "$cputype"
+    done
+}
+
+handle_macho_fat64() {
+    echo "Format:    Mach-O FAT64 (Universal Binary)"
+
+    # fat_header is always big-endian on disk.
+    local nfat_arch
+    nfat_arch=$(u32_be 4)
+    printf "nfat_arch: %d\n" "$nfat_arch"
+
+    # Clamp nfat_arch: a u32 could be huge; real FAT64 binaries have ≤ a handful.
+    local MAX_FAT_ARCH=4096
+    (( nfat_arch > MAX_FAT_ARCH )) && nfat_arch=$MAX_FAT_ARCH
+
+    # Each fat_arch_64 struct is 24 bytes; the table starts at offset 8.
+    local i arch_offset cputype
+    for (( i = 0; i < nfat_arch; i++ )); do
+        arch_offset=$(( 8 + i * 24 ))
+        (( arch_offset + 24 > FILE_SIZE )) && break
         cputype=$(u32_be "$arch_offset")
         printf "cputype[%d]: %s (0x%x)\n" "$i" "$(macho_cpu_name "$cputype")" "$cputype"
     done
@@ -372,6 +422,9 @@ main() {
             ;;
         cafebabe)
             handle_macho_fat
+            ;;
+        cafebabf)
+            handle_macho_fat64
             ;;
         4d5a*)
             echo "Format:    PE/COFF (Windows Portable Executable)"

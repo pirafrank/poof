@@ -116,7 +116,9 @@ pub fn is_exec_by_magic_number(path: &Path) -> bool {
 ///
 /// The function checks the machine type of the binary to determine if it is for the current architecture.
 /// The function returns `true` if the binary is for the current architecture, `false` otherwise.
-/// The function returns an error if the file cannot be opened or read.
+/// The function returns an error if the file cannot be opened or if an I/O
+/// error occurs while reading required fields. If the file is simply too short
+/// or does not match expected executable metadata, it returns `Ok(false)`.
 ///
 /// # Arguments
 ///
@@ -366,8 +368,10 @@ mod tests {
 
     #[test]
     fn test_is_exec_by_magic_number_nonexistent_path() {
-        let path = std::path::Path::new("/tmp/poof_no_such_file_magic_test_abc123");
-        assert!(!is_exec_by_magic_number(path));
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("definitely_missing_exec_magic_test");
+        assert!(!path.exists());
+        assert!(!is_exec_by_magic_number(&path));
     }
 
     // *** is_exec_for_current_arch *******************************************
