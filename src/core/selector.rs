@@ -137,19 +137,23 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // OPERATING_SYSTEM and CPU_ARCH are lowercase in the code above.
     let item = input.to_lowercase();
 
+    // current_os is the operating system from the AssetTriple.
+    // AssetTriple defaults to the operating system poof is running on.
+    let current_os = t.get_os().as_str();
+
+    // tiny helper
+    let is_linux: bool = current_os == "linux";
+
     // MUSL
-    if t.is_musl() && item.contains("musl") {
-        // First of all, bonus point if the binary is musl and user asked for it.
+    if is_linux && t.is_musl() && item.contains("musl") {
+        // First of all, bonus point if (on linux) the binary is musl and user asked for it.
         score += 2;
-    } else if !t.is_musl() && item.contains("musl") {
-        // less points if the binary is musl but user didn't ask for it.
+    } else if is_linux && !t.is_musl() && item.contains("musl") {
+        // less points if the binary (on linux) is musl but user didn't ask for it.
         score -= 2;
     }
 
     // OPERATING_SYSTEM
-    // current_os is the operating system from the AssetTriple.
-    // AssetTriple defaults to the operating system poof is running on.
-    let current_os = t.get_os().as_str();
     let Some(os_aliases) = OPERATING_SYSTEM.get(current_os) else {
         // If current operating system is not in the OPERATING_SYSTEM hashmap, return -1
         // as deal-breaker. 'None' case happens when the hashmap misses the
@@ -291,7 +295,7 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // ADDITIONAL PATCHES
     // Patch assets missing OS label.
     // Usually these are linux x86_64 assets missing the OS tag.
-    if !found_os && current_os == "linux" {
+    if !found_os && is_linux {
         score += 1;
     }
 
