@@ -323,7 +323,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
-        assert_eq!(binaries.len(), 1);
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("fd-v10.3.0-x86_64-unknown-linux-gnu.tar.gz"));
     }
 
@@ -335,7 +335,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
-        assert_eq!(binaries.len(), 1);
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("jwtui-linux.tar.gz"));
     }
 
@@ -347,6 +347,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("jwtui-armv7-gnu.tar.gz"));
     }
 
@@ -358,6 +359,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("jwtui-armv7-musl.tar.gz"));
     }
 
@@ -370,6 +372,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("minisign-0.12-linux.tar.gz"));
     }
 
@@ -382,6 +385,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("minisign-0.12-linux.tar.gz"));
     }
 
@@ -394,6 +398,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("minisign-0.12-macos.zip"));
     }
 
@@ -406,6 +411,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("minisign-0.12-macos.zip"));
     }
 
@@ -418,6 +424,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("regex-tui_v0.7.0_linux.amd64"));
     }
 
@@ -430,6 +437,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("regex-tui_v0.7.0_darwin.arm64"));
     }
 
@@ -442,6 +450,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("fantarepo_ends_in_os_v1.0.0_amd64.linux"));
     }
 
@@ -454,6 +463,7 @@ mod tests {
         let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("fantarepo_ends_in_os_v1.0.0_arm64.darwin"));
     }
 
@@ -465,8 +475,12 @@ mod tests {
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
         assert!(!binaries.is_empty() && binaries.len() == 2);
-        assert!(binaries[0].contains("kubectx_v0.9.5_linux_x86_64.tar.gz"));
-        assert!(binaries[1].contains("kubens_v0.9.5_linux_x86_64.tar.gz"));
+        assert!(binaries
+            .iter()
+            .any(|asset| asset.contains("kubectx_v0.9.5_linux_x86_64.tar.gz")));
+        assert!(binaries
+            .iter()
+            .any(|asset| asset.contains("kubens_v0.9.5_linux_x86_64.tar.gz")));
     }
 
     #[test]
@@ -477,8 +491,12 @@ mod tests {
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
         assert!(!binaries.is_empty() && binaries.len() == 2);
-        assert!(binaries[0].contains("kubectx_v0.9.5_linux_armv7.tar.gz"));
-        assert!(binaries[1].contains("kubens_v0.9.5_linux_armv7.tar.gz"));
+        assert!(binaries
+            .iter()
+            .any(|asset| asset.contains("kubectx_v0.9.5_linux_armv7.tar.gz")));
+        assert!(binaries
+            .iter()
+            .any(|asset| asset.contains("kubens_v0.9.5_linux_armv7.tar.gz")));
     }
 
     #[test]
