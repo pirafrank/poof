@@ -1,4 +1,7 @@
-use crate::{files::utils::contains_alias_token, models::asset_triple::AssetTriple};
+use crate::{
+    files::utils::{contains_alias_token, is_checksum_file, is_signature_file},
+    models::asset_triple::AssetTriple,
+};
 use lazy_static::lazy_static;
 use std::{cmp::max, collections::HashMap};
 
@@ -299,36 +302,6 @@ pub fn platforms_strings() -> Vec<String> {
     s.extend(arch_aliases.iter().map(|alias| alias.to_string()));
     s.extend(os_aliases.iter().map(|alias| alias.to_string()));
     s
-}
-
-/// Returns `true` if `item` is a checksum file.
-fn is_checksum_file(item: &str) -> bool {
-    let item = item.to_lowercase();
-    item == "checksum.txt"
-        || item == "checksums.txt"
-        || item.ends_with(".sha256")
-        || item.ends_with(".sha256sum")
-        || item.ends_with(".sha1")
-        || item.ends_with(".sha1sum")
-        || item.ends_with(".md5")
-        || item.ends_with(".md5sum")
-        || item.ends_with(".sha512")
-        || item.ends_with(".sha512sum")
-        || item.ends_with(".crc32")
-        || item.ends_with(".crc64")
-        || item.ends_with(".crc")
-        || item.ends_with(".sfv")
-}
-
-/// Returns `true` if `item` is a signature file.
-fn is_signature_file(item: &str) -> bool {
-    let item = item.to_lowercase();
-    item.ends_with(".asc")
-        || item.ends_with(".sig")
-        || item.ends_with(".pem")
-        || item.ends_with(".minisign")
-        || item.ends_with(".pgp")
-        || item.ends_with(".gpg")
 }
 
 #[cfg(test)]

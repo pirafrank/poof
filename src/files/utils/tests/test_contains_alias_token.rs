@@ -53,7 +53,8 @@ fn test_contains_alias_token_empty_alias_in_word() {
 
 #[test]
 fn test_contains_alias_token_empty_alias_at_separator() {
-    // An empty alias at a separator boundary (start of string) does satisfy the check.
+    // An empty alias at a separator boundary (start of string) does not make any sense
+    // and should not satisfy the check, so we return false.
     // But seriously, would a tool ever start with a separator?
-    assert!(contains_alias_token("-tool", ""));
+    assert!(!contains_alias_token("-tool", ""));
 }

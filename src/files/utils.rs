@@ -215,5 +215,35 @@ pub fn find_similar_repo(data_dir: &Path, target_repo: &str) -> Option<String> {
     similar_repos.into_iter().next()
 }
 
+/// Returns `true` if `item` is a checksum file.
+pub fn is_checksum_file(item: &str) -> bool {
+    let item = item.to_lowercase();
+    item == "checksum.txt"
+        || item == "checksums.txt"
+        || item.ends_with(".sha256")
+        || item.ends_with(".sha256sum")
+        || item.ends_with(".sha1")
+        || item.ends_with(".sha1sum")
+        || item.ends_with(".md5")
+        || item.ends_with(".md5sum")
+        || item.ends_with(".sha512")
+        || item.ends_with(".sha512sum")
+        || item.ends_with(".crc32")
+        || item.ends_with(".crc64")
+        || item.ends_with(".crc")
+        || item.ends_with(".sfv")
+}
+
+/// Returns `true` if `item` is a signature file.
+pub fn is_signature_file(item: &str) -> bool {
+    let item = item.to_lowercase();
+    item.ends_with(".asc")
+        || item.ends_with(".sig")
+        || item.ends_with(".pem")
+        || item.ends_with(".minisign")
+        || item.ends_with(".pgp")
+        || item.ends_with(".gpg")
+}
+
 #[cfg(test)]
 mod tests;
