@@ -1,4 +1,7 @@
-use crate::models::asset_triple::AssetTriple;
+use crate::{
+    files::utils::{contains_alias_token, is_checksum_file, is_signature_file},
+    models::asset_triple::AssetTriple,
+};
 use lazy_static::lazy_static;
 use std::{cmp::max, collections::HashMap};
 
@@ -7,12 +10,12 @@ use crate::constants::SUPPORTED_EXTENSIONS;
 lazy_static! {
     static ref OPERATING_SYSTEM: HashMap<&'static str, Vec<&'static str>> = {
         let mut m = HashMap::new();
-        m.insert("windows", vec!["windows", "win"]);
-        m.insert("macos", vec!["macos", "darwin", "mac", "osx"]);
+        //m.insert("windows", vec!["windows", "win"]);
+        m.insert("macos", vec!["macos", "darwin", "osx", "mac"]);
         m.insert("linux", vec!["linux"]);
-        m.insert("openbsd", vec!["openbsd"]);
-        m.insert("freebsd", vec!["freebsd"]);
-        m.insert("netbsd", vec!["netbsd"]);
+        //m.insert("openbsd", vec!["openbsd"]);
+        //m.insert("freebsd", vec!["freebsd"]);
+        //m.insert("netbsd", vec!["netbsd"]);
         m
     };
 }
@@ -20,7 +23,7 @@ lazy_static! {
 lazy_static! {
     static ref CPU_ARCH: HashMap<&'static str, Vec<&'static str>> = {
         let mut m = HashMap::new();
-        m.insert("x86", vec!["x86", "386", "586", "686", "32-bit"]);
+        m.insert("x86", vec!["x86", "i386", "i586", "i686", "386", "586", "686", "32-bit"]);
         m.insert("x86_64", vec!["x86_64", "x86-64", "x64", "amd64"]);
         // order matters here, from more specific to less specific
         // arm assets will run on any armv7 device the armv7 poof build target runs on.
@@ -137,26 +140,48 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // OPERATING_SYSTEM and CPU_ARCH are lowercase in the code above.
     let item = input.to_lowercase();
 
+    // AVOID CHECKSUMS AND SIGNATURE FILES
+    // Avoid checksum files and signature files as false positive binary assets.
+    // we discard it by returning -1 as deal-breaker.
+    if is_checksum_file(&item) || is_signature_file(&item) {
+        return -1;
+    }
+
+    // current_os is the operating system from the AssetTriple.
+    // AssetTriple defaults to the operating system poof is running on.
+    let current_os = t.get_os().as_str();
+
+    // tiny helper
+    let is_linux: bool = current_os == "linux";
+
     // MUSL
-    if t.is_musl() && item.contains("musl") {
-        // First of all, bonus point if the binary is musl and user asked for it.
+    if is_linux && t.is_musl() && item.contains("musl") {
+        // First of all, bonus point if (on linux) the binary is musl and user asked for it.
         score += 2;
-    } else if !t.is_musl() && item.contains("musl") {
-        // less points if the binary is musl but user didn't ask for it.
+    } else if is_linux && !t.is_musl() && item.contains("musl") {
+        // less points if the binary (on linux) is musl but user didn't ask for it.
         score -= 2;
     }
 
     // OPERATING_SYSTEM
-    // Check if this OS matches our current OS
-    let found_os: bool = if OPERATING_SYSTEM
-        .get(t.get_os().as_str())
-        .is_some_and(|aliases| aliases.iter().any(|alias| item.contains(alias)))
-    {
-        score += 5;
-        true
-    } else {
-        false
+    let Some(os_aliases) = OPERATING_SYSTEM.get(current_os) else {
+        // If current operating system is not in the OPERATING_SYSTEM hashmap, return -1
+        // as deal-breaker. 'None' case happens when the hashmap misses the
+        // operating system poof is currently running on. This is unlikely to happen,
+        // unless the user is running a built poof on a yet unsupported operating system.
+        return -1;
     };
+    // Check if this OS matches our current OS.
+    // matching_os will hold the matched alias among the values that matched.
+    // Aliases are retrieved from OPERATING_SYSTEM using t.get_os() as the key.
+    let matching_os: Option<String> = os_aliases
+        .iter()
+        .find(|alias| contains_alias_token(&item, alias))
+        .map(|alias| alias.to_string());
+    let found_os: bool = matching_os.is_some();
+    if found_os {
+        score += 5;
+    }
 
     // CPU_ARCH
     // current_arch is the architecture from the AssetTriple.
@@ -170,39 +195,35 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     } else {
         current_arch
     };
-    // Check if architecture matches any alias for our current architecture.
-    // matching_arch will hold the alias among the values that matched.
-    // Aliases are retrieved from CPU_ARCH using current_arch as the key.
-    // If a match is found, matching_arch holds the matched alias;
-    // otherwise it stays "unknown".
-    let mut matching_arch: &str = "unknown";
-    let mut found_arch: bool = false;
-    if let Some(aliases) = CPU_ARCH.get(current_arch) {
-        // We iterate over the aliases in reverse order to give more priority to
-        // the more specific aliases.
-        let mut num_aliases = aliases.len();
-        for alias in aliases {
-            num_aliases -= 1;
-            if item.contains(alias) {
-                // We also add a base 5 points bonus in case of a match, like for OS matching.
-                // Then we add the number of aliases remaining to the score to give more priority
-                // to the earlier aliases in the array.
-                // This is to avoid false positives for assets that have multiple options for
-                // the same architecture, e.g. armv7, armv6 and armhf when running on armv7.
-                score = score + 5 + (num_aliases as i32);
-                found_arch = true;
-                matching_arch = alias;
-                break;
-            }
-        }
-    } else {
+    let Some(arch_aliases) = CPU_ARCH.get(current_arch) else {
         // If current architecture is not in the CPU_ARCH hashmap, return -1
         // as deal-breaker. 'None' case happens when the hashmap misses the
         // architecture poof is currently running on. This is unlikely to happen,
         // unless the user is running a built poof on a yet unsupported architecture.
         return -1;
-    }
+    };
+    // Check if architecture matches any alias for our current architecture.
+    // matching_arch will hold the alias among the values that matched.
+    // Aliases are retrieved from CPU_ARCH using current_arch as the key.
+    // If a match is found, matching_arch holds the matched alias;
+    // otherwise it stays "unknown".
+    let matching_arch: Option<(usize, String)> = arch_aliases
+        .iter()
+        .enumerate()
+        .find(|(_, alias)| contains_alias_token(&item, alias))
+        .map(|(idx, alias)| {
+            // We also add a base 5 points bonus in case of a match, like for OS matching.
+            // Then we add the number of aliases remaining to the score to give more priority
+            // to the earlier aliases in the array.
+            // This is to avoid false positives for assets that have multiple options for
+            // the same architecture, e.g. armv7, armv6 and armhf when running on armv7.
+            score = score + 5 + (arch_aliases.len() - idx) as i32;
+            (idx, alias.to_string())
+        });
+    let matching_arch: Option<String> = matching_arch.map(|(_, s)| s);
+    let found_arch: bool = matching_arch.is_some();
 
+    // ADDITIONAL CHECKS
     // fix to avoid mismatch between the asset and the target architecture
     // due to 'x86' being a substring of 'x86_64'.
     if (item.contains("x86_64") || item.contains("x86-64")) && current_arch == "x86" {
@@ -216,62 +237,41 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
         return -1;
     }
 
-    // SUPPORTED_EXTENSIONS
-    // Check if the file extension is supported
-    let has_ext: bool = has_extension(&item);
-    if has_ext
-        && !SUPPORTED_EXTENSIONS
+    // FILENAME_PATTERN
+    if !item.contains(".") {
+        // if the executable name does not contain a dot, it does not have an extension,
+        // so it's likely a compatible non-archived executable. we give it a lower bonus point.
+        // keep no-extension support, but require some platform signal
+        if !(found_os || found_arch) {
+            return -1;
+        }
+        score += 2;
+    } else if found_arch && item.ends_with(matching_arch.as_ref().unwrap()) {
+        // if the executable name ends with the matching architecture, we give it a lower bonus point.
+        // this is likely a binary that is released as an executable without an archive.
+        score += 2;
+    } else if found_os && item.ends_with(matching_os.as_ref().unwrap()) {
+        // if the executable name ends with the matching operating system, we give it a lower bonus point.
+        // this is likely a binary that is released as an executable without an archive.
+        score += 2;
+    } else if has_extension(&item)
+        && SUPPORTED_EXTENSIONS
             .iter()
             .any(|&format| item.ends_with(format))
     {
-        // if has extension, but not supported, return -1 as deal-breaker
+        // otherwise, check if it's a real extension and among the supported ones.
+        // if it does, we give it a higher bonus point, as we explicitly support it, without guessing.
+        score += 5;
+    } else {
+        // if none of the above conditions are met, it's likely not a meaningful binary asset.
+        // we discard it by returning -1 as deal-breaker.
         return -1;
     }
 
-    // FILENAME_PATTERN
-    // check if the executable name is only the arch, some binaries are released
-    // as executables without an archive. if so, bonus point.
-    // if the executable name does not contain a dot, it does not have an extension,
-    // so it's likely a compatible non-archived executable. we give it a bonus point.
-    if item.ends_with(matching_arch) || !item.contains(".") {
-        score += 2;
-    }
-
-    // Avoid checksum files as false positive binary assets.
-    // if the asset name contains .sha256 or .sha1 or .md5, it's likely not a real asset,
-    // it's a checksum file. we discard it by returning -1 as deal-breaker.
-    if item.ends_with(".sha256")
-        || item.ends_with(".sha256sum")
-        || item.ends_with(".sha1")
-        || item.ends_with(".sha1sum")
-        || item.ends_with(".md5")
-        || item.ends_with(".md5sum")
-        || item.ends_with(".sha512")
-        || item.ends_with(".sha512sum")
-        || item.ends_with(".crc32")
-        || item.ends_with(".crc64")
-        || item.ends_with(".crc")
-        || item.ends_with(".sfv")
-    {
-        return -1;
-    }
-
-    // Avoid signature files as false positive binary assets.
-    // if the asset name contains what is usually a signature file extension,
-    // it's likely not a real asset. we discard it by returning -1 as deal-breaker.
-    if item.ends_with(".asc")
-        || item.ends_with(".sig")
-        || item.ends_with(".pem")
-        || item.ends_with(".minisign")
-        || item.ends_with(".pgp")
-        || item.ends_with(".gpg")
-    {
-        return -1;
-    }
-
+    // ADDITIONAL PATCHES
     // Patch assets missing OS label.
     // Usually these are linux x86_64 assets missing the OS tag.
-    if !found_os && t.get_os() == "linux" {
+    if !found_os && is_linux {
         score += 1;
     }
 

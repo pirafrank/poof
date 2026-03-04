@@ -111,6 +111,29 @@ pub fn clean_up_filename(filename: &str, to_remove: Vec<String>) -> String {
     result
 }
 
+/// Returns `true` if `item` contains the alias token, ignoring case,
+/// and having it surrounded by non-alphanumeric characters.
+/// Returns `false` if any of the two parameters is empty.
+pub fn contains_alias_token(item: &str, alias: &str) -> bool {
+    if item.is_empty() || alias.is_empty() {
+        return false;
+    }
+    let item = item.to_lowercase();
+    let alias = alias.to_lowercase();
+    item.match_indices(&alias).any(|(start, _)| {
+        let end = start + alias.len();
+        let left_ok = item[..start]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !c.is_ascii_alphanumeric());
+        let right_ok = item[end..]
+            .chars()
+            .next()
+            .is_none_or(|c| !c.is_ascii_alphanumeric());
+        left_ok && right_ok
+    })
+}
+
 /// Return the "stem" of `file_name` trimmed at the first [`FILENAME_SEPARATORS`] character.
 ///
 /// For example, `mytool-1.0.0-linux-x86_64` becomes `mytool`. Trailing ASCII
@@ -190,6 +213,36 @@ pub fn find_similar_repo(data_dir: &Path, target_repo: &str) -> Option<String> {
     let similar_repos: Vec<String> = find_similar_repos(data_dir, target_repo);
     // Return only the top entry as a string
     similar_repos.into_iter().next()
+}
+
+/// Returns `true` if `item` is a checksum file.
+pub fn is_checksum_file(item: &str) -> bool {
+    let item = item.to_lowercase();
+    item == "checksum.txt"
+        || item == "checksums.txt"
+        || item.ends_with(".sha256")
+        || item.ends_with(".sha256sum")
+        || item.ends_with(".sha1")
+        || item.ends_with(".sha1sum")
+        || item.ends_with(".md5")
+        || item.ends_with(".md5sum")
+        || item.ends_with(".sha512")
+        || item.ends_with(".sha512sum")
+        || item.ends_with(".crc32")
+        || item.ends_with(".crc64")
+        || item.ends_with(".crc")
+        || item.ends_with(".sfv")
+}
+
+/// Returns `true` if `item` is a signature file.
+pub fn is_signature_file(item: &str) -> bool {
+    let item = item.to_lowercase();
+    item.ends_with(".asc")
+        || item.ends_with(".sig")
+        || item.ends_with(".pem")
+        || item.ends_with(".minisign")
+        || item.ends_with(".pgp")
+        || item.ends_with(".gpg")
 }
 
 #[cfg(test)]
