@@ -113,7 +113,11 @@ pub fn clean_up_filename(filename: &str, to_remove: Vec<String>) -> String {
 
 /// Returns `true` if `item` contains the alias token, ignoring case,
 /// and having it surrounded by non-alphanumeric characters.
+/// Returns `false` if any of the two parameters is empty.
 pub fn contains_alias_token(item: &str, alias: &str) -> bool {
+    if item.is_empty() || alias.is_empty() {
+        return false;
+    }
     let item = item.to_lowercase();
     let alias = alias.to_lowercase();
     item.match_indices(&alias).any(|(start, _)| {
