@@ -164,15 +164,14 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // Check if this OS matches our current OS.
     // matching_os will hold the matched alias among the values that matched.
     // Aliases are retrieved from OPERATING_SYSTEM using t.get_os() as the key.
-    let matching_os: Option<String> =
-        os_aliases
-            .iter()
-            .find(|alias| item.contains(*alias))
-            .map(|alias| {
-                score += 5;
-                alias.to_string()
-            });
+    let matching_os: Option<String> = os_aliases
+        .iter()
+        .find(|alias| item.contains(*alias))
+        .map(|alias| alias.to_string());
     let found_os: bool = matching_os.is_some();
+    if found_os {
+        score += 5;
+    }
 
     // CPU_ARCH
     // current_arch is the architecture from the AssetTriple.
@@ -198,24 +197,20 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // Aliases are retrieved from CPU_ARCH using current_arch as the key.
     // If a match is found, matching_arch holds the matched alias;
     // otherwise it stays "unknown".
-    let mut num_aliases = arch_aliases.len();
-    let matching_arch: Option<String> = arch_aliases
+    let matching_arch: Option<(usize, String)> = arch_aliases
         .iter()
-        .find(|alias| {
-            // We iterate over the aliases in reverse order to give more priority to
-            // the more specific aliases.
-            num_aliases -= 1;
-            item.contains(*alias)
-        })
-        .map(|alias| {
+        .enumerate()
+        .find(|(_, alias)| item.contains(*alias))
+        .map(|(idx, alias)| {
             // We also add a base 5 points bonus in case of a match, like for OS matching.
             // Then we add the number of aliases remaining to the score to give more priority
             // to the earlier aliases in the array.
             // This is to avoid false positives for assets that have multiple options for
             // the same architecture, e.g. armv7, armv6 and armhf when running on armv7.
-            score = score + 5 + (num_aliases as i32);
-            alias.to_string()
+            score = score + 5 + (arch_aliases.len() - idx) as i32;
+            (idx, alias.to_string())
         });
+    let matching_arch: Option<String> = matching_arch.map(|(_, s)| s);
     let found_arch: bool = matching_arch.is_some();
 
     // ADDITIONAL CHECKS
