@@ -252,6 +252,18 @@ mod tests {
     }
 
     #[test]
+    fn test_linux_ppc64le_unarchived_binary() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/direnv@direnv.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let platform_triple = AssetTriple::new("linux".to_string(), "powerpc64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
+        assert!(binaries[0].contains("direnv.linux-ppc64le"));
+    }
+
+    #[test]
     fn test_linux_armv7_with_armv6_glibc_asset() {
         let assets: Vec<String> =
             ron::from_str(include_str!("assets/jesseduffield@lazygit.ron")).unwrap();
@@ -443,5 +455,41 @@ mod tests {
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
         assert!(binaries[0].contains("fantarepo_ends_in_os_v1.0.0_arm64.darwin"));
+    }
+
+    #[test]
+    fn test_linux_x86_64_multiple_assets() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/ahmetb@kubectx.ron")).unwrap();
+        let platform_triple = AssetTriple::new("linux".to_string(), "x86_64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&assets, &platform_triple, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 2);
+        assert!(binaries[0].contains("kubectx_v0.9.5_linux_x86_64.tar.gz"));
+        assert!(binaries[1].contains("kubens_v0.9.5_linux_x86_64.tar.gz"));
+    }
+
+    #[test]
+    fn test_linux_armv7_multiple_assets() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/ahmetb@kubectx.ron")).unwrap();
+        let platform_triple = AssetTriple::new("linux".to_string(), "arm".to_string(), false);
+        let binaries = get_triple_compatible_assets(&assets, &platform_triple, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 2);
+        assert!(binaries[0].contains("kubectx_v0.9.5_linux_armv7.tar.gz"));
+        assert!(binaries[1].contains("kubens_v0.9.5_linux_armv7.tar.gz"));
+    }
+
+    #[test]
+    fn test_linux_arm64_many_extensions_one_match() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/muesli@duf.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let platform_triple = AssetTriple::new("linux".to_string(), "aarch64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(!binaries.is_empty() && binaries.len() == 1);
+        assert!(binaries[0].contains("duf_0.9.1_linux_arm64.tar.gz"));
     }
 }
