@@ -291,6 +291,10 @@ jobs:
             --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
             --region auto || true
 
+      - name: Sign RPM packages
+        run: |
+          find downloaded-packages/rpm/ -name "*.rpm" -print0 | xargs -0 --no-run-if-empty rpm --addsign
+
       - name: Organize RPMs into distribution directories
         run: |
           for dist in el8 el9 amzn2 amzn2023; do
@@ -301,10 +305,6 @@ jobs:
               done
             done
           done
-
-      - name: Sign RPM packages
-        run: |
-          find downloaded-packages/rpm/ -name "*.rpm" -print0 | xargs -0 --no-run-if-empty rpm --addsign
 
       - name: Generate YUM repository metadata
         run: |
