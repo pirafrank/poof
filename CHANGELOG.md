@@ -2,6 +2,59 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.6.1] - 2026-03-04
+
+### 🚀 Features
+
+- Dockerfile for one-off test of `poof`
+- Support optional slug in `list` command (#165)
+- Show url to release in version info
+- Support zstd format (#174)
+- Poof as Github action
+- Poof as devcontainer feature
+- Macports support as installation method (#177)
+- Docs improvements (#176)
+- Nix support (#179)
+- Support distros from the last 10 years in apt and yum/dnf repos (#180)
+- Support binaries with arch or OS as extension (#183)
+
+### 🐛 Bug Fixes
+
+- Changed `which` implementation to work after running `unlink` (#172)
+- Proper exit codes for warning and error case (#173)
+- Improved selection and handling of binaries across platforms (#181)
+
+### 🚜 Refactor
+
+- Rename test files for better readability
+- Move tests to own files for clarity
+
+### 📚 Documentation
+
+- Automated devcontainer feature documentation update (#175)
+
+### 🔧 Setup & Quality
+
+- Poof test pipeline
+- Change trigger for crates.io publish
+- Updated triggers and added Nix checks pipeline
+- .deb and .rpm release pipeline
+- Make apt/yum packages pipeline idempotent
+
+### ⚙️ Miscellaneous Tasks
+
+- Added tools for AUR asset generation
+- New logo
+- Bump MSRV to 1.88 (up from 1.85) and add verification pipeline
+- Renamed workflows files
+- Removed AUR packaging scripts (now handled by AURA)
+- Avoid running pre-push checks when not needed
+- Ignore github tokens in Cursor IDE
+- AUR readme and typo fixes
+- Cargo update (#182)
+- Added readme to devcontainer test dir
+- Update tag matching rule in git-cliff
+
 ## [0.6.0] - 2026-02-04
 
 ### 🚀 Features
