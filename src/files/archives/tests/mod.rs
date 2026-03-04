@@ -1,3 +1,3 @@
 pub mod common;
-pub mod extract_to_dir;
-pub mod validate_magic_bytes;
+pub mod test_extract_to_dir;
+pub mod test_validate_magic_bytes;

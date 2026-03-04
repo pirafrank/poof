@@ -1,9 +1,9 @@
-pub mod clean_up_filename_test;
-pub mod find_similar_repos;
-pub mod get_file_extension;
-pub mod get_file_name;
-pub mod get_stem_name_trimmed_at_first_separator;
-pub mod strip_supported_extensions;
+pub mod test_clean_up_filename;
 pub mod test_contains_alias_token;
+pub mod test_find_similar_repos;
+pub mod test_get_file_extension;
+pub mod test_get_file_name;
+pub mod test_get_stem_name_trimmed_at_first_separator;
 pub mod test_is_checksum_file;
 pub mod test_is_signature_file;
+pub mod test_strip_supported_extensions;
