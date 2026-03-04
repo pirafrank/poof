@@ -398,7 +398,7 @@ mod tests {
     }
 
     #[test]
-    fn test_linux_x86_64_os_label_as_extension() {
+    fn test_linux_x86_64_arch_label_as_extension() {
         let assets: Vec<String> =
             ron::from_str(include_str!("assets/vitor-mariano@regex-tui.ron")).unwrap();
         let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
@@ -410,7 +410,7 @@ mod tests {
     }
 
     #[test]
-    fn test_macos_arm64_os_label_as_extension() {
+    fn test_macos_arm64_arch_label_as_extension() {
         let assets: Vec<String> =
             ron::from_str(include_str!("assets/vitor-mariano@regex-tui.ron")).unwrap();
         let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
@@ -419,5 +419,29 @@ mod tests {
         assert!(binaries.is_some());
         let binaries = binaries.unwrap();
         assert!(binaries[0].contains("regex-tui_v0.7.0_darwin.arm64"));
+    }
+
+    #[test]
+    fn test_linux_x86_64_os_label_as_extension() {
+        let assets: Vec<String> =
+            ron::from_str(include_str!("assets/fantauser@fantarepo_ends_in_os.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let platform_triple = AssetTriple::new("linux".to_string(), "x86_64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("fantarepo_ends_in_os_v1.0.0_amd64.linux"));
+    }
+
+    #[test]
+    fn test_macos_arm64_os_label_as_extension() {
+        let assets: Vec<String> =
+            ron::from_str(include_str!("assets/fantauser@fantarepo_ends_in_os.ron")).unwrap();
+        let asset_refs: Vec<&str> = assets.iter().map(|s| s.as_str()).collect();
+        let platform_triple = AssetTriple::new("macos".to_string(), "aarch64".to_string(), false);
+        let binaries = get_triple_compatible_assets(&asset_refs, &platform_triple, |asset| asset);
+        assert!(binaries.is_some());
+        let binaries = binaries.unwrap();
+        assert!(binaries[0].contains("fantarepo_ends_in_os_v1.0.0_arm64.darwin"));
     }
 }
