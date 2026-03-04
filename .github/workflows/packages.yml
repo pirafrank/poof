@@ -212,11 +212,13 @@ jobs:
           cat > apt/conf/distributions << EOF
           Origin: ${APP_NAME}
           Label: ${APP_NAME}
+          Suite: stable
           Codename: stable
           Architectures: amd64 arm64
           Components: main
           Description: ${APP_NAME} apt package repository
           SignWith: ${{ secrets.GPG_KEY_ID }}
+          Limit: 0
           EOF
 
       - name: Add .deb packages to repository
