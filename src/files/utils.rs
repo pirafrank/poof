@@ -111,6 +111,25 @@ pub fn clean_up_filename(filename: &str, to_remove: Vec<String>) -> String {
     result
 }
 
+/// Returns `true` if `item` contains the alias token, ignoring case,
+/// and having it surrounded by non-alphanumeric characters.
+pub fn contains_alias_token(item: &str, alias: &str) -> bool {
+    let item = item.to_lowercase();
+    let alias = alias.to_lowercase();
+    item.match_indices(&alias).any(|(start, _)| {
+        let end = start + alias.len();
+        let left_ok = item[..start]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !c.is_ascii_alphanumeric());
+        let right_ok = item[end..]
+            .chars()
+            .next()
+            .is_none_or(|c| !c.is_ascii_alphanumeric());
+        left_ok && right_ok
+    })
+}
+
 /// Return the "stem" of `file_name` trimmed at the first [`FILENAME_SEPARATORS`] character.
 ///
 /// For example, `mytool-1.0.0-linux-x86_64` becomes `mytool`. Trailing ASCII

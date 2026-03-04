@@ -1,4 +1,4 @@
-use crate::models::asset_triple::AssetTriple;
+use crate::{files::utils::contains_alias_token, models::asset_triple::AssetTriple};
 use lazy_static::lazy_static;
 use std::{cmp::max, collections::HashMap};
 
@@ -20,7 +20,7 @@ lazy_static! {
 lazy_static! {
     static ref CPU_ARCH: HashMap<&'static str, Vec<&'static str>> = {
         let mut m = HashMap::new();
-        m.insert("x86", vec!["x86", "386", "586", "686", "32-bit"]);
+        m.insert("x86", vec!["x86", "i386", "i586", "i686", "386", "586", "686", "32-bit"]);
         m.insert("x86_64", vec!["x86_64", "x86-64", "x64", "amd64"]);
         // order matters here, from more specific to less specific
         // arm assets will run on any armv7 device the armv7 poof build target runs on.
@@ -137,6 +137,13 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // OPERATING_SYSTEM and CPU_ARCH are lowercase in the code above.
     let item = input.to_lowercase();
 
+    // AVOID CHECKSUMS AND SIGNATURE FILES
+    // Avoid checksum files and signature files as false positive binary assets.
+    // we discard it by returning -1 as deal-breaker.
+    if is_checksum_file(&item) || is_signature_file(&item) {
+        return -1;
+    }
+
     // current_os is the operating system from the AssetTriple.
     // AssetTriple defaults to the operating system poof is running on.
     let current_os = t.get_os().as_str();
@@ -166,7 +173,7 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // Aliases are retrieved from OPERATING_SYSTEM using t.get_os() as the key.
     let matching_os: Option<String> = os_aliases
         .iter()
-        .find(|alias| item.contains(*alias))
+        .find(|alias| contains_alias_token(&item, alias))
         .map(|alias| alias.to_string());
     let found_os: bool = matching_os.is_some();
     if found_os {
@@ -200,7 +207,7 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     let matching_arch: Option<(usize, String)> = arch_aliases
         .iter()
         .enumerate()
-        .find(|(_, alias)| item.contains(*alias))
+        .find(|(_, alias)| contains_alias_token(&item, alias))
         .map(|(idx, alias)| {
             // We also add a base 5 points bonus in case of a match, like for OS matching.
             // Then we add the number of aliases remaining to the score to give more priority
@@ -231,6 +238,10 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     if !item.contains(".") {
         // if the executable name does not contain a dot, it does not have an extension,
         // so it's likely a compatible non-archived executable. we give it a lower bonus point.
+        // keep no-extension support, but require some platform signal
+        if !(found_os || found_arch) {
+            return -1;
+        }
         score += 2;
     } else if found_arch && item.ends_with(matching_arch.as_ref().unwrap()) {
         // if the executable name ends with the matching architecture, we give it a lower bonus point.
@@ -251,39 +262,6 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     } else {
         // if none of the above conditions are met, it's likely not a meaningful binary asset.
         // we discard it by returning -1 as deal-breaker.
-        return -1;
-    }
-
-    // THINGS TO AVOID
-    // Avoid checksum files as false positive binary assets.
-    // if the asset name contains .sha256 or .sha1 or .md5, it's likely not a real asset,
-    // it's a checksum file. we discard it by returning -1 as deal-breaker.
-    if item.ends_with(".sha256")
-        || item.ends_with(".sha256sum")
-        || item.ends_with(".sha1")
-        || item.ends_with(".sha1sum")
-        || item.ends_with(".md5")
-        || item.ends_with(".md5sum")
-        || item.ends_with(".sha512")
-        || item.ends_with(".sha512sum")
-        || item.ends_with(".crc32")
-        || item.ends_with(".crc64")
-        || item.ends_with(".crc")
-        || item.ends_with(".sfv")
-    {
-        return -1;
-    }
-
-    // Avoid signature files as false positive binary assets.
-    // if the asset name contains what is usually a signature file extension,
-    // it's likely not a real asset. we discard it by returning -1 as deal-breaker.
-    if item.ends_with(".asc")
-        || item.ends_with(".sig")
-        || item.ends_with(".pem")
-        || item.ends_with(".minisign")
-        || item.ends_with(".pgp")
-        || item.ends_with(".gpg")
-    {
         return -1;
     }
 
@@ -321,6 +299,36 @@ pub fn platforms_strings() -> Vec<String> {
     s.extend(arch_aliases.iter().map(|alias| alias.to_string()));
     s.extend(os_aliases.iter().map(|alias| alias.to_string()));
     s
+}
+
+/// Returns `true` if `item` is a checksum file.
+fn is_checksum_file(item: &str) -> bool {
+    let item = item.to_lowercase();
+    item == "checksum.txt"
+        || item == "checksums.txt"
+        || item.ends_with(".sha256")
+        || item.ends_with(".sha256sum")
+        || item.ends_with(".sha1")
+        || item.ends_with(".sha1sum")
+        || item.ends_with(".md5")
+        || item.ends_with(".md5sum")
+        || item.ends_with(".sha512")
+        || item.ends_with(".sha512sum")
+        || item.ends_with(".crc32")
+        || item.ends_with(".crc64")
+        || item.ends_with(".crc")
+        || item.ends_with(".sfv")
+}
+
+/// Returns `true` if `item` is a signature file.
+fn is_signature_file(item: &str) -> bool {
+    let item = item.to_lowercase();
+    item.ends_with(".asc")
+        || item.ends_with(".sig")
+        || item.ends_with(".pem")
+        || item.ends_with(".minisign")
+        || item.ends_with(".pgp")
+        || item.ends_with(".gpg")
 }
 
 #[cfg(test)]
