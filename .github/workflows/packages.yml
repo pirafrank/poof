@@ -65,6 +65,16 @@ jobs:
           - arch: arm64
             target: aarch64-unknown-linux-gnu
             rpm_arch: aarch64
+          - arch: armhf
+            target: armv7-unknown-linux-gnueabihf
+            apt_only: true
+          - arch: i386
+            target: i686-unknown-linux-gnu
+            apt_only: true
+          - arch: riscv64
+            target: riscv64gc-unknown-linux-gnu
+            apt_only: true
+            glibc_max: "2.35"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -103,7 +113,7 @@ jobs:
           #   - RHEL 9 (centos stream 9), which has glibc 2.34
           #   - Amazon Linux 2, which has glibc 2.26
           #   - Amazon Linux 2023, which has glibc 2.34
-          GLIBC_MAX=${{ env.GLIBC_MAX }}
+          GLIBC_MAX=${{ matrix.glibc_max || env.GLIBC_MAX }}
 
           GLIBC_ACTUAL=$(just glibc "binary/${APP_NAME}")
           echo "Binary glibc requirement: ${GLIBC_ACTUAL}"
@@ -142,6 +152,7 @@ jobs:
             "binary/${APP_NAME}=/usr/local/bin/${APP_NAME}"
 
       - name: Build .rpm packages
+        if: ${{ !matrix.apt_only }}
         env:
           APP_NAME: ${{ needs.checks.outputs.APP_NAME }}
           APP_VERSION: ${{ needs.checks.outputs.APP_VERSION }}
@@ -223,7 +234,7 @@ jobs:
           Label: ${APP_NAME}
           Suite: stable
           Codename: stable
-          Architectures: amd64 arm64
+          Architectures: amd64 arm64 armhf i386 riscv64
           Components: main
           Description: ${APP_NAME} apt package repository
           SignWith: ${{ secrets.GPG_KEY_ID }}
