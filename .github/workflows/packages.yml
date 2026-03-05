@@ -181,10 +181,19 @@ jobs:
           path: downloaded-packages
           merge-multiple: true
 
-      - name: Install reprepro
+      - name: Install reprepro (multiple-versions fork)
         run: |
           sudo apt-get update
-          sudo apt-get install -y reprepro
+          sudo apt-get install -y \
+            build-essential autoconf automake gettext \
+            libdb-dev libbz2-dev libarchive-dev libgpgme-dev liblzma-dev zlib1g-dev
+          git clone --depth=1 --branch multiple-versions-debian \
+            https://github.com/ionos-cloud/reprepro.git /tmp/reprepro
+          cd /tmp/reprepro
+          autoreconf -fi
+          ./configure
+          make -j"$(nproc)"
+          sudo make install
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
