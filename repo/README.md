@@ -3,9 +3,15 @@
 poof is available via native package managers for Debian/Ubuntu-based systems (APT)
 and Red Hat-based systems (DNF/YUM).
 
-Packages are built for **amd64** and **arm64** architectures.
-
 ## Debian and Ubuntu (APT)
+
+Supported architectures:
+
+- `amd64` (`x86_64`)
+- `arm64` (`aarch64`)
+- `armhf` (`armv7`)
+- `i386` (`i686`)
+- `riscv64` (`riscv64gc`)
 
 Supported distributions:
 
@@ -38,6 +44,11 @@ sudo apt update
 ```
 
 ## Fedora, RHEL, CentOS, Amazon Linux (DNF/YUM)
+
+Supported architectures:
+
+- `x86_64`
+- `aarch64`
 
 Supported distributions:
 
