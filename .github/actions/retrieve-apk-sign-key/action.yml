@@ -1,0 +1,39 @@
+name: Retrieve APK Signing Key
+description: Fetch the APK RSA signing key from Bitwarden Secrets Manager and convert it to PEM format
+inputs:
+  bws_access_token:
+    description: Bitwarden Secrets Manager access token
+    required: true
+  bw_apk_key_secret_id:
+    description: UUID of the APK RSA signing key secret in Bitwarden Secrets Manager
+    required: true
+  apk_key_name:
+    description: Public key filename (e.g. signing-key.rsa.pub); private key is derived by stripping the .pub suffix
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Retrieve and convert APK signing key
+      shell: bash
+      env:
+        BWS_ACCESS_TOKEN: ${{ inputs.bws_access_token }}
+        BW_APK_KEY_SECRET_ID: ${{ inputs.bw_apk_key_secret_id }}
+        APK_KEY_NAME: ${{ inputs.apk_key_name }}
+      run: |
+        mkdir -p apk-keys
+        # Name the private key file after the public key name without the .pub suffix,
+        # so abuild-sign embeds the correct key ID in each package signature.
+        PRIVATE_KEY_NAME="${APK_KEY_NAME%.pub}"
+        # Read private key from BWS and convert to PEM format
+        bws secret get "${BW_APK_KEY_SECRET_ID}" \
+          --server-url "https://vault.bitwarden.eu" \
+          -o json \
+          | jq -r '.value' > "apk-keys/${PRIVATE_KEY_NAME}"
+        # Set permissions to 600 to satisfy ssh-keygen requirements
+        chmod 600 "apk-keys/${PRIVATE_KEY_NAME}"
+        # Convert the private key to PEM format in place
+        ssh-keygen -p -m PEM -f "apk-keys/${PRIVATE_KEY_NAME}" -N ""
+        # Derive the public key file - abuild-sign requires <privkey>.pub alongside the private key
+        openssl rsa -in "apk-keys/${PRIVATE_KEY_NAME}" -pubout -out "apk-keys/${APK_KEY_NAME}"
+        # Set permissions back to 644 so the non-root packager user inside the Docker container can read both keys
+        chmod 644 "apk-keys/${PRIVATE_KEY_NAME}" "apk-keys/${APK_KEY_NAME}"

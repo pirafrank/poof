@@ -1,11 +1,14 @@
-# APT/YUM package repositories
+# APT/YUM/APK package repositories
 
-poof is available via native package managers for Debian/Ubuntu-based systems (APT)
-and Red Hat-based systems (DNF/YUM).
+poof is available via native package managers for popular Linux distributions:
+
+[Debian/Ubuntu-based systems (APT)](#debian-and-ubuntu-apt) |
+[Red Hat-based systems (DNF/YUM)](#fedora-rhel-centos-amazon-linux) |
+[Alpine Linux (APK)](#alpine-linux-apk)
 
 ## Debian and Ubuntu (APT)
 
-Supported architectures:
+### Supported architectures
 
 - `amd64` (`x86_64`)
 - `arm64` (`aarch64`)
@@ -13,12 +16,12 @@ Supported architectures:
 - `i386` (`i686`)
 - `riscv64` (`riscv64gc`)
 
-Supported distributions:
+### Supported distributions
 
 - Debian 9 (stretch) and newer
 - Ubuntu 16.04 (xenial) and newer
 
-## Install
+### Install
 
 ```sh
 curl -fsSL https://poof-pkgs.fpira.com/apt/gpg.pub \
@@ -43,14 +46,14 @@ sudo rm /etc/apt/sources.list.d/poof.list /usr/share/keyrings/poof.gpg
 sudo apt update
 ```
 
-## Fedora, RHEL, CentOS, Amazon Linux (DNF/YUM)
+## Fedora, RHEL, CentOS, Amazon Linux
 
-Supported architectures:
+### Supported architectures
 
 - `x86_64`
 - `aarch64`
 
-Supported distributions:
+### Supported distributions
 
 - Fedora 24 and newer
 - RHEL 8 / CentOS 8 / CentOS Stream 8
@@ -133,4 +136,50 @@ To also remove the repository:
 
 ```sh
 sudo rm /etc/yum.repos.d/poof.repo
+```
+
+## Alpine Linux (APK)
+
+### Supported architectures
+
+- `x86_64`
+- `aarch64`
+- `armv7`
+- `riscv64`
+
+### Supported versions
+
+We support the latest four stable Alpine in the repository.
+
+- Alpine 3.23
+- Alpine 3.22
+- Alpine 3.21
+- Alpine 3.20
+
+You can always use other install methods (e.g. install script, or manual download
+from [releases](https://github.com/pirafrank/poof/releases/latest)) to bring musl
+builds to older Alpine versions.
+
+### Install
+
+```sh
+wget -q -O /etc/apk/keys/signing-key.rsa.pub \
+  https://poof-pkgs.fpira.com/apk/signing-key.rsa.pub
+ALPINE_VERSION=$(cat /etc/alpine-release | cut -d. -f1,2)
+echo "https://poof-pkgs.fpira.com/apk/v${ALPINE_VERSION}" \
+  >> /etc/apk/repositories
+apk update && apk add poof
+```
+
+### Uninstall
+
+```sh
+apk del poof
+```
+
+To also remove the repository:
+
+```sh
+sed -i '/poof-pkgs\.fpira\.com\/apk/d' /etc/apk/repositories
+rm -f /etc/apk/keys/signing-key.rsa.pub
 ```

@@ -4,7 +4,6 @@ run-name: APK repository for ${{ github.event_name == 'workflow_dispatch' && inp
 # Required secrets:
 #   BWS_ACCESS_TOKEN     - Bitwarden machine token for bws
 #   BW_APK_KEY_SECRET_ID - UUID of the APK RSA signing key in Bitwarden Secrets Manager
-#   APK_KEY_NAME         - APK public key filename in Alpine convention (e.g. dev@fpira.com-abcdef01.rsa.pub)
 #   R2_ACCESS_KEY_ID     - Cloudflare R2 access key
 #   R2_SECRET_ACCESS_KEY - Cloudflare R2 secret key
 #   R2_ACCOUNT_ID        - Cloudflare account ID
@@ -26,6 +25,9 @@ permissions:
 
 env:
   BIN_NAME: poof
+  APK_KEY_NAME: signing-key.rsa.pub
+  ALPINE_VERSIONS: "3.20 3.21 3.22 3.23"
+  APK_ARCHS: "x86_64 aarch64 armv7 riscv64"
 
 jobs:
   checks:
@@ -70,7 +72,7 @@ jobs:
           echo "matrix=$(grep -v '//' $MATRIX_FILE | jq -c '.')" >> "$GITHUB_OUTPUT"
 
   download_and_package:
-    name: Download and package (${{ matrix.alpine_tag }} / ${{ matrix.apk_arch }})
+    name: Download and package (v${{ matrix.alpine_version }} / ${{ matrix.apk_arch }})
     needs: [checks, make_matrix]
     runs-on: ubuntu-latest
     strategy:
@@ -96,29 +98,19 @@ jobs:
           tar -xzf downloads/${{ env.BIN_NAME }}-*-${{ matrix.target }}.tar.gz \
             -C binary/ "${{ env.BIN_NAME }}"
 
-      - name: Install poof and binaries
+      - name: Install poof and bws CLI
         uses: ./
         with:
           packages: |
-            bitwarden/sdk-sm -t "bws CLI v2.0.0"
+            bitwarden/sdk-sm@bws-v2.0.0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Retrieve and convert APK signing key
-        env:
-          BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
-          BW_APK_KEY_SECRET_ID: ${{ secrets.BW_APK_KEY_SECRET_ID }}
-          APK_KEY_NAME: ${{ secrets.APK_KEY_NAME }}
-        run: |
-          mkdir -p apk-keys
-          # Name the private key file after the public key name without the .pub suffix,
-          # so abuild-sign embeds the correct key ID in each package signature.
-          PRIVATE_KEY_NAME="${APK_KEY_NAME%.pub}"
-          bws secret get "${BW_APK_KEY_SECRET_ID}" -o json \
-            | jq -r '.value' \
-            | openssl pkey -in /dev/stdin -traditional \
-              -out "apk-keys/${PRIVATE_KEY_NAME}"
-          # 644 so the non-root packager user inside the Docker container can read it
-          chmod 644 "apk-keys/${PRIVATE_KEY_NAME}"
+        uses: ./.github/actions/retrieve-apk-sign-key
+        with:
+          bws_access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
+          bw_apk_key_secret_id: ${{ secrets.BW_APK_KEY_SECRET_ID }}
+          apk_key_name: ${{ env.APK_KEY_NAME }}
 
       - name: Build Docker image
         run: |
@@ -130,7 +122,7 @@ jobs:
       - name: Build .apk package
         env:
           APP_VERSION: ${{ needs.checks.outputs.APP_VERSION }}
-          APK_KEY_NAME: ${{ secrets.APK_KEY_NAME }}
+          APK_KEY_NAME: ${{ env.APK_KEY_NAME }}
         run: |
           mkdir -p packages/apk
           # Allow the non-root packager user inside the container to write to /output
@@ -189,8 +181,8 @@ jobs:
 
       - name: Organize packages into versioned arch directories
         run: |
-          for alpine_version in 3.20 3.21; do
-            for arch in x86_64 aarch64 armv7 ppc64le riscv64 s390x; do
+          for alpine_version in ${{ env.ALPINE_VERSIONS }}; do
+            for arch in ${{ env.APK_ARCHS }}; do
               mkdir -p "apk/v${alpine_version}/${arch}"
               artifact_dir="downloaded-packages/poof-apk-${alpine_version}-${arch}"
               if [ -d "${artifact_dir}" ]; then
@@ -200,40 +192,37 @@ jobs:
             done
           done
 
-      - name: Install poof and binaries
+      - name: Install poof and bws CLI
         uses: ./
         with:
           packages: |
-            bitwarden/sdk-sm -t "bws CLI v2.0.0"
+            bitwarden/sdk-sm@bws-v2.0.0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Retrieve and convert APK signing key
-        env:
-          BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
-          BW_APK_KEY_SECRET_ID: ${{ secrets.BW_APK_KEY_SECRET_ID }}
-          APK_KEY_NAME: ${{ secrets.APK_KEY_NAME }}
-        run: |
-          mkdir -p apk-keys
-          PRIVATE_KEY_NAME="${APK_KEY_NAME%.pub}"
-          bws secret get "${BW_APK_KEY_SECRET_ID}" -o json \
-            | jq -r '.value' \
-            | openssl pkey -in /dev/stdin -traditional \
-              -out "apk-keys/${PRIVATE_KEY_NAME}"
-          chmod 600 "apk-keys/${PRIVATE_KEY_NAME}"
+        uses: ./.github/actions/retrieve-apk-sign-key
+        with:
+          bws_access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
+          bw_apk_key_secret_id: ${{ secrets.BW_APK_KEY_SECRET_ID }}
+          apk_key_name: ${{ env.APK_KEY_NAME }}
 
       - name: Create APKINDEX and sign
         env:
-          APK_KEY_NAME: ${{ secrets.APK_KEY_NAME }}
+          APK_KEY_NAME: ${{ env.APK_KEY_NAME }}
         run: |
-          for alpine_version in 3.20 3.21; do
+          for alpine_version in ${{ env.ALPINE_VERSIONS }}; do
             docker run --rm \
               -v "$(pwd)/apk/v${alpine_version}:/apk:rw" \
               -v "$(pwd)/apk-keys:/apk-keys:ro" \
               -e APK_KEY_NAME="${APK_KEY_NAME}" \
               alpine:${alpine_version} sh -c '
+                set -e
                 apk add --no-cache abuild
                 PRIVATE_KEY_NAME="${APK_KEY_NAME%.pub}"
-                for arch in x86_64 aarch64 armv7 ppc64le riscv64 s390x; do
+                # Install the public key into the system trust store so apk index
+                # can verify package signatures without reporting UNTRUSTED errors
+                cp "/apk-keys/${APK_KEY_NAME}" /etc/apk/keys/
+                for arch in ${{ env.APK_ARCHS }}; do
                   dir="/apk/${arch}"
                   if [ -d "${dir}" ] && ls "${dir}"/*.apk >/dev/null 2>&1; then
                     apk index \
@@ -250,7 +239,7 @@ jobs:
 
       - name: Export APK public key
         env:
-          APK_KEY_NAME: ${{ secrets.APK_KEY_NAME }}
+          APK_KEY_NAME: ${{ env.APK_KEY_NAME }}
         run: |
           PRIVATE_KEY_NAME="${APK_KEY_NAME%.pub}"
           openssl rsa -in "apk-keys/${PRIVATE_KEY_NAME}" -pubout > "apk/${APK_KEY_NAME}"

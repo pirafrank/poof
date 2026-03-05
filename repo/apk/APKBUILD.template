@@ -6,8 +6,8 @@ pkgdesc="Easy to use zero-config, zero-install, zero-dependencies manager of pre
 url="https://github.com/pirafrank/poof"
 arch="@@ARCH@@"
 license="MIT"
-options="!check !strip"
+options="!check !strip !tracedeps"
 
 package() {
-	install -Dm755 /input/poof "$pkgdir/usr/local/bin/poof"
+	install -Dm755 /input/poof "$pkgdir/usr/bin/poof"
 }

@@ -5,11 +5,22 @@ packages for poof.
 
 ## Files
 
-| File | Description |
-|------|-------------|
-| `Dockerfile` | Alpine-based image used to build `.apk` packages. Accepts `ALPINE_VERSION` as a build arg (default: `3.21`). |
-| `entrypoint.sh` | Container entrypoint. Sets up the abuild signing key, fills in the `APKBUILD.template`, runs `abuild -F package`, and copies the output `.apk` to `/output/`. |
-| `APKBUILD.template` | Alpine package build script template. Placeholders (`@@PKGVER@@`, `@@PKGREL@@`, `@@ARCH@@`) are substituted at build time by `entrypoint.sh`. |
+- `Dockerfile`: Alpine-based image used to build `.apk` packages.
+  It accepts `ALPINE_VERSION` as a build arg (default: `3.21`).
+- `entrypoint.sh`: Container entrypoint. Sets up the abuild signing key,
+  fills in the `APKBUILD.template`, runs `abuild -F package`, and copies
+  the output `.apk` to `/output/`.
+- `APKBUILD.template`: Alpine package build script template. Placeholders
+  (`@@PKGVER@@`, `@@PKGREL@@`, `@@ARCH@@`) are substituted at build time by
+  `entrypoint.sh`.
+
+## Variables
+
+In [apk_matrix.jsonc](./apk_matrix.jsonc) matrix file and in [apk.yml](../../.github/workflows/apk.yml)
+workflow file:
+
+- `alpine_version`s  should match with `ALPINE_VERSIONS`
+- `alpine_arch`s should match with `APK_ARCHS`
 
 ## Build workflow
 

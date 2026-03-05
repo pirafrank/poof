@@ -29,6 +29,10 @@ mkdir -p ~/.abuild
 echo "PACKAGER_PRIVKEY=\"${KEY_FILE}\"" > ~/.abuild/abuild.conf
 chmod 600 ~/.abuild/abuild.conf
 
+# Install public key into the system trust store so apk can verify
+# signatures when abuild creates the local repository index
+cp "${KEY_FILE}.pub" /etc/apk/keys/
+
 # Build the aports-style source directory:
 #   ~/src/<repo_name>/<pkgname>/APKBUILD
 # abuild derives the repo name from the parent directory name.
@@ -43,10 +47,10 @@ sed \
     -e "s/@@ARCH@@/${ARCH}/g" \
     /apkbuild/APKBUILD.template > "${PKG_DIR}/APKBUILD"
 
-# Run abuild — skips fetch/unpack since source= is empty;
+# Run abuild - skips fetch/unpack since source= is empty;
 # package() installs the binary directly from /input/<pkgname>.
 cd "${PKG_DIR}"
-abuild -F package
+abuild -F
 
 # Locate and copy the produced .apk to /output/
 find ~/packages -name "*.apk" -exec cp {} /output/ \;

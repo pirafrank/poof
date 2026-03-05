@@ -215,19 +215,19 @@ emit_head() {
     }
 
     .pkg-section h2 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 24px;
+    }
+
+    .pkg-section h3 {
       font-size: 1.15rem;
       font-weight: 600;
       letter-spacing: 0.03em;
       color: var(--text-muted);
       text-transform: uppercase;
       margin-bottom: 16px;
-    }
-
-    .pkg-section h3 {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text);
-      margin: 24px 0 10px;
     }
 
     .pkg-section p {
