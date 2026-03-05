@@ -17,9 +17,11 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 </div>
 
-Easy-to-use package manager in one-binary. No manifests, formulae, or repositories required.
+Easy-to-use package manager in one-binary. No manifests, formulae, or
+repositories required.
 
-You just run `poof install someuser/somerepo` and... *poof!* it is installed and available in your shell.
+You just run `poof install someuser/somerepo` and... *poof!* it is installed
+and available in your shell.
 
 > *"poof-poof"*
 >
@@ -29,59 +31,86 @@ You just run `poof install someuser/somerepo` and... *poof!* it is installed and
 >
 > What poof thinks of itself
 
-For more information read below or check the documentation. Got an idea? Let's talk in Discussions!
+For more information read below or check the documentation. Got an idea?
+Let's talk in Discussions!
 
 [![Poof Documentation website](https://img.shields.io/badge/Poof-Documentation-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://poof.fpira.com/docs/intro)
 [![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=flat-square&logo=github&logoColor=white&color=blue)](https://github.com/pirafrank/poof/discussions)
 
 ## Features
 
-- **🚀 Easy to use**: Sensible commands that are easy to remember and type. Just run `poof help` to know more
-- **👤 User-space**: Designed to work in user-space and be portable. No root access needed to manage your tools
-- **🧠 Smart asset selection**: Automatically detects your OS, architecture, and libc (glibc vs musl) to download the right binary for your configuration. Supports multi-tool releases, multi-binary assets, mono-repos, and repositories not following Semantic Versioning
-- **📦 Archive format support**: Handles 10+ formats including ZIP, TAR, 7z, and all their compressed variants with magic number validation
-- **🔄 Version management**: Install multiple versions of the same tool side-by-side and switch between them instantly with `poof use`
-- **🧹 Clean management**: XDG-compliant directory structure with separate cache, data, and bin directories
-- **🔍 Helpful error handling**: Fuzzy matching for repository names catches typos, conflict detection warns about existing binaries, and error messages always provide context
+- **🚀 Easy to use**: Sensible commands that are easy to remember and type. Just
+  run `poof help` to know more
+- **👤 User-space**: Designed to work in user-space and be portable. No root
+  access needed to manage your tools
+- **🧠 Smart asset selection**: Automatically detects your OS, architecture, and
+  libc (glibc vs musl) to download the right binary for your configuration.
+  Supports multi-tool releases, multi-binary assets, mono-repos, and repositories
+  not following Semantic Versioning
+- **📦 Archive format support**: Handles 10+ formats including ZIP, TAR, 7z, and
+  all their compressed variants with magic number validation
+- **🔄 Version management**: Install multiple versions of the same tool
+  side-by-side and switch between them instantly with `poof use`
+- **🧹 Clean management**: XDG-compliant directory structure with separate cache,
+  data, and bin directories
+- **🔍 Helpful error handling**: Fuzzy matching for repository names catches typos,
+  conflict detection warns about existing binaries, and error messages always provide
+  context
 
 ### Core Philosophy
 
-- **📃 Zero-maintenance**: Maintainers don’t need to explictly support poof, users don't need to wait for maintainers to add their software to poof
-- **🛠️ Zero-config**: Use it straight away, no yaml, no TOML or other boring configuration
-- **📦 Zero-install**: One self-contained binary you just put in `PATH` and `rm` to uninstall
+- **📃 Zero-maintenance**: Maintainers don’t need to explictly support poof,
+  users don't need to wait for maintainers to add their software to poof
+- **🛠️ Zero-config**: Use it straight away, no yaml, no TOML or other boring
+  configuration
+- **📦 Zero-install**: One self-contained binary you just put in `PATH` and `rm`
+  to uninstall
 - **🔗 Zero-dependencies**: It runs standalone, no additional software needed
 
 ### Platform Support
 
 - **🌍 Cross-platform**: Works on Linux and macOS (FreeBSD support is planned)
-- **🏗️ Wide architecture support**: 8 architectures on Linux, and both Intel and Apple Silicon on macOS
-- **🐚 Shell integration**: Native support for 7 shells (bash, zsh, fish, elvish, nushell, powershell, xonsh) with auto-completions and one-command PATH setup
+- **🏗️ Wide architecture support**: 8 architectures on Linux, and both Intel and
+  Apple Silicon on macOS
+- **🐚 Shell integration**: Native support for 7 shells (bash, zsh, fish, elvish,
+  nushell, powershell, xonsh) with auto-completions and one-command PATH setup
 
 ### What's more?
 
-- **⚙️ Written in Rust**: Safe and fast binaries built on reliable dependencies, with linting and formatting applied at commit time
-- **0️⃣ Zero-versioned**: Because major versions are [a thing of the past](https://0ver.org/) (and *poof*, albeit magic, is baby).
+- **⚙️ Written in Rust**: Safe and fast binaries built on reliable dependencies,
+  with linting and formatting applied at commit time
+- **0️⃣ Zero-versioned**: Because major versions are
+  [a thing of the past](https://0ver.org/) (and *poof*, albeit magic, is baby).
 
 ## Why
 
-More and more often modern tools are built with languages like C/C++, Rust or Go, and offer pre-built binaries. But they aren't always available in standard package managers.
+More and more often modern tools are built with languages like C/C++, Rust or Go,
+and offer pre-built binaries. But they aren't always available in standard
+package managers.
 
 Here's where `poof` helps:
 
-- Get software instantly upon release: if it's on GitHub Releases, poof can install it
+- Get software instantly upon release: if it's on GitHub Releases, poof can
+  install it
 - Download and put in `$PATH` CLI and TUI programs with a single command
-- Install tools discovered on sites like [Terminal Trove](http://terminaltrove.com) easily
+- Install tools discovered on sites like [Terminal Trove](http://terminaltrove.com)
+  easily
 - Don't wait for your next favorite tool to be supported by maintainers or community
-- Test newer versions of tools before they reach official repositories without uninstalling your current version
+- Test newer versions of tools before they reach official repositories without
+  uninstalling your current version
 - Easily install multiple versions of the same tool and switch between them
-- Keep your system clean from unnecessary packages and dependencies installed via system package managers
-- Configure your CI/CD pipelines to use pre-built binaries without messing with additional requirements
+- Keep your system clean from unnecessary packages and dependencies installed via
+  system package managers
+- Configure your CI/CD pipelines to use pre-built binaries without messing with
+  additional requirements
 - Install software in sandboxed environments without root access
 
 ## Requirements
 
-- Linux or macOS released in the last 10 years, running on one of the supported architectures:
-  - Linux (`x86_64`, `aarch64`, `armv7l`, `i686`, `ppc64le`, `s390x`, `riscv64gc`, `loongarch64`)
+- Linux or macOS released in the last 10 years, running on one of the supported
+  architectures:
+  - Linux (`x86_64`, `aarch64`, `armv7l`, `i686`, `ppc64le`, `s390x`, `riscv64gc`,
+  `loongarch64`)
   - macOS (`x86_64`, `aarch64`)
 
 ## Quick start
@@ -92,7 +121,7 @@ Here's where `poof` helps:
     curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh
     ```
 
-    or via one of other [install methods](https://poof.fpira.com/docs/installation).
+    or via your distribution package managers. Check the [other ways to install](https://poof.fpira.com/docs/installation).
 
 2. Add poof's `bin` directory to `$PATH`:
 
@@ -118,22 +147,81 @@ poof help
 
 or read the [Usage](https://poof.fpira.com/docs/usage) page for additional information.
 
+## GitHub Action
+
+Easy add `poof` to a runner `PATH` and use it to quickly install software.
+
+It is available in the [Actions Marketplace](https://github.com/marketplace/actions/setup-poof).
+
+### Inputs
+
+- `packages` (required): a list of software to install in `USERNAME/REPO` format
+  with optional tag after `@` character. If no tag is specified, poof
+  automatically featches and installs the latest available from GitHub.
+- `token` (optional): GitHub token used for API requests inside poof to
+  avoid rate limiting or access private releases. Defaults to the workflow's
+  built-in `GITHUB_TOKEN`.
+- `version` (optional): version of poof itself to install.
+
+### Usage
+
+Install multiple software at once:
+
+```yaml
+- name: Setup poof and install packages
+  uses: pirafrank/poof@main
+  with:
+    packages: |
+      pirafrank/vault-conductor
+      ms-jpq/sad@v0.4.32
+```
+
+Or pin a specific version of poof itself:
+
+```yaml
+- name: Setup poof and install packages
+  uses: pirafrank/poof@main
+  with:
+    version: v0.6.0
+    packages: pirafrank/vault-conductor
+    token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## Devcontainer Feature
+
+Easy add `poof` to a devcontainer. It is available as a
+[devcontainer feature](https://containers.dev/features) on the
+GitHub Container Registry.
+
+```json
+"features": {
+    "ghcr.io/pirafrank/poof/poof:1": {}
+}
+```
+
+More info in the [devcontainer-feature README](./devcontainer-features/poof/README.md).
+
 ## About poof's `bin` directory
 
-`poof` installs binaries in its own data directory, then symlinks them to its bin directory.
+`poof` installs binaries in its own data directory, then symlinks them to its bin
+directory.
 
 You can run `poof info` at any time to know where it does store data.
 
-Having a dedicated directory for `poof` binaries is a good practice, as it allows to:
+Having a dedicated directory for `poof` binaries is a good practice, as it allows
+to:
 
 - keep them separate from other software installed on your system,
 - keep them away from paths the user may manually interact to (like `~/.local/bin`),
 - support multiple side-by-side versions of the same software for easy switch,
-- easily temporarily disable `poof` by removing its bin directory from your `$PATH` (read below).
+- easily temporarily disable `poof` by removing its bin directory from your `$PATH`
+  (read below).
 
 ## Disable
 
-poof's `bin` directory by default is added at the beginning of `$PATH` so that it takes precedence over any other version of same-named binary you may have installed other ways.
+poof's `bin` directory by default is added at the beginning of `$PATH` so that it
+takes precedence over any other version of same-named binary you may have installed
+other ways.
 
 If you want to halt this behavior, you can either:
 
@@ -150,21 +238,28 @@ Have a look at [our project goals](https://poof.fpira.com/docs/project-goals).
 
 ## Roadmap
 
-A list of features implemented and to implement is available [here](https://poof.fpira.com/docs/roadmap). The list is not final and may change over time.
+A list of features implemented and to implement is available [in the roadmap](https://poof.fpira.com/docs/roadmap).
+The list is not final and may change over time.
 
 ## Feature requests and Bug reporting
 
-Want to suggest a feature? Found a bug? Please [open an issue](https://github.com/pirafrank/poof/issues). Thank you!
+Want to suggest a feature? Found a bug? Please [open an issue](https://github.com/pirafrank/poof/issues).
+Thank you!
 
 ## Contributing
 
-Contributions are welcome! Please read the [Development](https://poof.fpira.com/docs/development-guide) page for information about how to build, and the [CONTRIBUTING](CONTRIBUTING.md) file for details on how to contribute to this project.
-Please make sure to follow the [code of conduct](CODE_OF_CONDUCT.md) when contributing. Thank you!
+Contributions are welcome! Please read the [Development](https://poof.fpira.com/docs/development-guide)
+page for information about how to build, and the [CONTRIBUTING](CONTRIBUTING.md)
+file for details on how to contribute to this project.
+Please make sure to follow the [code of conduct](CODE_OF_CONDUCT.md) when
+contributing. Thank you!
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md)
+file for details.
 
 ## Acknowledgements
 
-*poof* software is born out of a necessity of mine, yet its name is a tribute to the much more famous [poof](https://fairlyoddparents.fandom.com/wiki/Poof).
+*poof* software is born out of a necessity of mine, yet its name is a tribute to
+the much more famous [poof](https://fairlyoddparents.fandom.com/wiki/Poof).
