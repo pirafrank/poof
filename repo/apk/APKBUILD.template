@@ -1,0 +1,13 @@
+# Maintainer: Francesco Pira <dev@fpira.com>
+pkgname=poof
+pkgver=@@PKGVER@@
+pkgrel=@@PKGREL@@
+pkgdesc="Easy to use zero-config, zero-install, zero-dependencies manager of pre-built software that works like magic"
+url="https://github.com/pirafrank/poof"
+arch="@@ARCH@@"
+license="MIT"
+options="!check !strip"
+
+package() {
+	install -Dm755 /input/poof "$pkgdir/usr/local/bin/poof"
+}

@@ -1,0 +1,18 @@
+{
+  "include": [
+    // Alpine v3.20
+    { "apk_arch": "x86_64",  "target": "x86_64-unknown-linux-musl",      "alpine_version": "3.20", "alpine_tag": "v3.20" },
+    { "apk_arch": "aarch64", "target": "aarch64-unknown-linux-musl",      "alpine_version": "3.20", "alpine_tag": "v3.20" },
+    { "apk_arch": "armv7",   "target": "armv7-unknown-linux-musleabihf",  "alpine_version": "3.20", "alpine_tag": "v3.20" },
+    { "apk_arch": "ppc64le", "target": "powerpc64le-unknown-linux-gnu",   "alpine_version": "3.20", "alpine_tag": "v3.20" },
+    { "apk_arch": "riscv64", "target": "riscv64gc-unknown-linux-musl",    "alpine_version": "3.20", "alpine_tag": "v3.20" },
+    { "apk_arch": "s390x",   "target": "s390x-unknown-linux-gnu",         "alpine_version": "3.20", "alpine_tag": "v3.20" },
+    // Alpine v3.21
+    { "apk_arch": "x86_64",  "target": "x86_64-unknown-linux-musl",      "alpine_version": "3.21", "alpine_tag": "v3.21" },
+    { "apk_arch": "aarch64", "target": "aarch64-unknown-linux-musl",      "alpine_version": "3.21", "alpine_tag": "v3.21" },
+    { "apk_arch": "armv7",   "target": "armv7-unknown-linux-musleabihf",  "alpine_version": "3.21", "alpine_tag": "v3.21" },
+    { "apk_arch": "ppc64le", "target": "powerpc64le-unknown-linux-gnu",   "alpine_version": "3.21", "alpine_tag": "v3.21" },
+    { "apk_arch": "riscv64", "target": "riscv64gc-unknown-linux-musl",    "alpine_version": "3.21", "alpine_tag": "v3.21" },
+    { "apk_arch": "s390x",   "target": "s390x-unknown-linux-gnu",         "alpine_version": "3.21", "alpine_tag": "v3.21" }
+  ]
+}
