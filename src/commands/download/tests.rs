@@ -19,7 +19,7 @@ fn test_download_asset_success() -> Result<()> {
     let filename = "test-file.bin".to_string();
     let download_url = format!("{}/test-asset", server.url());
 
-    let result = download_asset(&filename, &download_url, &download_to)?;
+    let result = download_asset(&filename, &download_url, &download_to, None)?;
 
     assert!(result.exists());
     assert_eq!(result, download_to.join(&filename));
@@ -42,7 +42,7 @@ fn test_download_asset_http_error() -> Result<()> {
     let filename = "error-file.bin".to_string();
     let download_url = format!("{}/error-asset", server.url());
 
-    let result = download_asset(&filename, &download_url, &download_to);
+    let result = download_asset(&filename, &download_url, &download_to, None);
 
     assert!(result.is_err());
     let err_msg = result.unwrap_err().to_string();
@@ -60,7 +60,7 @@ fn test_download_asset_invalid_url() -> Result<()> {
     let filename = "invalid-url.bin".to_string();
     let download_url = "http://invalid.url.that.does.not.exist.local".to_string();
 
-    let result = download_asset(&filename, &download_url, &download_to);
+    let result = download_asset(&filename, &download_url, &download_to, None);
 
     assert!(result.is_err());
     assert!(result
@@ -95,7 +95,7 @@ fn test_download_asset_fs_error() -> Result<()> {
     let filename = "test-file.bin".to_string();
     let download_url = format!("{}/test-asset", server.url());
 
-    let result = download_asset(&filename, &download_url, &download_to);
+    let result = download_asset(&filename, &download_url, &download_to, None);
 
     // Cleanup permissions so tempdir can be deleted
     perms.set_mode(0o755);

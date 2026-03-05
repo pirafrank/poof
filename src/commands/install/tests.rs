@@ -970,6 +970,7 @@ mod select_assets_success_tests {
         let asset_name = "testrepo-darwin-aarch64";
 
         let download_url = format!("{}/releases/download/{}/{}", server.url(), tag, asset_name);
+        let api_url = format!("{}/repos/{}/releases/assets/1", server.url(), repo);
 
         let mock = server
             .mock("GET", format!("/{}/releases/latest", repo).as_str())
@@ -984,6 +985,7 @@ mod select_assets_success_tests {
                     "assets": [
                         {
                             "name": asset_name,
+                            "url": api_url,
                             "browser_download_url": download_url,
                             "content_type": "application/octet-stream",
                         }

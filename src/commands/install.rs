@@ -28,6 +28,11 @@ use crate::{
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
 
+/// Reads the `GITHUB_TOKEN` environment variable and returns it, or `None` if unset/empty.
+fn get_github_token() -> Option<String> {
+    std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty())
+}
+
 /// Download and install a GitHub release binary for `repo`.
 ///
 /// When `tag` is `None` the latest release is fetched. The function selects
@@ -59,6 +64,9 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         datadirs::get_cache_dir().context("Cannot determine cache directory")?;
     debug!("Cache directory: {}", cache_dir.display());
 
+    // resolve the token once; it drives both the URL choice and auth header
+    let token = get_github_token();
+
     let mut i = 1;
     for asset in assets {
         // if not installed, download release assets.
@@ -66,8 +74,18 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         // which themselves may contain multiple executables.
         let download_to =
             datadirs::get_binary_nest(&cache_dir, repo, &version).join(format!("asset_{}", i));
+
+        // When a token is available, use the GitHub API URL so that the
+        // Authorization header is accepted (required for private repos).
+        // Fall back to browser_download_url for unauthenticated public downloads.
+        let download_url = if token.is_some() {
+            asset.url()
+        } else {
+            asset.browser_download_url()
+        };
+
         let downloaded_file =
-            match download_asset(asset.name(), asset.browser_download_url(), &download_to)
+            match download_asset(asset.name(), download_url, &download_to, token.as_deref())
                 .with_context(|| format!("Cannot download asset for {} version {}", repo, version))
             {
                 Ok(file) => file,

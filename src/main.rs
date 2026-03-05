@@ -92,11 +92,19 @@ fn run() -> Result<ExitCode> {
 
             let (_, assets) = commands::install::select_assets(&args.repo, args.tag.as_deref())?;
 
+            let token = std::env::var("GITHUB_TOKEN").ok().filter(|t| !t.is_empty());
+
             for asset in assets {
+                let download_url = if token.is_some() {
+                    asset.url()
+                } else {
+                    asset.browser_download_url()
+                };
                 commands::download::download_asset(
                     asset.name(),
-                    asset.browser_download_url(),
+                    download_url,
                     &current_dir,
+                    token.as_deref(),
                 )
                 .with_context(|| {
                     format!(
