@@ -63,6 +63,14 @@ case "$OS" in
     Linux)
         # Determine suffix based on architecture and libc availability
         case "$ARCH" in
+            armv7)
+                # armv7 targets require the eabihf ABI suffix
+                if [ "$LIBC_TYPE" = "gnu" ]; then
+                    TARGET="${ARCH}-unknown-linux-gnueabihf"
+                else
+                    TARGET="${ARCH}-unknown-linux-musleabihf"
+                fi
+                ;;
             powerpc64le)
                 # Only glibc available in matrix.jsonc
                 TARGET="${ARCH}-unknown-linux-gnu"
