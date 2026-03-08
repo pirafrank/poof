@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to build packages for (e.g. v0.6.0)'
+        description: 'Release tag (e.g. v0.6.0)'
         required: true
         type: string
 
@@ -33,6 +33,7 @@ jobs:
   checks:
     name: Get app info
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
     outputs:
       APP_VERSION: ${{ steps.info.outputs.app_version }}
       RESOLVED_TAG: ${{ steps.tag.outputs.tag }}
