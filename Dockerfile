@@ -4,9 +4,8 @@ FROM alpine:${ALPINE_VERSION}
 
 # Install dependencies:
 # - curl and ca-certificates are needed to download poof.
-# - libc6-compat and gcompat are added to provide glibc compatibility
-#   just in case any downloaded binaries require it during the install process.
-RUN apk add --no-cache curl ca-certificates libc6-compat gcompat bash
+# - libgcc is needed by the riscv64 musl binary for stack unwinding.
+RUN apk add --no-cache curl ca-certificates libgcc bash
 
 # Download and install poof using the official script
 RUN curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh

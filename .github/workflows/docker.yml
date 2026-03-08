@@ -36,7 +36,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.release.outputs.tag }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || steps.release.outputs.tag }}
           fetch-depth: 1
 
       - name: Set up QEMU
@@ -67,7 +67,7 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/riscv64,linux/ppc64le,linux/s390x,linux/386
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/riscv64,linux/386
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
