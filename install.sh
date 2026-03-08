@@ -2,8 +2,20 @@
 #
 # poof install script
 #
+# Version: 0.6.0
+# Release: https://github.com/pirafrank/poof/releases/tag/v0.6.0
+#
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh
+#
+# Notes:
+#   This script is self-contained and does not require any external dependencies.
+#   It will install the binary to ${HOME}/.local/bin.
+#   If run twice, it will overwrite the existing binary, and overwrite it. Thus,
+#   it is idempotent and can also be used to update the binary.
+#
+#   You can also install from APT, YUM, DNF, APK, AUR, asdf, cargo, or source.
+#   See https://poof.fpira.com for more information.
 #
 set -e
 

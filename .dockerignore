@@ -1,3 +1,4 @@
 */
 !target/debug/poof
+!target/release/poof
 !Dockerfile
