@@ -11,7 +11,7 @@ inputs:
       Newline or comma-separated list of GitHub repos to install,
       in USERNAME/REPO format with optional tag after '@' character
       (e.g. ms-jpq/sad or pirafrank/vault-conductor@v0.3.0).
-    required: true
+    required: false
   version:
     description: >
       Version of poof to bootstrap (e.g. v0.6.0). Defaults to 'latest',
@@ -38,6 +38,15 @@ runs:
 
         INSTALL_DIR="$HOME/.local/bin"
         mkdir -p "$INSTALL_DIR"
+
+        echo "Adding poof bin dir to PATH: $INSTALL_DIR"
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+
+        # Check if poof is already installed and it is not a same-named binary in PATH
+        if [[ -f "$INSTALL_DIR/poof" ]] && { "$INSTALL_DIR/poof" --version 2>&1 | grep -q "pirafrank"; }; then
+          echo "poof already installed in $INSTALL_DIR, skipping installation"
+          exit 0
+        fi
 
         if [ "$POOF_VERSION" = "latest" ]; then
           echo "Installing latest poof via install.sh..."
@@ -99,8 +108,6 @@ runs:
           chmod +x "$INSTALL_DIR/poof"
         fi
 
-        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
-
     - name: Add poof bin dir to PATH
       shell: bash
       run: |
@@ -122,6 +129,7 @@ runs:
         echo "$POOF_BIN_DIR" >> "$GITHUB_PATH"
 
     - name: Install packages with poof
+      if: inputs.packages != ''
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
@@ -129,6 +137,11 @@ runs:
         set -euo pipefail
 
         export PATH="$HOME/.local/bin:$PATH"
+
+        if ! command -v poof >/dev/null 2>&1; then
+          echo "poof not found in PATH"
+          exit 1
+        fi
 
         # Split on newlines and commas, trim whitespace, skip empty lines.
         # Supports optional tag: user/repo@v1.0.0 -> poof install user/repo --tag v1.0.0

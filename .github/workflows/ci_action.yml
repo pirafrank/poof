@@ -11,6 +11,40 @@ on:
   workflow_dispatch:
 
 jobs:
+  test_setup:
+    name: Test latest with separate setup (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+      fail-fast: false
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Test setup
+        uses: ./
+
+      - name: Verify installed binary is in PATH
+        run: |
+          which poof
+          poof --version
+
+      - name: Install multiple binaries
+        uses: ./
+        with:
+          packages: |
+            lsd-rs/lsd
+            dandavison/delta@0.18.0
+          token: ${{ github.token }}
+
+      - name: Verify installed binaries are in PATH
+        run: |
+          which lsd
+          lsd --version
+          which delta
+          delta --version | grep 0.18.0
+
   test_action:
     name: Test latest poof (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -28,9 +62,9 @@ jobs:
           packages: |
             lsd-rs/lsd
             dandavison/delta@0.18.0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
 
-      - name: Verify installed binary is in PATH
+      - name: Verify installed binaries are in PATH
         run: |
           which poof
           poof --version
@@ -56,9 +90,14 @@ jobs:
           packages: |
             ms-jpq/sad
           version: 'v0.5.2'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
 
       - name: Verify pinned install
         run: |
           which poof
-          poof --version
+          poof --version | grep 0.5.2
+
+      - name: Verify installed binaries are in PATH
+        run: |
+          which sad
+          sad --version

@@ -155,7 +155,7 @@ It is available in the [Actions Marketplace](https://github.com/marketplace/acti
 
 ### Inputs
 
-- `packages` (required): a list of software to install in `USERNAME/REPO` format
+- `packages` (optional): a list of software to install in `USERNAME/REPO` format
   with optional tag after `@` character. If no tag is specified, poof
   automatically featches and installs the latest available from GitHub.
 - `token` (optional): GitHub token used for API requests inside poof to
@@ -165,7 +165,15 @@ It is available in the [Actions Marketplace](https://github.com/marketplace/acti
 
 ### Usage
 
-Install multiple software at once:
+Setup only:
+
+```yaml
+- name: Setup poof and install packages
+  uses: pirafrank/poof@main
+```
+
+Setup and/or install multiple software at once (it won't reinstall poof
+is already installed):
 
 ```yaml
 - name: Setup poof and install packages
