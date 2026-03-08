@@ -9,8 +9,8 @@ on:
         default: "user/repo"
 
 jobs:
-    test:
-      name: Test poof
+    test_with_stable:
+      name: Install ${{ github.event.inputs.repo }} with latest stable release
       runs-on: ubuntu-latest
       steps:
         - name: Setup poof
@@ -20,11 +20,34 @@ jobs:
         - name: Add to PATH
           run: |
             echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+            echo "$HOME/.local/share/poof/bin" >> "$GITHUB_PATH"
 
         - name: Test installed poof
           run: poof --version
 
-        - name: Run poof
+        - name: Install ${{ github.event.inputs.repo }}
           run: |
-            poof download ${{ github.event.inputs.repo }}
+            poof install ${{ github.event.inputs.repo }}
+            ls -la
+
+    test_with_main:
+      name: Install ${{ github.event.inputs.repo }} with main branch
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout repo
+          uses: actions/checkout@v4
+
+        - name: Setup Rust
+          uses: actions-rust-lang/setup-rust-toolchain@v1
+
+        - name: Add to PATH
+          run: |
+            echo "$HOME/.local/share/poof/bin" >> "$GITHUB_PATH"
+
+        - name: Test installed poof
+          run: cargo run --bin poof -- --version
+
+        - name: Install ${{ github.event.inputs.repo }}
+          run: |
+            cargo run --bin poof -- install ${{ github.event.inputs.repo }}
             ls -la
