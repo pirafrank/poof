@@ -209,6 +209,38 @@ GitHub Container Registry.
 
 More info in the [devcontainer-feature README](./devcontainer-features/poof/README.md).
 
+## Docker image
+
+A Docker image is available on [Docker Hub](https://hub.docker.com/r/pirafrank/poof),
+built automatically on every stable release via the [Docker workflow](.github/workflows/docker.yml).
+
+Supported architectures are:
+
+- `linux/amd64`
+- `linux/arm64`
+- `linux/arm/v7`
+- `linux/riscv64`
+- `linux/386`
+
+The container is meant to run `poof` without changing your host environment, or
+to install binaries on the fly by mounting poof's data and bin directories from
+the host. **Please note that when run from a Docker container `poof` downloads
+only Linux MUSL assets.**
+
+```sh
+docker run --rm \
+  -u $(id -u):$(id -g) \
+  -v ~/.local/share/poof:/.local/share/poof \
+  -e HOME=/ \
+  pirafrank/poof:latest poof install pirafrank/vault-conductor
+```
+
+You can also define an alias to use the containerized `poof` transparently:
+
+```sh
+alias poof='docker run --rm -u $(id -u):$(id -g) -v ~/.local/share/poof:/.local/share/poof -e HOME=/ pirafrank/poof:latest poof'
+```
+
 ## About poof's `bin` directory
 
 `poof` installs binaries in its own data directory, then symlinks them to its bin
