@@ -197,7 +197,7 @@ Or pin a specific version of poof itself:
 
 ## Devcontainer Feature
 
-Easy add `poof` to a devcontainer. It is available as a
+Easily add `poof` to a devcontainer. It is available as a
 [devcontainer feature](https://containers.dev/features) on the
 GitHub Container Registry.
 

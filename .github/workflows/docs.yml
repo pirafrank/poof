@@ -21,7 +21,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Setup just runner
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Check docs
         run: just docs-verify-all

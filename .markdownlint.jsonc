@@ -1,4 +1,6 @@
 {
+    // long lines in tables
+    "MD013": { "tables": false },
     // tables
     "MD060": false,
     // multiple headers with the same content

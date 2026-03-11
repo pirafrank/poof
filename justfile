@@ -99,6 +99,8 @@ prepare-release version: flake-update
 make-release version:
   git checkout main
   git tag -s -a v{{version}} -m "{{version}}"
+  git checkout latest
+  git merge --ff v{{version}}
 
 # Build for release
 release:

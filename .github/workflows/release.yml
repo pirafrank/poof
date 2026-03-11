@@ -48,14 +48,14 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Setup just runner
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Generate man pages
         run: just man
 
       - name: Upload man pages artifact
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ needs.checks.outputs.APP_NAME }}.1
           path: man/${{ needs.checks.outputs.APP_NAME }}.1
@@ -96,7 +96,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Setup just runner
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload artifact
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.archive.outputs.archive_name }}
           path: ${{ steps.archive.outputs.archive_path }}
@@ -131,7 +131,7 @@ jobs:
 
       - name: Upload artifact checksum
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.archive.outputs.sha256_name }}
           path: ${{ steps.archive.outputs.sha256_path }}
@@ -147,7 +147,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
 

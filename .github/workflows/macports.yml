@@ -82,7 +82,7 @@ jobs:
 
       - name: Add Portfile to artifacts
         if: steps.install.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Portfile
           path: "./macports/Portfile"

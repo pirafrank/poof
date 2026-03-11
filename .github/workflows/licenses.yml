@@ -37,7 +37,7 @@ jobs:
         run: cargo install cargo-deny --locked
 
       - name: Setup just runner
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Perform compliance checks
         run: just licenses
