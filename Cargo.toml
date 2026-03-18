@@ -28,9 +28,9 @@ exclude = [
 ]
 
 [dependencies]
-clap = { version = "4.5", features = ["derive"] }
-clap_complete = "4.5"
-clap_complete_nushell = "4.5"
+clap = { version = "4.6", features = ["derive"] }
+clap_complete = "4.6"
+clap_complete_nushell = "4.6"
 dirs = "6.0"
 errno = "0.3"
 lazy_static = "1.5.0"
@@ -53,7 +53,7 @@ which = "8.0.2"
 zstd = "0.13.3"
 
 [dev-dependencies]
-clap_mangen = "0.2.31"
+clap_mangen = "0.2.33"
 tempfile = "3"
 serial_test = "3"
 predicates = "3.1.4"
@@ -66,5 +66,5 @@ ron = "0.12"
 [build-dependencies]
 build_cfg = "1.1.0"
 chrono = "0.4"
-clap_mangen = "0.2.31"
+clap_mangen = "0.2.33"
 glibc_version = "0.1.2"
