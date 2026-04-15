@@ -46,7 +46,7 @@ sevenz-rust2 = { version = "0.20" }
 log = "0.4.27"
 env_logger = "0.11.10"
 regex = "1.11.1"
-rayon = "1.11.0"
+rayon = "1.12.0"
 semver = "1.0.28"
 anyhow = "1.0"
 which = "8.0.2"
