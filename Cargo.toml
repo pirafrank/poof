@@ -43,7 +43,7 @@ flate2 = "1.1"
 xz2 = "0.1"
 bzip2 = "0.6"
 sevenz-rust2 = { version = "0.20" }
-log = "0.4.30"
+log = "0.4.31"
 env_logger = "0.11.10"
 regex = "1.11.1"
 rayon = "1.12.0"
