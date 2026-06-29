@@ -22,6 +22,7 @@ on:
 
 env:
   BIN_NAME: poof
+  GLIBC_MAX_VERSION: 2.23
 
 jobs:
   make_matrix:
@@ -72,6 +73,20 @@ jobs:
 
       - name: Build project using ${{ matrix.builder }}
         run: ${{ matrix.builder }} build --target ${{ matrix.target }}
+
+      - name: Install just runner
+        uses: extractions/setup-just@v3
+
+      - name: Check GLIBC version
+        if: ${{ contains(matrix.target, 'linux-gnu') }}
+        run: |
+          exec_glibc=$(just glibc target/${{ matrix.target }}/debug/${{ env.BIN_NAME }})
+          if [[ "$exec_glibc" -gt "$GLIBC_MAX_VERSION" ]]; then
+            echo "❌ ERROR: GLIBC version $exec_glibc is higher than maximum allowed ($GLIBC_MAX_VERSION)"
+            exit 1
+          else
+            echo "✅ GLIBC version $exec_glibc <= $GLIBC_MAX_VERSION"
+          fi
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v6
