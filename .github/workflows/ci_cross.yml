@@ -78,9 +78,17 @@ jobs:
 
       - name: Check GLIBC version
         if: ${{ contains(matrix.target, 'linux-gnu') }}
+        # Passing values from matrix through environment variables to prevent shell injection
+        env:
+          GLIBC_MAX_VERSION: ${{ matrix.glibc_max_version }}
+          TARGET: ${{ matrix.target }}
+          BIN: ${{ env.BIN_NAME }}
         run: |
-          GLIBC_MAX_VERSION='${{ matrix.glibc_max_version }}'
-          exec_glibc=$(just glibc target/${{ matrix.target }}/debug/${{ env.BIN_NAME }})
+          exec_glibc=$(just glibc "target/$TARGET/debug/$BIN")
+          if [ -z "$exec_glibc" ]; then
+            echo "❌ ERROR: No GLIBC version detected for $BIN"
+            exit 1
+          fi
           if [ "$(printf '%s\n%s\n' "$exec_glibc" "$GLIBC_MAX_VERSION" | sort -V | tail -n1)" != "$GLIBC_MAX_VERSION" ]; then
             echo "❌ ERROR: GLIBC version $exec_glibc is higher than maximum allowed ($GLIBC_MAX_VERSION)"
             exit 1
