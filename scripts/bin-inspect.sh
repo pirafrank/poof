@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
+#
 # bin-inspect.sh - Inspect binary file headers using only POSIX od(1).
 # Works on Linux, macOS, and BSD without external tools.
+# On Linux it also tells the minimum glibc version required to run the binary.
 #
 # Usage: bin-inspect.sh <binary_file>
+#
 
 set -euo pipefail
 
@@ -319,6 +322,22 @@ handle_elf() {
     printf "OS:        %s\n" "$(_detect_elf_os "$ei_class" "$endian")"
 }
 
+min_glibc_version() {
+    if ! command -v objdump > /dev/null 2>&1 ; then
+      echo "Warning: objdump not found, cannot determine GLIBC version." >&2
+      return
+    fi
+
+    # Use objdump to extract printable ASCII strings matching "GLIBC_" to find
+    # the minimum required glibc version.
+    local glibc_v
+    # || true; needed because of set -e, in case grep finds no matches (e.g. statically linked binaries)
+    glibc_v=$(objdump -p "$FILE" | { grep -o 'GLIBC_[0-9.]*' || true; } | sort -V | tail -n 1 | cut -d'_' -f2)
+    if [ -n "$glibc_v" ]; then
+        printf "GLIBC:     %s\n" "$glibc_v"
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Mach-O field decoders
 # ---------------------------------------------------------------------------
@@ -407,6 +426,7 @@ main() {
     case "$magic" in
         7f454c46)
             handle_elf
+            min_glibc_version
             ;;
         feedface)
             handle_macho_thin "big" "32"
