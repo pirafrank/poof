@@ -25,6 +25,9 @@ jobs:
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
 
       - name: Setup just runner
         uses: extractions/setup-just@v3
