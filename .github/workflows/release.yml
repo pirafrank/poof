@@ -22,7 +22,7 @@ jobs:
       APP_VERSION: ${{ steps.info.outputs.app_version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -42,7 +42,7 @@ jobs:
     needs: checks
     steps:
       - name: Clone repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -73,7 +73,7 @@ jobs:
       MATRIX_FILE: matrix.jsonc
     steps:
       - name: Clone repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
       - id: set-matrix
@@ -90,7 +90,7 @@ jobs:
       max-parallel: 5
     steps:
       - name: Clone repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
