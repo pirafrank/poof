@@ -2,6 +2,43 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.6.2] - 2026-07-09
+
+This is a maintenance release, mainly due to update dependencies and delivery
+repository chores.
+
+### 🚀 Features
+
+- Poof as Docker image
+- GitHub Action can be used for setup only
+
+### 🐛 Bug Fixes
+
+- Fix install script returning 404 on armv7
+- Docker publish pipeline
+- Fixup Rust version in toolchain missing patch version
+
+### 🔧 Setup & Quality
+
+- Fix yum package signature
+- Fix missing older versions of packages in APT
+- Use reprepro with support for multiple versions
+- Add additional platforms to APT repository
+- Added pipeline for APK repository
+- Fixup and updated repo readme files
+- Parallel testing of stable and edge versions of poof
+- Pipeline to build and publish as Docker image
+- Perform a glibc version check after build (#217)
+
+### ⚙️ Miscellaneous Tasks
+
+- Updated repositories readme files
+- Pipelines minor changes, removed unused homebrew workflow
+- Update steps after github action node 20 deprecation
+- Moved apt/yum/apk packaging to centralized automation
+- Update rustsec/audit-check to node v24
+- New msrv 1.93 to allow bump of sevenz-rust2 from 0.20.2 to 0.21.1 (#218)
+
 ## [0.6.1] - 2026-03-04
 
 ### 🚀 Features
