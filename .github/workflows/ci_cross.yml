@@ -74,7 +74,7 @@ jobs:
         run: ${{ matrix.builder }} build --target ${{ matrix.target }}
 
       - name: Install just runner
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Check GLIBC version
         if: ${{ contains(matrix.target, 'linux-gnu') }}

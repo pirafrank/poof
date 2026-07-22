@@ -30,7 +30,7 @@ jobs:
           profile: minimal
 
       - name: Setup just runner
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Install cargo-msrv
         run: cargo install cargo-msrv
