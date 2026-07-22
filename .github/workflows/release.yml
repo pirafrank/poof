@@ -48,7 +48,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Setup just runner
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Generate man pages
         run: just man
@@ -96,7 +96,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Setup just runner
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
