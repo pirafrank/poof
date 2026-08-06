@@ -66,7 +66,7 @@ lint-all:
 
 # Auto-fix clippy warnings
 fix:
-  cargo clippy -- --no-deps -D warnings --fix --allow-dirty
+  cargo clippy --no-deps --fix --allow-dirty -- -D warnings
 
 # Run the formatter and linter on all source files
 better: fmt lint-all
