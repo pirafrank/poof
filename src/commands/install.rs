@@ -61,8 +61,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         datadirs::get_cache_dir().context("Cannot determine cache directory")?;
     debug!("Cache directory: {}", cache_dir.display());
 
-    let mut i = 1;
-    for asset in assets {
+    for (i, asset) in (1..).zip(assets) {
         // if not installed, download release assets.
         // we use a counter to name the assets differently to avoid conflicts in case of multiple assets,
         // which themselves may contain multiple executables.
@@ -77,7 +76,6 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
                     bail!(e);
                 }
             };
-        i += 1;
 
         process_install(
             &slug,
@@ -93,7 +91,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
             debug!("Cleaned up cache directory: {}", download_to.display());
         }
     }
-    info!("{} {} installed successfully.\n", repo, &version);
+    info!("{} {} installed successfully.\n", repo, version);
 
     // check if the binaries are in the PATH by checking if poof's bin directory is in PATH
     commands::check::check_if_bin_in_path()?;
