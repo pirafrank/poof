@@ -114,7 +114,7 @@ mod unix {
         let dir = TempDir::new().unwrap();
         let target = write_tmp_file(&dir, "real.bin", b"data");
         let link = dir.path().join("link");
-        let result = create_symlink(&target, &link, false);
+        let result = create_repo_symlink(&target, &link, dir.path());
         assert!(result.is_ok());
         assert!(link.exists());
     }
@@ -124,9 +124,9 @@ mod unix {
         let dir = TempDir::new().unwrap();
         let target = write_tmp_file(&dir, "real.bin", b"data");
         let link = dir.path().join("link");
-        create_symlink(&target, &link, false).unwrap();
+        create_repo_symlink(&target, &link, dir.path()).unwrap();
         // Second call with remove_existing=false should silently skip
-        let result = create_symlink(&target, &link, false);
+        let result = create_repo_symlink(&target, &link, dir.path());
         assert!(result.is_ok());
     }
 
@@ -136,8 +136,8 @@ mod unix {
         let target1 = write_tmp_file(&dir, "real1.bin", b"v1");
         let target2 = write_tmp_file(&dir, "real2.bin", b"v2");
         let link = dir.path().join("link");
-        create_symlink(&target1, &link, false).unwrap();
-        let result = create_symlink(&target2, &link, true);
+        create_repo_symlink(&target1, &link, dir.path()).unwrap();
+        let result = create_repo_symlink(&target2, &link, dir.path());
         assert!(result.is_ok());
         // Link should now point to target2
         let contents = std::fs::read(&link).unwrap();
@@ -171,4 +171,46 @@ fn test_find_exec_files_in_dir_finds_shebang_file() {
     let found = find_exec_files_in_dir(dir.path(), false);
     assert!(found.contains(&script));
     assert!(!found.contains(&dir.path().join("data.txt")));
+}
+
+#[cfg(unix)]
+#[test]
+fn create_repo_symlink_refuses_foreign_target() {
+    let dir = TempDir::new().unwrap();
+    let repo = dir.path().join("data/owner/repo/1.0");
+    let foreign = dir.path().join("data/owner/other/1.0/tool");
+    let link = dir.path().join("bin/tool");
+    std::fs::create_dir_all(&repo).unwrap();
+    std::fs::create_dir_all(foreign.parent().unwrap()).unwrap();
+    std::fs::create_dir_all(link.parent().unwrap()).unwrap();
+    std::fs::write(repo.join("tool"), b"owned").unwrap();
+    std::fs::write(&foreign, b"foreign").unwrap();
+    std::os::unix::fs::symlink(&foreign, &link).unwrap();
+
+    assert!(create_repo_symlink(
+        &repo.join("tool"),
+        &link,
+        &dir.path().join("data/owner/repo")
+    )
+    .is_err());
+    assert_eq!(std::fs::read(&foreign).unwrap(), b"foreign");
+}
+
+#[cfg(unix)]
+#[test]
+fn create_repo_symlink_replaces_same_repo_link() {
+    let dir = TempDir::new().unwrap();
+    let repo_root = dir.path().join("data/owner/repo");
+    let old = repo_root.join("1.0/tool");
+    let new = repo_root.join("2.0/tool");
+    let link = dir.path().join("bin/tool");
+    std::fs::create_dir_all(old.parent().unwrap()).unwrap();
+    std::fs::create_dir_all(new.parent().unwrap()).unwrap();
+    std::fs::create_dir_all(link.parent().unwrap()).unwrap();
+    std::fs::write(&old, b"old").unwrap();
+    std::fs::write(&new, b"new").unwrap();
+    std::os::unix::fs::symlink(&old, &link).unwrap();
+
+    create_repo_symlink(&new, &link, &repo_root).unwrap();
+    assert_eq!(std::fs::read(link).unwrap(), b"new");
 }

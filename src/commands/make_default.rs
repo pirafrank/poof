@@ -122,6 +122,7 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
 
     // Get the installed directory for the specified repo and version
     let install_dir = get_installed_dir(repo, &resolved_version)?;
+    let data_dir = datadirs::get_data_dir().context("Cannot get data directory")?;
     // Get the bin directory
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory")?;
 
@@ -144,7 +145,8 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
             binaries.push(file_name.to_string_lossy().to_string());
             // make exec available in PATH, overwriting any existing symlink
             let symlink_path = bin_dir.join(file_name);
-            filesys::create_symlink(&path, &symlink_path, true)
+            let repo_root = datadirs::get_versions_nest(&data_dir, repo);
+            filesys::create_repo_symlink(&path, &symlink_path, &repo_root)
                 .map_err(anyhow::Error::msg)
                 .with_context(|| {
                     format!(
