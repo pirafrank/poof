@@ -319,7 +319,9 @@ fn install_binary(
         // Create a symlink in the bin directory, overwriting existing to default
         // using the new version. This is a UX feature to save the user from having to
         // manually set the default version after installation (most cases).
-        match filesys::create_symlink(&installed_exec, &symlink_path, true) {
+        let data_dir = datadirs::get_data_dir().context("Cannot determine data directory")?;
+        let repo_root = datadirs::get_versions_nest(&data_dir, slug.as_str());
+        match filesys::create_repo_symlink(&installed_exec, &symlink_path, &repo_root) {
             Ok(()) => {
                 info!("✓ '{}' command installed\n", exec_name.to_string_lossy());
             }
