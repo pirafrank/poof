@@ -23,7 +23,7 @@ use crate::{
         models::{Release, ReleaseAsset},
     },
     models::slug::Slug,
-    utils::semver::SemverStringPrefix,
+    utils::{semver::SemverStringPrefix, string::validate_version},
 };
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
@@ -36,8 +36,10 @@ use log::{debug, info, warn};
 /// PATH check. On Unix-like platforms a symlink is also created in the bin
 /// directory so the binary is available in `PATH`.
 pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
+    Slug::validate(repo)?;
     let (release, assets) = select_assets(repo, tag)?;
     let version: String = release.tag_name().strip_v();
+    validate_version(&version).context("Release tag is not a safe version path component")?;
 
     let install_dir = get_install_dir(repo, &version)?;
     if check_if_installed(&install_dir)? {
