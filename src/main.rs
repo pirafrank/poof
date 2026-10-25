@@ -83,7 +83,7 @@ fn run() -> Result<ExitCode> {
         Cmd::Download(args) => {
             info!(
                 "Downloading {} {} to current dir",
-                &args.repo,
+                args.repo,
                 args.tag.as_deref().unwrap_or("(latest)")
             );
             let current_dir =
@@ -111,21 +111,18 @@ fn run() -> Result<ExitCode> {
         Cmd::Install(args) => {
             info!(
                 "Installing {} {}",
-                &args.repo,
+                args.repo,
                 args.tag.as_deref().unwrap_or("(latest)")
             );
             commands::install::install(&args.repo, args.tag.as_deref())?;
         }
         Cmd::Use(args) => {
             if let Some(ref version) = args.version {
-                info!(
-                    "Setting version '{}' as default for {}",
-                    version, &args.repo
-                );
+                info!("Setting version '{}' as default for {}", version, args.repo);
             } else {
                 info!(
                     "Setting the newest installed version as default for {}",
-                    &args.repo
+                    args.repo
                 );
             }
             commands::make_default::set_default(&args.repo, args.version.as_deref())?;
