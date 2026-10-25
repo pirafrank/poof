@@ -270,17 +270,17 @@ mod tests {
 
     #[test]
     fn test_check_dir_in_path_first_entry() {
-        // Get the PATH and check for its first entry
-        let path = get_env_var("PATH");
-        if path != UNKNOWN {
-            let sep = env_path_separator();
-            let parts: Vec<&str> = path.split(sep).collect();
-            if !parts.is_empty() {
-                let first_dir = parts[0];
-                let position = check_dir_in_path(first_dir);
-                assert_eq!(position, 0, "First directory should be at position 0");
-            }
-        }
+        use temp_env::with_var;
+
+        let temp_path = format!("/first/path{}/second/path", env_path_separator());
+
+        with_var("PATH", Some(&temp_path), || {
+            assert_eq!(
+                check_dir_in_path("/first/path"),
+                0,
+                "First directory should be at position 0"
+            );
+        });
     }
 
     #[test]
