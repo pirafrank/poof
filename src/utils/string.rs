@@ -95,6 +95,25 @@ pub fn strip_repeated_separator(filename: &str, sep: &str) -> String {
     result
 }
 
+// Prevent path traversal by rejecting `.`/`..` and path separators,
+// and reject path-bearing identifiers that are not safe single components.
+pub fn is_safe_component(part: &str) -> bool {
+    !part.is_empty()
+        && part != "."
+        && part != ".."
+        && !part.contains(['/', '\\'])
+        && !part.contains(':')
+        && part
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.'))
+}
+
+/// Reject versions that can escape their repository directory.
+pub fn validate_version(version: &str) -> anyhow::Result<()> {
+    anyhow::ensure!(is_safe_component(version), "Invalid version format");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,5 +151,12 @@ mod tests {
         assert_eq!(strip_repeated_separator("a-bc---", "-"), "a-bc");
         assert_eq!(strip_repeated_separator("a--bc---", "-"), "abc");
         assert_eq!(strip_repeated_separator("abc", "-"), "abc");
+    }
+
+    #[test]
+    fn test_validate_version() {
+        assert!(validate_version("../../outside").is_err());
+        assert!(validate_version("/outside").is_err());
+        assert!(validate_version("1.2.3-beta.1").is_ok());
     }
 }

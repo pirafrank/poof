@@ -7,7 +7,9 @@ use log::{error, info};
 use crate::files::datadirs;
 use crate::files::filesys;
 use crate::files::utils::find_similar_repo;
+use crate::models::slug::Slug;
 use crate::utils::semver::SemverSort;
+use crate::utils::string::validate_version;
 
 /// Check if a repository is installed, providing helpful error messages if not.
 /// Returns the path to the repository's versions directory.
@@ -104,6 +106,7 @@ fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
 /// When `version` is `None`, the highest semantically-versioned installed release
 /// is selected automatically via [`get_latest_version`].
 pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
+    Slug::validate(repo)?;
     // Resolve version: use provided version or get latest
     let resolved_version = match version {
         Some(v) => v.to_string(),
@@ -115,6 +118,7 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
             latest
         }
     };
+    validate_version(&resolved_version)?;
 
     // Get the installed directory for the specified repo and version
     let install_dir = get_installed_dir(repo, &resolved_version)?;

@@ -9,6 +9,8 @@ use std::path::Path;
 use crate::cli::UninstallArgs;
 use crate::files::datadirs;
 use crate::files::filesys::is_broken_symlink;
+use crate::models::slug::Slug;
+use crate::utils::string::validate_version;
 
 /// Remove an installed version (or all versions) of a repository from the data directory.
 ///
@@ -16,6 +18,10 @@ use crate::files::filesys::is_broken_symlink;
 /// symlinks left behind in the bin directory. The user is prompted for
 /// confirmation unless the `--yes` / `-y` flag is set.
 pub fn run_uninstall(args: &UninstallArgs) -> Result<()> {
+    Slug::validate(&args.repo)?;
+    if let Some(version) = &args.version {
+        validate_version(version)?;
+    }
     let data_dir = datadirs::get_data_dir().context("Cannot get data directory")?;
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory")?;
 
