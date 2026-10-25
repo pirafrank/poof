@@ -13,9 +13,9 @@ static BINARY_NAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_-]+$").unwrap());
 
 /// Validates that `s` is a `USERNAME/REPO` slug and returns it unchanged if valid.
-fn validate_repo_format(s: &str) -> Result<String, String> {
+fn validate_repo_format(s: &str) -> Result<Slug, String> {
     match Slug::validate(s) {
-        Ok(_) => Ok(s.to_string()),
+        Ok(slug) => Ok(slug),
         Err(_) => Err(format!(
             "Repository must be in the format USERNAME/REPO, got: {}",
             s
