@@ -102,10 +102,9 @@ fn test_download_asset_fs_error() -> Result<()> {
     let _ = fs::set_permissions(&download_to, perms);
 
     assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("Cannot create file"));
+    assert!(result.is_err());
+    assert!(!download_to.join(&filename).exists());
+    assert_eq!(fs::read_dir(&download_to)?.count(), 0);
 
     Ok(())
 }
