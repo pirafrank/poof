@@ -109,3 +109,25 @@ fn test_download_asset_fs_error() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_download_rejects_asset_paths_outside_download_directory() {
+    let directory = Path::new("/tmp/downloads");
+    for filename in [
+        "../sentinel",
+        "/tmp/sentinel",
+        "nested/file",
+        "..",
+        r"nested\file",
+    ] {
+        assert!(safe_asset_path(directory, filename).is_err(), "{filename}");
+    }
+}
+
+#[test]
+fn test_download_accepts_asset_basename() {
+    assert_eq!(
+        safe_asset_path(Path::new("/tmp/downloads"), "tool.tar.gz").unwrap(),
+        Path::new("/tmp/downloads/tool.tar.gz")
+    );
+}
