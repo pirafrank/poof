@@ -16,6 +16,56 @@ use anyhow::{bail, Context, Result};
 
 /// Fallback subdirectory name used when an archive's own directory cannot be determined.
 const OUTPUT_DIR: &str = "output";
+// max expanded size 1 GB
+const MAX_EXPANDED_BYTES: u64 = 1024 * 1024 * 1024;
+// max number of files in an archive
+const MAX_ARCHIVE_ENTRIES: usize = 50_000;
+
+/// Copies data from a reader to an output file, enforcing a maximum size limit.
+/// If the copied data exceeds `MAX_EXPANDED_BYTES`, the output file is removed and an error is returned.
+fn copy_limited<R: Read>(reader: &mut R, output_path: &Path) -> Result<()> {
+    let mut output_file = File::create(output_path)?;
+    let copied = std::io::copy(&mut reader.take(MAX_EXPANDED_BYTES + 1), &mut output_file)?;
+    if copied > MAX_EXPANDED_BYTES {
+        std::fs::remove_file(output_path).ok();
+        bail!("Expanded file exceeds size limit");
+    }
+    Ok(())
+}
+
+/// Validates the limits of a TAR archive without extracting it.
+/// For security and resource management, it is important to validate the archive's limits
+/// before attempting extraction. This helps prevent denial-of-service attacks and
+/// excessive resource consumption caused by malicious or malformed archives.
+///
+/// This function iterates through the entries of a TAR archive and checks that:
+/// - The total number of entries does not exceed `MAX_ARCHIVE_ENTRIES`
+/// - The total expanded size does not exceed `MAX_EXPANDED_BYTES`
+///
+/// # Arguments
+///
+/// * `reader` - A reader for the TAR archive
+///
+/// # Returns
+///
+/// * `Ok(())` if the archive is within the specified limits
+/// * `Err` if the archive exceeds the limits or if an error occurs while reading entries
+fn validate_tar_limits<R: Read>(reader: R) -> Result<()> {
+    let mut archive = Archive::new(reader);
+    let mut total = 0_u64;
+    let mut count = 0_usize;
+    for entry in archive.entries()? {
+        let entry = entry?;
+        count += 1;
+        total = total
+            .checked_add(entry.size())
+            .context("Archive expanded size overflow")?;
+        if count > MAX_ARCHIVE_ENTRIES || total > MAX_EXPANDED_BYTES {
+            bail!("Archive exceeds extraction limits");
+        }
+    }
+    Ok(())
+}
 
 /// Validates an archive file's magic bytes against its expected format.
 ///
@@ -366,6 +416,18 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
             debug!("Extracting zip archive: {}", archive_path.display());
             let zip_file = File::open(archive_path)?;
             let mut archive = ZipArchive::new(zip_file)?;
+            if archive.len() > MAX_ARCHIVE_ENTRIES {
+                bail!("Archive exceeds extraction entry limit");
+            }
+            let mut total = 0_u64;
+            for index in 0..archive.len() {
+                total = total
+                    .checked_add(archive.by_index(index)?.size())
+                    .context("Archive expanded size overflow")?;
+                if total > MAX_EXPANDED_BYTES {
+                    bail!("Archive exceeds expanded size limit");
+                }
+            }
             archive.extract(extract_to)?;
             debug!(
                 "Successfully extracted zip archive to {}",
@@ -374,6 +436,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
         }
         BinaryContainer::TarGz => {
             debug!("Extracting tar.gz archive: {}", archive_path.display());
+            validate_tar_limits(GzDecoder::new(File::open(archive_path)?))?;
             let tar_gz_file = File::open(archive_path)?;
             let tar = GzDecoder::new(tar_gz_file);
             let mut archive = Archive::new(tar);
@@ -385,6 +448,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
         }
         BinaryContainer::TarXz => {
             debug!("Extracting tar.xz archive: {}", archive_path.display());
+            validate_tar_limits(XzDecoder::new(File::open(archive_path)?))?;
             let tar_xz_file = File::open(archive_path)?;
             let tar = XzDecoder::new(tar_xz_file);
             let mut archive = Archive::new(tar);
@@ -396,6 +460,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
         }
         BinaryContainer::TarBz2 => {
             debug!("Extracting tar.bz2 archive: {}", archive_path.display());
+            validate_tar_limits(BzDecoder::new(File::open(archive_path)?))?;
             let tar_bz2_file = File::open(archive_path)?;
             let tar = BzDecoder::new(tar_bz2_file);
             let mut archive = Archive::new(tar);
@@ -407,6 +472,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
         }
         BinaryContainer::TarZstd => {
             debug!("Extracting tar.zst archive: {}", archive_path.display());
+            validate_tar_limits(zstd::stream::read::Decoder::new(File::open(archive_path)?)?)?;
             let tar_zstd_file = File::open(archive_path)?;
             let tar = zstd::stream::read::Decoder::new(tar_zstd_file)?;
             let mut archive = Archive::new(tar);
@@ -418,6 +484,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
         }
         BinaryContainer::Tar => {
             debug!("Extracting tar archive: {}", archive_path.display());
+            validate_tar_limits(File::open(archive_path)?)?;
             let tar_file = File::open(archive_path)?;
             let mut archive = Archive::new(tar_file);
             archive.unpack(extract_to)?;
@@ -438,8 +505,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
                     .unwrap_or(OUTPUT_DIR),
             );
             std::fs::create_dir_all(extract_to)?;
-            let mut output_file = File::create(&output_path)?;
-            std::io::copy(&mut decoder, &mut output_file)?;
+            copy_limited(&mut decoder, &output_path)?;
             debug!(
                 "Successfully extracted gz archive to {}",
                 output_path.display()
@@ -457,8 +523,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
                     .unwrap_or(OUTPUT_DIR),
             );
             std::fs::create_dir_all(extract_to)?;
-            let mut output_file = File::create(&output_path)?;
-            std::io::copy(&mut decoder, &mut output_file)?;
+            copy_limited(&mut decoder, &output_path)?;
             debug!(
                 "Successfully extracted xz archive to {}",
                 output_path.display()
@@ -476,8 +541,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
                     .unwrap_or(OUTPUT_DIR),
             );
             std::fs::create_dir_all(extract_to)?;
-            let mut output_file = File::create(&output_path)?;
-            std::io::copy(&mut decoder, &mut output_file)?;
+            copy_limited(&mut decoder, &output_path)?;
             debug!(
                 "Successfully extracted bz2 archive to {}",
                 output_path.display()
@@ -494,8 +558,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
                     .unwrap_or(OUTPUT_DIR),
             );
             std::fs::create_dir_all(extract_to)?;
-            let mut output_file = File::create(&output_path)?;
-            std::io::copy(&mut decoder, &mut output_file)?;
+            copy_limited(&mut decoder, &output_path)?;
             debug!(
                 "Successfully extracted zst archive to {}",
                 output_path.display()
@@ -503,7 +566,24 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
         }
         BinaryContainer::SevenZ => {
             debug!("Extracting 7z archive: {}", archive_path.display());
-            sevenz_rust2::decompress_file(archive_path, extract_to).expect("complete");
+            let mut total = 0_u64;
+            let mut count = 0_usize;
+            sevenz_rust2::decompress_file_with_extract_fn(
+                archive_path,
+                extract_to,
+                |entry, reader, destination| {
+                    count += 1;
+                    total = total.saturating_add(entry.size());
+                    if count > MAX_ARCHIVE_ENTRIES || total > MAX_EXPANDED_BYTES {
+                        return Err(
+                            std::io::Error::other("Archive exceeds extraction limits").into()
+                        );
+                    }
+                    let mut limited_reader = reader.take(entry.size());
+                    sevenz_rust2::default_entry_extract_fn(entry, &mut limited_reader, destination)
+                },
+            )
+            .context("Cannot decompress 7z archive")?;
             debug!(
                 "Successfully extracted 7z archive to {}",
                 extract_to.display()
