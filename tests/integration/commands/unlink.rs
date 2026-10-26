@@ -13,9 +13,11 @@ use super::common::helpers::set_test_env;
 fn setup_test_symlink_env(
     fixture: &TestFixture,
     symlink_name: &str,
-) -> std::io::Result<std::path::PathBuf> {
+) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
     use std::fs;
-    let target = fixture.bin_dir.join("target_binary");
+    let target = fixture
+        .create_fake_installation("owner/repo", "1.0.0")?
+        .join("target_binary");
     fs::write(&target, b"content")?;
     let symlink_path = fixture.bin_dir.join(symlink_name);
     std::os::unix::fs::symlink(&target, &symlink_path)?;
@@ -209,7 +211,9 @@ fn test_unlink_with_yes_flag() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
 
     // Create a fake target and symlink
-    let target = fixture.bin_dir.join("target_binary");
+    let target = fixture
+        .create_fake_installation("owner/repo", "1.0.0")?
+        .join("target_binary");
     fs::write(&target, b"content")?;
 
     let symlink_name = "test_binary";
@@ -284,7 +288,9 @@ fn test_unlink_case_insensitive_confirmation() -> Result<(), Box<dyn std::error:
     let fixture = TestFixture::new()?;
 
     // Create a fake target and symlink
-    let target = fixture.bin_dir.join("target_binary");
+    let target = fixture
+        .create_fake_installation("owner/repo", "1.0.0")?
+        .join("target_binary");
     fs::write(&target, b"content")?;
 
     let symlink_name = "test_binary";
@@ -304,5 +310,27 @@ fn test_unlink_case_insensitive_confirmation() -> Result<(), Box<dyn std::error:
         "Symlink should be deleted with uppercase confirmation"
     );
 
+    Ok(())
+}
+
+#[test]
+#[serial]
+#[cfg(unix)]
+fn unlink_preserves_foreign_and_dangling_symlinks() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+    let foreign = fixture.bin_dir.join("foreign_target");
+    std::fs::write(&foreign, b"keep")?;
+    for (name, target) in [
+        ("foreign", foreign),
+        ("dangling", fixture.bin_dir.join("missing")),
+    ] {
+        let link = fixture.bin_dir.join(name);
+        std::os::unix::fs::symlink(&target, &link)?;
+        let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+        cmd.args(["unlink", name, "--yes"]);
+        set_test_env(&mut cmd, &fixture);
+        assert!(!cmd.output()?.status.success());
+        assert_eq!(std::fs::read_link(link)?, target);
+    }
     Ok(())
 }
