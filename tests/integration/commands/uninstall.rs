@@ -604,3 +604,21 @@ fn test_uninstall_with_v_and_yes_flag() -> Result<(), Box<dyn std::error::Error>
 
     Ok(())
 }
+
+#[test]
+#[serial]
+#[cfg(unix)]
+fn uninstall_refuses_symlinked_owner_outside_data_root() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+    let foreign = fixture.temp_dir.path().join("foreign");
+    std::fs::create_dir_all(foreign.join("repo/1.0"))?;
+    let sentinel = foreign.join("repo/1.0/keep");
+    std::fs::write(&sentinel, b"keep")?;
+    std::os::unix::fs::symlink(&foreign, fixture.data_dir.join("owner"))?;
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.args(["uninstall", "owner/repo", "--version", "1.0", "--yes"]);
+    set_test_env(&mut cmd, &fixture);
+    assert!(!cmd.output()?.status.success());
+    assert_eq!(std::fs::read(sentinel)?, b"keep");
+    Ok(())
+}

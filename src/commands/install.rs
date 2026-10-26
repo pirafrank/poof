@@ -122,12 +122,16 @@ fn process_install(
             .with_context(|| format!("Cannot install executable {}", asset_name))?;
     } else {
         // extract executables
-        archives::extract_to_dir(downloaded_file, download_to)
+        let staging = tempfile::Builder::new()
+            .prefix("poof-extract-")
+            .tempdir_in(download_to)?;
+        let extracted = staging.path().join("contents");
+        archives::extract_to_dir(downloaded_file, &extracted)
             .with_context(|| format!("Cannot extract archive {}", asset_name))?;
         debug!("Extracted {} to {}", asset_name, download_to.display());
 
         // install executables
-        install_binaries(slug, version, download_to, install_dir)
+        install_binaries(slug, version, &extracted, install_dir)
             .with_context(|| format!("Cannot extract executables from archive {}", asset_name))?;
     }
     Ok(())
