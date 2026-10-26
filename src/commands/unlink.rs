@@ -5,7 +5,8 @@ use log::info;
 use std::io::{self, Write};
 
 use crate::cli::UnlinkArgs;
-use crate::files::datadirs;
+use crate::files::{datadirs, filesys};
+use crate::utils::string;
 
 /// Remove a binary's symlink from the bin directory, making it unavailable in `PATH`.
 ///
@@ -14,6 +15,7 @@ use crate::files::datadirs;
 /// unless the `--yes` / `-y` flag is set.
 pub fn run_unlink(args: &UnlinkArgs) -> Result<()> {
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory path")?;
+    string::validate_version(&args.binary_name)?;
     let binary_path = bin_dir.join(&args.binary_name);
 
     // Check if binary exists
@@ -35,6 +37,10 @@ Check installed binaries using 'list' command.",
             args.binary_name
         );
     }
+
+    let data_dir = datadirs::get_data_dir().context("Cannot get data directory")?;
+    filesys::ensure_contained(&data_dir, &binary_path)
+        .context("Refusing to remove an unowned or dangling symlink")?;
 
     // Skip confirmation if -y flag is set
     if !args.yes {

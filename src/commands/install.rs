@@ -340,21 +340,16 @@ fn install_binary(
 /// Best effort clean up of cache directory.
 /// Returns true if the cache directory was deleted, false if it was not.
 fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
-    // Resolve and ensure we only delete stuff within the cache directory.
-    // Canonicalize both paths to handle symlinked temp paths consistently.
-    // Fall back to original paths if canonicalization fails.
-    let dir = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
-    let cache_root = cache_root
-        .canonicalize()
-        .unwrap_or_else(|_| cache_root.to_path_buf());
-
-    if !dir.starts_with(&cache_root) {
-        debug!("Refusing to delete non-cache path: {}", dir.display());
+    if filesys::ensure_contained(cache_root, dir).is_err() {
+        debug!(
+            "Refusing to delete non-cache or unresolved path: {}",
+            dir.display()
+        );
         return Ok(false);
     }
 
     // Best effort to clean up the cache directory.
-    match std::fs::remove_dir_all(&dir) {
+    match std::fs::remove_dir_all(dir) {
         Ok(()) => Ok(true),
         Err(e) => {
             debug!("Cannot delete cache directory {}: {}", dir.display(), e);
