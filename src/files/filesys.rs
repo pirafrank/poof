@@ -172,5 +172,17 @@ pub fn is_broken_symlink(path: &Path) -> std::io::Result<bool> {
     }
 }
 
+/// Confirm an existing target resolves strictly below its intended root.
+/// Refuse unresolved paths rather than falling back to lexical comparisons.
+pub fn ensure_contained(root: &Path, target: &Path) -> anyhow::Result<()> {
+    let root = root.canonicalize()?;
+    let target = target.canonicalize()?;
+    anyhow::ensure!(
+        target != root && target.starts_with(&root),
+        "Target escapes intended data root"
+    );
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests;

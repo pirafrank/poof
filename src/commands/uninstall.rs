@@ -7,8 +7,8 @@ use std::io::{stdin, stdout, Write};
 use std::path::Path;
 
 use crate::cli::UninstallArgs;
-use crate::files::datadirs;
 use crate::files::filesys::is_broken_symlink;
+use crate::files::{datadirs, filesys};
 use crate::models::slug::Slug;
 use crate::utils::string::validate_version;
 
@@ -87,6 +87,7 @@ pub fn run_uninstall(args: &UninstallArgs) -> Result<()> {
 
     // Delete the directory
     debug!("Deleting directory: {}", target_path.display());
+    filesys::ensure_contained(&data_dir, &target_path)?;
     fs::remove_dir_all(&target_path)
         .with_context(|| format!("Cannot delete directory: {}", target_path.display()))?;
 

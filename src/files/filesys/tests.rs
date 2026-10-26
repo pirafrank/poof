@@ -214,3 +214,54 @@ fn create_repo_symlink_replaces_same_repo_link() {
     create_repo_symlink(&new, &link, &repo_root).unwrap();
     assert_eq!(std::fs::read(link).unwrap(), b"new");
 }
+
+#[test]
+#[cfg(unix)]
+fn test_repo_symlink_preserves_regular_and_dangling_entries() {
+    let dir = tempfile::tempdir().unwrap();
+    let repo = dir.path().join("owner/repo");
+    std::fs::create_dir_all(&repo).unwrap();
+    let source = repo.join("tool");
+    std::fs::write(&source, b"tool").unwrap();
+    let regular = dir.path().join("regular");
+    std::fs::write(&regular, b"foreign").unwrap();
+    assert!(create_repo_symlink(&source, &regular, &repo).is_err());
+    assert_eq!(std::fs::read(&regular).unwrap(), b"foreign");
+    let dangling = dir.path().join("dangling");
+    let missing = dir.path().join("missing");
+    std::os::unix::fs::symlink(&missing, &dangling).unwrap();
+    assert!(create_repo_symlink(&source, &dangling, &repo).is_err());
+    assert_eq!(std::fs::read_link(&dangling).unwrap(), missing);
+}
+
+#[test]
+#[cfg(unix)]
+fn test_refuses_symlinked_ancestors_outside_root_and_root_itself() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("data");
+    let foreign = dir.path().join("foreign");
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::create_dir_all(foreign.join("repo/1.0")).unwrap();
+    std::os::unix::fs::symlink(&foreign, root.join("owner")).unwrap();
+    assert!(ensure_contained(&root, &root.join("owner/repo/1.0")).is_err());
+    assert!(ensure_contained(&root, &root).is_err());
+    assert!(ensure_contained(&root, &root.join("missing")).is_err());
+    std::fs::create_dir(root.join("owned")).unwrap();
+    assert!(ensure_contained(&root, &root.join("owned")).is_ok());
+}
+
+#[test]
+#[cfg(unix)]
+fn refuses_symlinked_ancestors_outside_root_and_root_itself() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("data");
+    let foreign = dir.path().join("foreign");
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::create_dir_all(foreign.join("repo/1.0")).unwrap();
+    std::os::unix::fs::symlink(&foreign, root.join("owner")).unwrap();
+    assert!(ensure_contained(&root, &root.join("owner/repo/1.0")).is_err());
+    assert!(ensure_contained(&root, &root).is_err());
+    assert!(ensure_contained(&root, &root.join("missing")).is_err());
+    std::fs::create_dir(root.join("owned")).unwrap();
+    assert!(ensure_contained(&root, &root.join("owned")).is_ok());
+}
