@@ -17,7 +17,7 @@ mod get_release_url {
 
     #[test]
     fn test_latest_release_url() {
-        let url = get_release_url("owner/repo", None);
+        let url = get_release_url("owner/repo", None).unwrap().to_string();
         assert_eq!(
             url,
             "https://api.github.com/repos/owner/repo/releases/latest"
@@ -26,7 +26,9 @@ mod get_release_url {
 
     #[test]
     fn test_specific_tag_release_url() {
-        let url = get_release_url("owner/repo", Some("v1.0.0"));
+        let url = get_release_url("owner/repo", Some("v1.0.0"))
+            .unwrap()
+            .to_string();
         assert_eq!(
             url,
             "https://api.github.com/repos/owner/repo/releases/tags/v1.0.0"
@@ -35,7 +37,9 @@ mod get_release_url {
 
     #[test]
     fn test_url_with_special_characters_in_repo() {
-        let url = get_release_url("user-name/repo_name", None);
+        let url = get_release_url("user-name/repo_name", None)
+            .unwrap()
+            .to_string();
         assert_eq!(
             url,
             "https://api.github.com/repos/user-name/repo_name/releases/latest"
@@ -44,7 +48,9 @@ mod get_release_url {
 
     #[test]
     fn test_url_with_special_characters_in_tag() {
-        let url = get_release_url("owner/repo", Some("v1.0.0-beta.1"));
+        let url = get_release_url("owner/repo", Some("v1.0.0-beta.1"))
+            .unwrap()
+            .to_string();
         assert_eq!(
             url,
             "https://api.github.com/repos/owner/repo/releases/tags/v1.0.0-beta.1"
@@ -53,7 +59,9 @@ mod get_release_url {
 
     #[test]
     fn test_url_with_numeric_repo() {
-        let url = get_release_url("owner123/repo456", Some("1.2.3"));
+        let url = get_release_url("owner123/repo456", Some("1.2.3"))
+            .unwrap()
+            .to_string();
         assert_eq!(
             url,
             "https://api.github.com/repos/owner123/repo456/releases/tags/1.2.3"
@@ -208,5 +216,33 @@ mod integration_with_fixture {
         // Try to serialize it back (this tests that the struct is complete)
         let json = serde_json::to_string(&release);
         assert!(json.is_ok(), "Release should be serializable to JSON");
+    }
+}
+
+mod security_tests {
+    use super::*;
+
+    #[test]
+    #[serial_test::serial]
+    fn test_release_tags_single_request_segments() {
+        let mut server = mockito::Server::new();
+        for (tag, encoded) in [
+            ("release/v1", "release%2Fv1"),
+            ("../../other/repo", "..%2F..%2Fother%2Frepo"),
+            ("v1?x#y%2F", "v1%3Fx%23y%252F"),
+        ] {
+            let path = format!("/repos/owner/repo/releases/tags/{encoded}");
+            let mock = server.mock("GET", path.as_str()).with_status(404).create();
+            temp_env::with_var(
+                "POOF_GITHUB_API_URL",
+                Some(format!("{}/repos", server.url())),
+                || {
+                    assert!(get_release("owner/repo", Some(tag)).is_err());
+                },
+            );
+            mock.assert();
+        }
+        assert!(get_release_url("owner/repo", Some("..")).is_err());
+        assert!(get_release_url("../repo", None).is_err());
     }
 }

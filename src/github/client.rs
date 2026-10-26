@@ -3,8 +3,10 @@
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, error, info};
 use reqwest::blocking::{Client, RequestBuilder};
+use reqwest::Url;
 
 use crate::core::selector::get_env_compatible_assets;
+use crate::models::slug::Slug;
 
 use super::models::{Release, ReleaseAsset};
 
@@ -37,12 +39,14 @@ fn get_base_api_url() -> String {
 /// limiting. The base API URL can be overridden via `POOF_GITHUB_API_URL`
 /// (useful in tests with a mock server).
 pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
-    let release_url = get_release_url(repo, tag);
+    let release_url = get_release_url(repo, tag)?;
     info!("Release URL: {}", release_url);
     let client: Client = Client::new();
 
     let mut request: RequestBuilder = client
-        .get(&release_url)
+        // better to .clone because Url does not implement Copy
+        // and we may need it later for error context
+        .get(release_url.clone())
         .header("User-Agent", GITHUB_API_USER_AGENT) // Keep User-Agent header for GitHub API
         .header("Accept", GITHUB_API_ACCEPT);
 
@@ -108,12 +112,30 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
 ///
 /// Returns the `/releases/tags/{tag}` endpoint when a specific tag is requested
 /// or the `/releases/latest` endpoint otherwise.
-pub fn get_release_url(repo: &str, tag: Option<&str>) -> String {
-    let base_url = get_base_api_url();
-    match tag {
-        Some(tag) => format!("{}/{}/releases/tags/{}", base_url, repo, tag),
-        None => format!("{}/{}/releases/latest", base_url, repo),
+pub fn get_release_url(repo: &str, tag: Option<&str>) -> Result<Url> {
+    Slug::validate(repo)?;
+    let mut url = Url::parse(&get_base_api_url()).context("Invalid GitHub API URL")?;
+    {
+        let mut segments = url
+            .path_segments_mut()
+            .map_err(|()| anyhow!("Invalid API base URL"))?;
+        segments.pop_if_empty();
+        for part in repo.split('/') {
+            segments.push(part);
+        }
+        segments.push("releases");
+        match tag {
+            Some(tag) => {
+                // URL parsers normalize bare dot segments, even when percent encoded.
+                anyhow::ensure!(!matches!(tag, "." | ".."), "Invalid release tag");
+                segments.push("tags").push(tag);
+            }
+            None => {
+                segments.push("latest");
+            }
+        }
     }
+    Ok(url)
 }
 
 /// Filter a release's assets to those compatible with the current platform.
