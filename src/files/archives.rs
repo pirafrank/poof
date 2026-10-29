@@ -16,9 +16,9 @@ use anyhow::{bail, Context, Result};
 
 /// Fallback subdirectory name used when an archive's own directory cannot be determined.
 const OUTPUT_DIR: &str = "output";
-// max expanded size 1 GB
+/// Maximum total expanded archive size (1 GiB).
 const MAX_EXPANDED_BYTES: u64 = 1024 * 1024 * 1024;
-// max number of files in an archive
+/// Maximum number of entries permitted in an archive.
 const MAX_ARCHIVE_ENTRIES: usize = 50_000;
 
 /// Copies data from a reader to an output file, enforcing a maximum size limit.

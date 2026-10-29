@@ -10,10 +10,13 @@ use std::{
 };
 use tempfile::NamedTempFile;
 
+/// Maximum permitted release asset download size (512 MiB).
 const MAX_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
+/// Maximum time allowed for a release asset download.
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 
 #[cfg(unix)]
+/// Ensures the download directory is owned by this user and is not group/other writable.
 fn validate_download_directory(directory: &Path) -> Result<()> {
     use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
@@ -31,10 +34,12 @@ fn validate_download_directory(directory: &Path) -> Result<()> {
 }
 
 #[cfg(not(unix))]
+/// Accepts the download directory on platforms without Unix ownership and mode checks.
 fn validate_download_directory(_directory: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Resolves an asset filename beneath `directory`, rejecting paths and separators.
 fn safe_asset_path(directory: &Path, filename: &str) -> Result<PathBuf> {
     let path = Path::new(filename);
     let mut components = path.components();
