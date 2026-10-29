@@ -97,16 +97,25 @@ pub fn strip_repeated_separator(filename: &str, sep: &str) -> String {
 
 /// Returns whether `part` is a safe single path component.
 /// Prevent path traversal by rejecting `.`/`..` and path separators,
-/// and reject path-bearing identifiers that are not safe single components.
-pub fn is_safe_component(part: &str) -> bool {
+/// with customizable extra allowed bytes.
+fn is_safe_component_with(part: &str, extra: &[u8]) -> bool {
     !part.is_empty()
         && part != "."
         && part != ".."
         && !part.contains(['/', '\\'])
         && !part.contains(':')
-        && part
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.'))
+        && part.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric()
+                || matches!(byte, b'_' | b'-' | b'.')
+                || extra.contains(&byte)
+        })
+}
+
+/// Returns whether `part` is a safe single path component.
+/// Prevent path traversal by rejecting `.`/`..` and path separators,
+/// and reject path-bearing identifiers that are not safe single components.
+pub fn is_safe_component(part: &str) -> bool {
+    is_safe_component_with(part, &[])
 }
 
 /// Reject versions that can escape their repository directory.
@@ -152,6 +161,31 @@ mod tests {
         assert_eq!(strip_repeated_separator("a-bc---", "-"), "a-bc");
         assert_eq!(strip_repeated_separator("a--bc---", "-"), "abc");
         assert_eq!(strip_repeated_separator("abc", "-"), "abc");
+    }
+
+    #[test]
+    fn test_is_safe_component() {
+        assert!(is_safe_component("valid_component"));
+        assert!(!is_safe_component("valid_component@123"));
+        assert!(!is_safe_component("."));
+        assert!(!is_safe_component(".."));
+        assert!(!is_safe_component("invalid/component"));
+        assert!(!is_safe_component("invalid\\component"));
+        assert!(!is_safe_component("invalid:component"));
+    }
+
+    #[test]
+    fn test_is_safe_component_with() {
+        assert!(is_safe_component_with("valid_component", &[]));
+        assert!(!is_safe_component_with(".", &[]));
+        assert!(!is_safe_component_with("..", &[]));
+        assert!(!is_safe_component_with("invalid/component", &[]));
+        assert!(!is_safe_component_with("invalid\\component", &[]));
+        assert!(!is_safe_component_with("invalid:component", &[]));
+        assert!(!is_safe_component_with("invalid:component", b"+")); // single extra byte
+        assert!(!is_safe_component_with("invalid:component", b"+@")); // multiple extra bytes
+        assert!(!is_safe_component_with("valid_component@123", &[])); // invalid because not allowing '@' by default
+        assert!(is_safe_component_with("valid_component@123", b"+@")); // valid by adding '@' to the allowed extra bytes
     }
 
     #[test]
