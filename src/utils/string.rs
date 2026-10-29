@@ -95,8 +95,9 @@ pub fn strip_repeated_separator(filename: &str, sep: &str) -> String {
     result
 }
 
-// Prevent path traversal by rejecting `.`/`..` and path separators,
-// and reject path-bearing identifiers that are not safe single components.
+/// Returns whether `part` is a safe single path component.
+/// Prevent path traversal by rejecting `.`/`..` and path separators,
+/// and reject path-bearing identifiers that are not safe single components.
 pub fn is_safe_component(part: &str) -> bool {
     !part.is_empty()
         && part != "."

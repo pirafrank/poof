@@ -9,10 +9,15 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 // Constants
+
+/// Compiled pattern that restricts binary names to safe ASCII characters.
+/// LazyLock will compile the regex only once, on first use,
+/// ensuring efficient repeated validation.
 static BINARY_NAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_-]+$").unwrap());
 
-/// Validates that `s` is a `USERNAME/REPO` slug and returns it unchanged if valid.
+/// Validates that the given string is a `USERNAME/REPO` slug
+/// and returns it unchanged if valid.
 fn validate_repo_format(s: &str) -> Result<Slug, String> {
     match Slug::validate(s) {
         Ok(slug) => Ok(slug),
@@ -23,6 +28,7 @@ fn validate_repo_format(s: &str) -> Result<Slug, String> {
     }
 }
 
+/// Validates that the given string is a safe single version path component.
 fn validate_version_component(s: &str) -> Result<String, String> {
     match validate_version(s) {
         Ok(_) => Ok(s.to_string()),
