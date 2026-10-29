@@ -6,10 +6,20 @@ coverage:
         threshold: 1%
     patch:
       default:
-        target: auto
-        threshold: 1%
+        target: 90%
+        threshold: 0%
 ignore:
   - "tests/*"
   - "src/core/tests/**"
   - "build.rs"
 
+#
+# Notes:
+#
+# The coverage thresholds are set to ensure that the project maintains a minimum level of test coverage.
+# The 'project' section defines the overall coverage targets for the entire project.
+# Here 'auto' means that Codecov will require as minimum coverage the same as the previous commit in history.
+# The 'patch' section defines the coverage targets for individual pull requests.
+# The 'threshold' values define the minimum acceptable coverage percentage.
+# The 'ignore' section lists files and directories that should be excluded from coverage analysis.
+# Codecov will use the configuration from your PR branch, not from main, by default.
