@@ -7,7 +7,9 @@ use log::{error, info};
 use crate::files::datadirs;
 use crate::files::filesys;
 use crate::files::utils::find_similar_repo;
+use crate::models::slug::Slug;
 use crate::utils::semver::SemverSort;
+use crate::utils::string::validate_version;
 
 /// Check if a repository is installed, providing helpful error messages if not.
 /// Returns the path to the repository's versions directory.
@@ -104,6 +106,7 @@ fn get_installed_dir(repo: &str, version: &str) -> Result<PathBuf> {
 /// When `version` is `None`, the highest semantically-versioned installed release
 /// is selected automatically via [`get_latest_version`].
 pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
+    Slug::validate(repo)?;
     // Resolve version: use provided version or get latest
     let resolved_version = match version {
         Some(v) => v.to_string(),
@@ -115,9 +118,11 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
             latest
         }
     };
+    validate_version(&resolved_version)?;
 
     // Get the installed directory for the specified repo and version
     let install_dir = get_installed_dir(repo, &resolved_version)?;
+    let data_dir = datadirs::get_data_dir().context("Cannot get data directory")?;
     // Get the bin directory
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory")?;
 
@@ -140,7 +145,8 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
             binaries.push(file_name.to_string_lossy().to_string());
             // make exec available in PATH, overwriting any existing symlink
             let symlink_path = bin_dir.join(file_name);
-            filesys::create_symlink(&path, &symlink_path, true)
+            let repo_root = datadirs::get_versions_nest(&data_dir, repo);
+            filesys::create_repo_symlink(&path, &symlink_path, &repo_root)
                 .map_err(anyhow::Error::msg)
                 .with_context(|| {
                     format!(

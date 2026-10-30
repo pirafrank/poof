@@ -1,25 +1,42 @@
 //! `user/repo` slug type with validation.
 
+use crate::utils::string::is_safe_component;
 use anyhow::bail;
 use anyhow::Error;
 
 /// A validated GitHub repository slug in the form `user/repo`.
 ///
 /// Both the user and repository parts must be non-empty after trimming.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
 pub struct Slug(pub String);
 
-// allowing dead code for the sake of having a complete set
-// of function available for the Slug struct.
-#[allow(dead_code)]
 impl Slug {
     /// Parse a `"user/repo"` string into a [`Slug`], returning an error if the
     /// format is invalid (wrong number of `/` separators or empty components).
+    /// # Arguments
+    /// * `repo_slug` - The `"user/repo"` string to parse.
+    ///
+    /// # Returns
+    ///
+    /// A [`Slug`] if the input is valid, or an error otherwise.
     pub fn new(repo_slug: &str) -> Result<Self, Error> {
+        // validate returns a new Slug if the format is correct
+        Self::validate(repo_slug)
+    }
+
+    /// Validate a `"user/repo"` string and return a [`Slug`] if valid.
+    /// # Arguments
+    ///
+    /// * `repo_slug` - The `"user/repo"` string to validate.
+    ///
+    /// # Returns
+    ///
+    /// A [`Slug`] if the input is valid, or an error otherwise.
+    pub fn validate(repo_slug: &str) -> Result<Self, Error> {
         let mut parts = repo_slug.split('/');
         match (parts.next(), parts.next(), parts.next()) {
             (Some(user), Some(repo), None) => Ok(Slug::from_parts(user, repo)?),
-            _ => bail!("Invalid slug format: {}", repo_slug),
+            _ => bail!("Invalid slug: {}", repo_slug),
         }
     }
 
@@ -29,7 +46,8 @@ impl Slug {
     pub fn from_parts(user: &str, repo: &str) -> Result<Self, Error> {
         let user = user.trim();
         let repo = repo.trim();
-        if user.is_empty() || repo.is_empty() {
+        // Prevent path traversal by rejecting `.`/`..` and path separators
+        if !is_safe_component(user) || !is_safe_component(repo) {
             bail!("Invalid slug format: {}/{}", user, repo)
         }
         Ok(Slug(format!("{}/{}", user, repo)))
@@ -94,6 +112,10 @@ mod tests {
         // Empty parts
         let slug = Slug::new("");
         assert!(slug.is_err());
+
+        // Path traversal
+        assert!(Slug::new("../..").is_err());
+        assert!(Slug::new("owner/..").is_err());
 
         // Missing repo
         let slug = Slug::new("user");
@@ -172,5 +194,12 @@ mod tests {
         // Valid slug with whitespace should be accepted and cleaned up
         let slug = Slug::new("  user  /  repo  ").unwrap();
         assert_eq!(slug.as_str(), "user/repo");
+    }
+
+    #[test]
+    fn test_validate() {
+        assert!(Slug::validate("../..").is_err());
+        assert!(Slug::validate("owner/..").is_err());
+        assert!(Slug::validate("owner/repo").is_ok());
     }
 }

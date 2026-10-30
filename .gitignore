@@ -67,3 +67,6 @@ data/*
 
 # generated man pages
 man/
+
+# security reviews directory
+security-reviews/
