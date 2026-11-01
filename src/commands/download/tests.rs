@@ -29,6 +29,31 @@ fn test_download_asset_success() -> Result<()> {
 }
 
 #[test]
+fn test_download_asset_replaces_existing_destination() -> Result<()> {
+    let mut server = Server::new();
+    let body = "replacement content";
+    let _m = server
+        .mock("GET", "/test-asset")
+        .with_status(200)
+        .with_body(body)
+        .create();
+
+    let tmp_dir = tempdir()?;
+    let download_to = tmp_dir.path().to_path_buf();
+    let filename = "test-file.bin".to_string();
+    let destination = download_to.join(&filename);
+    fs::write(&destination, "old content")?;
+    let download_url = format!("{}/test-asset", server.url());
+
+    let result = download_asset(&filename, &download_url, &download_to)?;
+
+    assert_eq!(result, destination);
+    assert_eq!(fs::read_to_string(result)?, body);
+
+    Ok(())
+}
+
+#[test]
 fn test_download_asset_http_error() -> Result<()> {
     let mut server = Server::new();
     let _m = server

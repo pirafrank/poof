@@ -111,7 +111,7 @@ pub fn download_asset(
         })();
         download_result?;
         let finalized_file = temporary_file
-            .persist_noclobber(&target_file_path)
+            .persist(&target_file_path)
             .map_err(|error| error.error)
             .with_context(|| {
                 format!(
