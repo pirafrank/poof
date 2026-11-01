@@ -16,6 +16,7 @@ mod get_release_url {
     use super::*;
 
     #[test]
+    #[serial_test::serial]
     fn test_latest_release_url() {
         let url = get_release_url("owner/repo", None).unwrap().to_string();
         assert_eq!(
@@ -25,6 +26,7 @@ mod get_release_url {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_specific_tag_release_url() {
         let url = get_release_url("owner/repo", Some("v1.0.0"))
             .unwrap()
@@ -36,6 +38,7 @@ mod get_release_url {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_url_with_special_characters_in_repo() {
         let url = get_release_url("user-name/repo_name", None)
             .unwrap()
@@ -47,6 +50,7 @@ mod get_release_url {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_url_with_special_characters_in_tag() {
         let url = get_release_url("owner/repo", Some("v1.0.0-beta.1"))
             .unwrap()
@@ -58,6 +62,7 @@ mod get_release_url {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_url_with_numeric_repo() {
         let url = get_release_url("owner123/repo456", Some("1.2.3"))
             .unwrap()
