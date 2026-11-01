@@ -71,9 +71,49 @@ pub fn get_bin_dir() -> Option<PathBuf> {
 pub fn get_cache_dir() -> Option<PathBuf> {
     let cache_dir = dirs::cache_dir()?.join(APP_NAME);
     if !cache_dir.exists() {
-        std::fs::create_dir_all(&cache_dir).ok()?;
+        std::fs::create_dir_all(cache_dir.parent()?).ok()?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            std::fs::DirBuilder::new()
+                .mode(0o700)
+                .create(&cache_dir)
+                .ok()?;
+        }
+        #[cfg(not(unix))]
+        std::fs::create_dir(&cache_dir).ok()?;
     }
+    #[cfg(unix)]
+    ensure_private_managed_dir(&cache_dir).ok()?;
     Some(cache_dir)
+}
+
+/// Ensure poof's cache root is a private, user-owned directory.
+#[cfg(unix)]
+fn ensure_private_managed_dir(directory: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+
+    let metadata = std::fs::symlink_metadata(directory)?;
+    if !metadata.file_type().is_dir() || metadata.uid() != unsafe { libc::geteuid() } {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "managed directory is not a user-owned directory",
+        ));
+    }
+    if metadata.permissions().mode() & 0o777 != 0o700 {
+        std::fs::set_permissions(directory, std::fs::Permissions::from_mode(0o700))?;
+    }
+    let repaired = std::fs::symlink_metadata(directory)?;
+    if !repaired.file_type().is_dir()
+        || repaired.uid() != unsafe { libc::geteuid() }
+        || repaired.permissions().mode() & 0o777 != 0o700
+    {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "managed directory could not be secured",
+        ));
+    }
+    Ok(())
 }
 
 /// Returns `base/username/reponame` for `repo` in `"username/reponame"` format.
@@ -94,6 +134,46 @@ pub fn get_binary_nest(base: &Path, repo: &str, version: &str) -> PathBuf {
 mod tests {
     use super::*;
     use std::path::Path;
+
+    #[cfg(unix)]
+    #[test]
+    fn test_private_managed_dir_repairs_permissions_and_preserves_contents() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = tempfile::tempdir().unwrap();
+        let directory = temp.path().join("managed");
+        std::fs::create_dir(&directory).unwrap();
+        let content = directory.join("existing");
+        std::fs::write(&content, "keep").unwrap();
+        std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o775)).unwrap();
+
+        // Running ensure_private_managed_dir twice to test that method is safe and idempotent.
+        ensure_private_managed_dir(&directory).unwrap();
+        ensure_private_managed_dir(&directory).unwrap();
+
+        assert_eq!(
+            std::fs::metadata(&directory).unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+        assert_eq!(std::fs::read_to_string(content).unwrap(), "keep");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_private_managed_dir_rejects_symlink_without_changing_target() {
+        let temp = tempfile::tempdir().unwrap();
+        let target = temp.path().join("target");
+        let link = temp.path().join("managed");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(target.join("sentinel"), "keep").unwrap();
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+
+        assert!(ensure_private_managed_dir(&link).is_err());
+        assert_eq!(
+            std::fs::read_to_string(target.join("sentinel")).unwrap(),
+            "keep"
+        );
+    }
 
     #[test]
     fn test_get_versions_nest() {

@@ -53,6 +53,37 @@ fn test_download_asset_replaces_existing_destination() -> Result<()> {
     Ok(())
 }
 
+#[cfg(unix)]
+#[test]
+fn test_download_asset_accepts_shared_writable_destinations_without_chmod() -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    for mode in [0o755, 0o775] {
+        let mut server = Server::new();
+        let _m = server
+            .mock("GET", "/test-asset")
+            .with_status(200)
+            .with_body("content")
+            .create();
+        let tmp_dir = tempdir()?;
+        let download_to = tmp_dir.path().join("destination");
+        fs::create_dir(&download_to)?;
+        fs::set_permissions(&download_to, fs::Permissions::from_mode(mode))?;
+
+        download_asset(
+            &"test-file.bin".to_string(),
+            &format!("{}/test-asset", server.url()),
+            &download_to,
+        )?;
+
+        assert_eq!(
+            fs::metadata(download_to)?.permissions().mode() & 0o777,
+            mode
+        );
+    }
+    Ok(())
+}
+
 #[test]
 fn test_download_asset_http_error() -> Result<()> {
     let mut server = Server::new();

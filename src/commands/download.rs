@@ -3,7 +3,6 @@
 use anyhow::{bail, Context, Result};
 use log::{debug, info};
 use std::{
-    fs,
     io::{self, Read},
     path::{Component, Path, PathBuf},
     time::Duration,
@@ -14,30 +13,6 @@ use tempfile::NamedTempFile;
 const MAX_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
 /// Maximum time allowed for a release asset download.
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10 * 60);
-
-#[cfg(unix)]
-/// Ensures the download directory is owned by this user and is not group/other writable.
-fn validate_download_directory(directory: &Path) -> Result<()> {
-    use std::os::unix::fs::{MetadataExt, PermissionsExt};
-
-    let metadata = fs::metadata(directory)
-        .with_context(|| format!("Cannot inspect download directory {}", directory.display()))?;
-    let mode = metadata.permissions().mode();
-    // Prevent other users from replacing temporary files before finalization.
-    if metadata.uid() != unsafe { libc::geteuid() } || mode & 0o700 != 0o700 || mode & 0o022 != 0 {
-        bail!(
-            "Download directory must be owned by the current user, accessible to that user, and not writable by group or others: {}",
-            directory.display()
-        );
-    }
-    Ok(())
-}
-
-#[cfg(not(unix))]
-/// Accepts the download directory on platforms without Unix ownership and mode checks.
-fn validate_download_directory(_directory: &Path) -> Result<()> {
-    Ok(())
-}
 
 /// Resolves an asset filename beneath `directory`, rejecting paths and separators.
 fn safe_asset_path(directory: &Path, filename: &str) -> Result<PathBuf> {
@@ -83,11 +58,11 @@ pub fn download_asset(
         // Ensure the directory exists
         std::fs::create_dir_all(download_to)
             .with_context(|| format!("Cannot create directory {}", download_to.display()))?;
-        validate_download_directory(download_to)?;
-
-        let mut temporary_file = NamedTempFile::new_in(download_to).with_context(|| {
-            format!("Cannot create temporary file in {}", download_to.display())
-        })?;
+        // Keep the in-progress file in the private system temporary directory. A
+        // user-selected destination may be group writable, so its entries cannot
+        // protect an in-progress download from replacement by another user.
+        let mut temporary_file =
+            NamedTempFile::new().context("Cannot create private temporary file")?;
 
         debug!(
             "Saving download to temporary file: {}",
