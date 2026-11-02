@@ -7,8 +7,10 @@ FROM alpine:${ALPINE_VERSION}
 # - libgcc is needed by the riscv64 musl binary for stack unwinding.
 RUN apk add --no-cache curl ca-certificates libgcc bash
 
-# Download and install poof using the official script
-RUN curl -fsSL https://raw.githubusercontent.com/pirafrank/poof/main/install.sh | sh
+# Install the resolved release, using the installer from the checked-out source.
+ARG POOF_TAG
+COPY install.sh /tmp/poof-install.sh
+RUN POOF_TAG="$POOF_TAG" sh /tmp/poof-install.sh
 
 # The install script places poof in /root/.local/bin/poof by default.
 # Set it to the PATH so it can be executed easily by any user context.
