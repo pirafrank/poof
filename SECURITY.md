@@ -14,14 +14,24 @@ public issues until a fix and disclosure have been coordinated.
 
 ## Release authenticity
 
-Starting with the next release built by the updated release workflow, each target
-has an SPDX JSON SBOM and GitHub Artifact Attestations for its binary and archive.
-The SBOM inventories the build's locked source dependencies; it may include
-dependencies that are not linked on that target. Older releases may lack these files.
-Checksums detect corruption but do not establish who produced an asset.
+Download the archive, checksum manifest, and its Sigstore bundle from the same
+[GitHub release](https://github.com/pirafrank/poof/releases). Verify the manifest
+signature and archive checksum before extracting or running an asset. Replace the
+example version and filename with the release you downloaded:
 
-Download the desired archive from the official release, then verify it before
-extracting or running it. Substitute the actual asset filename:
+```sh
+cosign verify-blob poof-VERSION-checksums.txt \
+  --bundle poof-VERSION-checksums.txt.sigstore.json \
+  --certificate-identity 'https://github.com/pirafrank/poof/.github/workflows/release.yml@refs/tags/vVERSION' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
+sha256sum --check poof-VERSION-checksums.txt
+```
+
+Run the checksum command in the directory containing every manifest entry. On
+macOS, use `shasum -a 256 --check`. If verifying one asset in a wrapper, select
+its exact filename from the manifest and require exactly one matching entry.
+
+GitHub attestations verify the archive and its SPDX SBOM against the release tag:
 
 ```sh
 gh attestation verify ./poof-VERSION-TARGET.tar.gz \
@@ -36,9 +46,17 @@ gh attestation verify ./poof-VERSION-TARGET.tar.gz \
   --predicate-type https://spdx.dev/Document/v2.3
 ```
 
-After extraction, the same commands can verify `./poof`. Verification needs an
-authenticated GitHub CLI and network access. See
-[GitHub's verification documentation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
+Attestations can also verify `./poof` after extraction. Verification requires
+network access and an authenticated GitHub CLI. See [GitHub's verification
+documentation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations).
+
+Each archive also has a build-environment JSON record covered by the signed
+checksum manifest. It records artifact identity, source and workflow/run details,
+runner and Rust toolchain information, build inputs and configuration, plus host
+and cross-compilation toolchains. Unavailable probes are null; sensitive
+environment values and credentials are not collected. This record aids build
+investigation but does not prove reproducibility; independent rebuilds and output
+comparison are needed for that.
 
 ## Release checks
 

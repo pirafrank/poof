@@ -307,4 +307,4 @@ the much more famous [poof](https://fairlyoddparents.fandom.com/wiki/Poof).
 ## Security
 
 See [SECURITY.md](SECURITY.md) for supported versions, private vulnerability reporting,
-release attestation verification, and the release validation gates.
+release attestation verification instructions, and the release validation gates.
