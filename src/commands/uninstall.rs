@@ -7,8 +7,10 @@ use std::io::{stdin, stdout, Write};
 use std::path::Path;
 
 use crate::cli::UninstallArgs;
-use crate::files::datadirs;
 use crate::files::filesys::is_broken_symlink;
+use crate::files::{datadirs, filesys};
+use crate::models::slug::Slug;
+use crate::utils::string::validate_version;
 
 /// Remove an installed version (or all versions) of a repository from the data directory.
 ///
@@ -16,6 +18,10 @@ use crate::files::filesys::is_broken_symlink;
 /// symlinks left behind in the bin directory. The user is prompted for
 /// confirmation unless the `--yes` / `-y` flag is set.
 pub fn run_uninstall(args: &UninstallArgs) -> Result<()> {
+    Slug::validate(&args.repo)?;
+    if let Some(version) = &args.version {
+        validate_version(version)?;
+    }
     let data_dir = datadirs::get_data_dir().context("Cannot get data directory")?;
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory")?;
 
@@ -81,6 +87,7 @@ pub fn run_uninstall(args: &UninstallArgs) -> Result<()> {
 
     // Delete the directory
     debug!("Deleting directory: {}", target_path.display());
+    filesys::ensure_contained(&data_dir, &target_path)?;
     fs::remove_dir_all(&target_path)
         .with_context(|| format!("Cannot delete directory: {}", target_path.display()))?;
 
@@ -98,7 +105,7 @@ pub fn run_uninstall(args: &UninstallArgs) -> Result<()> {
 
     // Clean up broken symlinks
     let cleaned_count =
-        clean_broken_symlinks(&bin_dir).context("Failed to clean broken symlinks")?;
+        clean_broken_symlinks(&bin_dir, &target_path).context("Failed to clean broken symlinks")?;
 
     if cleaned_count > 0 {
         debug!(
@@ -112,7 +119,7 @@ pub fn run_uninstall(args: &UninstallArgs) -> Result<()> {
 
 /// Clean broken symlinks from the bin directory.
 /// Returns the number of symlinks that were removed.
-fn clean_broken_symlinks(bin_dir: &Path) -> Result<usize> {
+fn clean_broken_symlinks(bin_dir: &Path, removed_root: &Path) -> Result<usize> {
     let mut count = 0;
 
     // Return early if bin_dir doesn't exist
@@ -127,7 +134,13 @@ fn clean_broken_symlinks(bin_dir: &Path) -> Result<usize> {
         let path = entry.path();
 
         // Check if it's a symlink
-        if is_broken_symlink(&path)? {
+        if is_broken_symlink(&path)?
+            && fs::read_link(&path)?.is_absolute()
+            && fs::read_link(&path)?.starts_with(removed_root)
+            && !fs::read_link(&path)?
+                .components()
+                .any(|part| part == std::path::Component::ParentDir)
+        {
             fs::remove_file(&path)
                 .with_context(|| format!("Cannot remove broken symlink: {}", path.display()))?;
             count += 1;
@@ -170,9 +183,24 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
+    fn cleanup_preserves_unrelated_dangling_links() -> Result<()> {
+        let env = TestEnv::new()?;
+        let owned = env._temp_dir.path().join("data/owner/repo");
+        env.create_symlink("owned", &owned.join("1.0/tool"))?;
+        let foreign = env._temp_dir.path().join("foreign/missing");
+        env.create_symlink("foreign", &foreign)?;
+        env.create_symlink("relative", Path::new("../foreign/missing"))?;
+        assert_eq!(clean_broken_symlinks(&env.bin_dir, &owned)?, 1);
+        assert_eq!(fs::read_link(env.bin_dir.join("foreign"))?, foreign);
+        assert!(env.bin_dir.join("relative").is_symlink());
+        Ok(())
+    }
+
+    #[test]
     fn test_clean_broken_symlinks_empty_dir() -> Result<()> {
         let env = TestEnv::new()?;
-        let count = clean_broken_symlinks(&env.bin_dir)?;
+        let count = clean_broken_symlinks(&env.bin_dir, &env.bin_dir)?;
         assert_eq!(count, 0, "Empty directory should return 0");
         Ok(())
     }
@@ -181,7 +209,7 @@ mod tests {
     fn test_clean_broken_symlinks_nonexistent_dir() -> Result<()> {
         let temp_dir = TempDir::new()?;
         let nonexistent = temp_dir.path().join("nonexistent");
-        let count = clean_broken_symlinks(&nonexistent)?;
+        let count = clean_broken_symlinks(&nonexistent, &nonexistent)?;
         assert_eq!(count, 0, "Nonexistent directory should return 0");
         Ok(())
     }
@@ -198,7 +226,7 @@ mod tests {
         // Create a valid symlink pointing to the target
         env.create_symlink("valid_link", &target)?;
 
-        let count = clean_broken_symlinks(&env.bin_dir)?;
+        let count = clean_broken_symlinks(&env.bin_dir, &env.bin_dir)?;
         assert_eq!(count, 0, "No broken symlinks should return 0");
 
         // Verify the symlink still exists
@@ -221,7 +249,7 @@ mod tests {
         let broken_target = env.bin_dir.join("nonexistent_target");
         env.create_symlink("broken_link", &broken_target)?;
 
-        let count = clean_broken_symlinks(&env.bin_dir)?;
+        let count = clean_broken_symlinks(&env.bin_dir, &env.bin_dir)?;
         assert_eq!(count, 1, "Should remove exactly 1 broken symlink");
 
         // Verify valid symlink still exists
@@ -250,7 +278,7 @@ mod tests {
         env.create_symlink("broken_link1", &env.bin_dir.join("nonexistent1"))?;
         env.create_symlink("broken_link2", &env.bin_dir.join("nonexistent2"))?;
 
-        let count = clean_broken_symlinks(&env.bin_dir)?;
+        let count = clean_broken_symlinks(&env.bin_dir, &env.bin_dir)?;
         assert_eq!(count, 2, "Should remove exactly 2 broken symlinks");
 
         // Verify regular file and valid symlink still exist
@@ -277,7 +305,7 @@ mod tests {
             )?;
         }
 
-        let count = clean_broken_symlinks(&env.bin_dir)?;
+        let count = clean_broken_symlinks(&env.bin_dir, &env.bin_dir)?;
         assert_eq!(count, 5, "Should remove all 5 broken symlinks");
 
         // Verify all were removed

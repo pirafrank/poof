@@ -671,6 +671,7 @@ mod public_api_tests {
         // Test with empty repo - mock the endpoint that would be called
         let mock_empty = server
             .mock("GET", "//releases/latest")
+            .expect(0)
             .match_header("User-Agent", "pirafrank/poof")
             .match_header("Accept", "application/vnd.github.v3+json")
             .with_status(404)
@@ -698,6 +699,7 @@ mod public_api_tests {
         let invalid_repo = "no-slash";
         let mock_invalid = server
             .mock("GET", format!("/{}/releases/latest", invalid_repo).as_str())
+            .expect(0)
             .match_header("User-Agent", "pirafrank/poof")
             .match_header("Accept", "application/vnd.github.v3+json")
             .with_status(404)

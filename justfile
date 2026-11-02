@@ -221,14 +221,23 @@ nix-build:
 nix-run:
   nix run .#default -- --version
 
-# Update the flake.lock file
+# Update the flake.lock file (does not work in git worktrees)
 flake-update:
   docker run --rm \
   -v "$(pwd):/workspace" \
   -w /workspace \
-  -e NIX_CONFIG="experimental-features = nix-command flakes" \
+  -e GITHUB_TOKEN \
+  -e HOST_UID="$(id -u)" \
+  -e HOST_GID="$(id -g)" \
   nixos/nix \
-  sh -c "git config --global --add safe.directory /workspace && nix flake update && chown $(id -u):$(id -g) flake.lock"
+  sh -c 'git config --global --add safe.directory /workspace && \
+  if [ -n "$GITHUB_TOKEN" ]; then \
+  export NIX_CONFIG="$(printf "%s\n%s" "experimental-features = nix-command flakes" "access-tokens = github.com=$GITHUB_TOKEN")"; \
+  else \
+  export NIX_CONFIG="experimental-features = nix-command flakes"; \
+  fi && \
+  nix flake update && \
+  chown "$HOST_UID:$HOST_GID" flake.lock'
 
 # Check the glibc version a binary was built against
 glibc binary:

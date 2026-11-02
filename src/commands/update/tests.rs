@@ -445,7 +445,7 @@ fn test_process_update_with_repo_name() -> Result<()> {
     let test_env = setup_test_env()?;
 
     let args = UpdateArgs {
-        repo: Some("user/repo".to_string()),
+        repo: Some(Slug::try_from("user/repo")?),
         all: false,
     };
 

@@ -23,7 +23,7 @@ use crate::{
         models::{Release, ReleaseAsset},
     },
     models::slug::Slug,
-    utils::semver::SemverStringPrefix,
+    utils::{semver::SemverStringPrefix, string::validate_version},
 };
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, warn};
@@ -36,8 +36,10 @@ use log::{debug, info, warn};
 /// PATH check. On Unix-like platforms a symlink is also created in the bin
 /// directory so the binary is available in `PATH`.
 pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
+    Slug::validate(repo)?;
     let (release, assets) = select_assets(repo, tag)?;
     let version: String = release.tag_name().strip_v();
+    validate_version(&version).context("Release tag is not a safe version path component")?;
 
     let install_dir = get_install_dir(repo, &version)?;
     if check_if_installed(&install_dir)? {
@@ -59,8 +61,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
         datadirs::get_cache_dir().context("Cannot determine cache directory")?;
     debug!("Cache directory: {}", cache_dir.display());
 
-    let mut i = 1;
-    for asset in assets {
+    for (i, asset) in (1..).zip(assets) {
         // if not installed, download release assets.
         // we use a counter to name the assets differently to avoid conflicts in case of multiple assets,
         // which themselves may contain multiple executables.
@@ -75,7 +76,6 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
                     bail!(e);
                 }
             };
-        i += 1;
 
         process_install(
             &slug,
@@ -91,7 +91,7 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
             debug!("Cleaned up cache directory: {}", download_to.display());
         }
     }
-    info!("{} {} installed successfully.\n", repo, &version);
+    info!("{} {} installed successfully.\n", repo, version);
 
     // check if the binaries are in the PATH by checking if poof's bin directory is in PATH
     commands::check::check_if_bin_in_path()?;
@@ -122,12 +122,16 @@ fn process_install(
             .with_context(|| format!("Cannot install executable {}", asset_name))?;
     } else {
         // extract executables
-        archives::extract_to_dir(downloaded_file, download_to)
+        let staging = tempfile::Builder::new()
+            .prefix("poof-extract-")
+            .tempdir_in(download_to)?;
+        let extracted = staging.path().join("contents");
+        archives::extract_to_dir(downloaded_file, &extracted)
             .with_context(|| format!("Cannot extract archive {}", asset_name))?;
         debug!("Extracted {} to {}", asset_name, download_to.display());
 
         // install executables
-        install_binaries(slug, version, download_to, install_dir)
+        install_binaries(slug, version, &extracted, install_dir)
             .with_context(|| format!("Cannot extract executables from archive {}", asset_name))?;
     }
     Ok(())
@@ -319,7 +323,9 @@ fn install_binary(
         // Create a symlink in the bin directory, overwriting existing to default
         // using the new version. This is a UX feature to save the user from having to
         // manually set the default version after installation (most cases).
-        match filesys::create_symlink(&installed_exec, &symlink_path, true) {
+        let data_dir = datadirs::get_data_dir().context("Cannot determine data directory")?;
+        let repo_root = datadirs::get_versions_nest(&data_dir, slug.as_str());
+        match filesys::create_repo_symlink(&installed_exec, &symlink_path, &repo_root) {
             Ok(()) => {
                 info!("✓ '{}' command installed\n", exec_name.to_string_lossy());
             }
@@ -338,21 +344,16 @@ fn install_binary(
 /// Best effort clean up of cache directory.
 /// Returns true if the cache directory was deleted, false if it was not.
 fn clean_cache_dir(dir: &Path, cache_root: &Path) -> Result<bool> {
-    // Resolve and ensure we only delete stuff within the cache directory.
-    // Canonicalize both paths to handle symlinked temp paths consistently.
-    // Fall back to original paths if canonicalization fails.
-    let dir = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
-    let cache_root = cache_root
-        .canonicalize()
-        .unwrap_or_else(|_| cache_root.to_path_buf());
-
-    if !dir.starts_with(&cache_root) {
-        debug!("Refusing to delete non-cache path: {}", dir.display());
+    if filesys::ensure_contained(cache_root, dir).is_err() {
+        debug!(
+            "Refusing to delete non-cache or unresolved path: {}",
+            dir.display()
+        );
         return Ok(false);
     }
 
     // Best effort to clean up the cache directory.
-    match std::fs::remove_dir_all(&dir) {
+    match std::fs::remove_dir_all(dir) {
         Ok(()) => Ok(true),
         Err(e) => {
             debug!("Cannot delete cache directory {}: {}", dir.display(), e);

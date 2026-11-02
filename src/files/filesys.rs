@@ -1,6 +1,6 @@
 //! File system helpers for locating, copying, and symlinking executables.
 
-use log::{debug, warn};
+use log::debug;
 use std::path::{Path, PathBuf};
 
 use crate::files::magic::{is_exec_by_magic_number, is_exec_for_current_arch};
@@ -109,57 +109,51 @@ pub fn copy_file(source: &PathBuf, target: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-/// Create a Unix symlink at `target` pointing to `source` (Unix only).
-///
-/// When `remove_existing` is `true` any file already at `target` is deleted
-/// before the symlink is created. When it is `false` and `target` already
-/// exists the operation is skipped with a warning.
+/// Replace a symlink only when its current target belongs to `repo_root`.
 #[cfg(not(target_os = "windows"))]
-pub fn create_symlink(
+pub fn create_repo_symlink(
     source: &PathBuf,
     target: &PathBuf,
-    remove_existing: bool,
+    repo_root: &Path,
 ) -> Result<(), String> {
-    let msg = if remove_existing { "" } else { " NOT" };
-    debug!(
-        "Creating symlink {} -> {},{} removing existing",
-        source.display(),
-        target.display(),
-        msg
-    );
-    if target.exists() {
-        if remove_existing {
-            if let Err(e) = std::fs::remove_file(target) {
-                return Err(format!("Cannot remove {}, Error: {}", target.display(), e));
+    match std::fs::symlink_metadata(target) {
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            let link_target = std::fs::read_link(target)
+                .map_err(|error| format!("Cannot read {}: {error}", target.display()))?;
+            let resolved_target = if link_target.is_absolute() {
+                link_target
+            } else {
+                target
+                    .parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .join(link_target)
+            };
+            let resolved_target = resolved_target
+                .canonicalize()
+                .map_err(|error| format!("Cannot resolve {}: {error}", target.display()))?;
+            let repo_root = repo_root
+                .canonicalize()
+                .map_err(|error| format!("Cannot resolve repository directory: {error}"))?;
+            if !resolved_target.starts_with(&repo_root) {
+                return Err(format!(
+                    "Refusing to replace symlink not owned by repository: {}",
+                    target.display()
+                ));
             }
-            debug!("Removed existing symlink {}", target.display());
-        } else {
-            // If the symlink already exists and we don't want to remove it, skip.
-            warn!("Symlink {} already exists. Skipping.", target.display());
-            return Ok(());
+            std::fs::remove_file(target)
+                .map_err(|error| format!("Cannot remove {}: {error}", target.display()))?;
         }
-    }
-
-    // Create a symlink in the target directory pointing to the installed binary.
-    match std::os::unix::fs::symlink(source, target) {
         Ok(_) => {
-            debug!(
-                "Symlink created: {} -> {}",
-                source.display(),
+            return Err(format!(
+                "Refusing to replace non-symlink {}",
                 target.display()
-            );
+            ))
         }
-        Err(e) => {
-            let e_msg = format!(
-                "Error creating symlink {} -> {}: {}",
-                source.display(),
-                target.display(),
-                e
-            );
-            return Err(e_msg);
-        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("Cannot inspect {}: {error}", target.display())),
     }
-    Ok(())
+    std::os::unix::fs::symlink(source, target)
+        .map_err(|error| format!("Cannot create symlink {}: {error}", target.display()))
 }
 
 /// Check if a symlink is broken.
@@ -176,6 +170,18 @@ pub fn is_broken_symlink(path: &Path) -> std::io::Result<bool> {
     } else {
         Ok(false)
     }
+}
+
+/// Confirm an existing target resolves strictly below its intended root.
+/// Refuse unresolved paths rather than falling back to lexical comparisons.
+pub fn ensure_contained(root: &Path, target: &Path) -> anyhow::Result<()> {
+    let root = root.canonicalize()?;
+    let target = target.canonicalize()?;
+    anyhow::ensure!(
+        target != root && target.starts_with(&root),
+        "Target escapes intended data root"
+    );
+    Ok(())
 }
 
 #[cfg(test)]
