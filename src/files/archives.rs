@@ -24,9 +24,17 @@ const MAX_ARCHIVE_ENTRIES: usize = 50_000;
 /// Copies data from a reader to an output file, enforcing a maximum size limit.
 /// If the copied data exceeds `MAX_EXPANDED_BYTES`, the output file is removed and an error is returned.
 fn copy_limited<R: Read>(reader: &mut R, output_path: &Path) -> Result<()> {
+    copy_limited_with_limit(reader, output_path, MAX_EXPANDED_BYTES)
+}
+
+/// Copies data from a reader to an output file, enforcing a specified size limit.
+/// If the copied data exceeds `limit`, the output file is removed and an error is returned.
+/// This allows to enforce custom size limits for different use cases, rather than relying solely on the global maximum.
+/// One use case is testing with deliberately small limits to ensure that oversized files are correctly rejected.
+fn copy_limited_with_limit<R: Read>(reader: &mut R, output_path: &Path, limit: u64) -> Result<()> {
     let mut output_file = File::create(output_path)?;
-    let copied = std::io::copy(&mut reader.take(MAX_EXPANDED_BYTES + 1), &mut output_file)?;
-    if copied > MAX_EXPANDED_BYTES {
+    let copied = std::io::copy(&mut reader.take(limit + 1), &mut output_file)?;
+    if copied > limit {
         std::fs::remove_file(output_path).ok();
         bail!("Expanded file exceeds size limit");
     }

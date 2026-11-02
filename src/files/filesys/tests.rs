@@ -217,6 +217,26 @@ fn create_repo_symlink_replaces_same_repo_link() {
 
 #[test]
 #[cfg(unix)]
+fn create_repo_symlink_resolves_relative_target() {
+    let dir = TempDir::new().unwrap();
+    let repo_root = dir.path().join("data/owner/repo");
+    let old = repo_root.join("1.0/tool");
+    let new = repo_root.join("2.0/tool");
+    let link = dir.path().join("bin/tool");
+    std::fs::create_dir_all(old.parent().unwrap()).unwrap();
+    std::fs::create_dir_all(new.parent().unwrap()).unwrap();
+    std::fs::create_dir_all(link.parent().unwrap()).unwrap();
+    std::fs::write(&old, b"old").unwrap();
+    std::fs::write(&new, b"new").unwrap();
+    std::os::unix::fs::symlink("../data/owner/repo/1.0/tool", &link).unwrap();
+
+    create_repo_symlink(&new, &link, &repo_root).unwrap();
+
+    assert_eq!(std::fs::read(link).unwrap(), b"new");
+}
+
+#[test]
+#[cfg(unix)]
 fn test_repo_symlink_preserves_regular_and_dangling_entries() {
     let dir = tempfile::tempdir().unwrap();
     let repo = dir.path().join("owner/repo");
