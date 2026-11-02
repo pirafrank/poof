@@ -1,27 +1,38 @@
 use crate::constants::*;
 use crate::core::platform_info::{long_version, short_description};
+use crate::models::slug::Slug;
 use crate::models::supported_shells::SupportedShell;
+use crate::utils::string::validate_version;
 
 use clap::{ArgGroup, Parser, Subcommand};
-use lazy_static::lazy_static;
 use regex::Regex;
+use std::sync::LazyLock;
 
 // Constants
 
-lazy_static! {
-    static ref REPO_REGEX: Regex = Regex::new(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$").unwrap();
-    static ref BINARY_NAME_REGEX: Regex = Regex::new(r"^[A-Za-z0-9_-]+$").unwrap();
-}
+/// Compiled pattern that restricts binary names to safe ASCII characters.
+/// LazyLock will compile the regex only once, on first use,
+/// ensuring efficient repeated validation.
+static BINARY_NAME_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_-]+$").unwrap());
 
-/// Validates that `s` is a `USERNAME/REPO` slug and returns it unchanged if valid.
-fn validate_repo_format(s: &str) -> Result<String, String> {
-    if REPO_REGEX.is_match(s) {
-        Ok(s.to_string())
-    } else {
-        Err(format!(
+/// Validates that the given string is a `USERNAME/REPO` slug
+/// and returns it unchanged if valid.
+fn validate_repo_format(s: &str) -> Result<Slug, String> {
+    match Slug::validate(s) {
+        Ok(slug) => Ok(slug),
+        Err(_) => Err(format!(
             "Repository must be in the format USERNAME/REPO, got: {}",
             s
-        ))
+        )),
+    }
+}
+
+/// Validates that the given string is a safe single version path component.
+fn validate_version_component(s: &str) -> Result<String, String> {
+    match validate_version(s) {
+        Ok(_) => Ok(s.to_string()),
+        Err(_) => Err("Version must be a single path component".to_string()),
     }
 }
 
@@ -43,10 +54,10 @@ pub struct UseArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     /// e.g. pirafrank/rust_exif_renamer
     #[arg(required = true, value_parser = validate_repo_format)]
-    pub repo: String,
+    pub repo: Slug,
 
     /// Version to set as default. If not specified, uses the latest version.
-    #[arg()]
+    #[arg(value_parser = validate_version_component)]
     pub version: Option<String>,
 }
 
@@ -56,7 +67,7 @@ pub struct CmdArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     /// e.g. pirafrank/rust_exif_renamer
     #[arg(required = true, value_parser = validate_repo_format)]
-    pub repo: String,
+    pub repo: Slug,
 
     /// Optional release tag (defaults to 'latest')
     #[arg(long, short)]
@@ -68,7 +79,7 @@ pub struct CmdArgs {
 pub struct UpdateArgs {
     /// Github slug in the format USERNAME/REPO
     #[arg(value_parser = validate_repo_format, required_unless_present_any = ["all"])]
-    pub repo: Option<String>,
+    pub repo: Option<Slug>,
 
     /// Update all installed binaries
     #[arg(long, conflicts_with_all = ["repo"])]
@@ -112,8 +123,8 @@ pub struct UnlinkArgs {
 pub struct ListArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     /// e.g. pirafrank/rust_exif_renamer
-    #[arg(required = false, value_parser = validate_repo_format)]
-    pub repo: Option<String>,
+    #[arg(value_parser = validate_repo_format)]
+    pub repo: Option<Slug>,
 }
 
 /// Arguments for the `which` subcommand.
@@ -130,7 +141,7 @@ pub struct WhatArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     /// e.g. pirafrank/rust_exif_renamer
     #[arg(required = true, value_parser = validate_repo_format)]
-    pub repo: String,
+    pub repo: Slug,
 }
 
 /// Arguments for the `uninstall` subcommand.
@@ -139,10 +150,10 @@ pub struct WhatArgs {
 pub struct UninstallArgs {
     /// GitHub user and repository in the format USERNAME/REPO
     #[arg(required = true, value_parser = validate_repo_format)]
-    pub repo: String,
+    pub repo: Slug,
 
     /// Version to uninstall
-    #[arg(long, short = 'v', group = "what_to_uninstall")]
+    #[arg(long, short = 'v', group = "what_to_uninstall", value_parser = validate_version_component)]
     pub version: Option<String>,
 
     /// Uninstall all versions of the slug

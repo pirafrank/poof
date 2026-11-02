@@ -12,35 +12,30 @@ use std::path::PathBuf;
 #[path = "../src/constants.rs"]
 mod constants;
 
-// Import platform_info.rs as a top-level module
-#[allow(dead_code)]
-#[path = "../src/core/platform_info.rs"]
-pub mod platform_info_impl;
+/// Re-exported constants module from the main crate.
+#[path = "../src/models/mod.rs"]
+mod models;
 
-#[allow(dead_code)]
-#[path = "../src/models/supported_shells.rs"]
-pub mod supported_shells_impl;
+/// Re-exported core module from the main crate.
+#[path = "../src/core/mod.rs"]
+mod core;
 
-/// Namespace module that mirrors the main crate's `core` module layout.
-#[allow(dead_code)]
-mod core {
-    pub use super::platform_info_impl as platform_info;
-}
-
-/// Namespace module that mirrors the main crate's `models` module layout.
-#[allow(dead_code)]
-mod models {
-    pub use super::supported_shells_impl as supported_shells;
-}
+/// Re-exported files module from the main crate.
+#[path = "../src/files/mod.rs"]
+mod files;
 
 // Import string.rs as a top-level module
 #[allow(dead_code)]
 #[path = "../src/utils/string.rs"]
 pub mod string_impl;
 
+#[path = "../src/utils/semver.rs"]
+pub mod semver_impl;
+
 /// Namespace module that mirrors the main crate's `utils` module layout.
 #[allow(dead_code)]
 mod utils {
+    pub use super::semver_impl as semver;
     pub use super::string_impl as string;
 }
 
