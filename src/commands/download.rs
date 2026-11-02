@@ -2,6 +2,7 @@
 
 use anyhow::{bail, Context, Result};
 use log::{debug, info};
+use std::fs::{copy, create_dir_all, File};
 use std::{
     io::{self, Read},
     path::{Component, Path, PathBuf},
@@ -13,6 +14,25 @@ use tempfile::NamedTempFile;
 const MAX_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
 /// Maximum time allowed for a release asset download.
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+
+/// Finalizes a downloaded file, copying through private temporary storage across filesystems.
+fn finalize_download(temporary_file: NamedTempFile, target: &Path) -> Result<File> {
+    let file = match temporary_file.persist(target) {
+        Ok(file) => Ok(file),
+        Err(error) if error.error.raw_os_error() == Some(libc::EXDEV) => {
+            // Keep staging outside the destination directory, which may be writable by others.
+            let staged_file = NamedTempFile::new()
+                .context("Cannot create private temporary file for cross-filesystem copy")?;
+            copy(error.file.path(), staged_file.path())
+                .context("Cannot stage downloaded file for cross-filesystem copy")?;
+            copy(staged_file.path(), target)?;
+            File::open(target)
+        }
+        Err(error) => Err(error.error),
+    };
+
+    file.with_context(|| format!("Cannot finalize downloaded file {}", target.display()))
+}
 
 /// Resolves an asset filename beneath `directory`, rejecting paths and separators.
 fn safe_asset_path(directory: &Path, filename: &str) -> Result<PathBuf> {
@@ -56,7 +76,7 @@ pub fn download_asset(
             bail!("Release asset exceeds the maximum download size of {MAX_DOWNLOAD_BYTES} bytes");
         }
         // Ensure the directory exists
-        std::fs::create_dir_all(download_to)
+        create_dir_all(download_to)
             .with_context(|| format!("Cannot create directory {}", download_to.display()))?;
         // Keep the in-progress file in the private system temporary directory. A
         // user-selected destination may be group writable, so its entries cannot
@@ -85,15 +105,7 @@ pub fn download_asset(
             Ok(())
         })();
         download_result?;
-        let finalized_file = temporary_file
-            .persist(&target_file_path)
-            .map_err(|error| error.error)
-            .with_context(|| {
-                format!(
-                    "Cannot finalize downloaded file {}",
-                    target_file_path.display()
-                )
-            })?;
+        let finalized_file = finalize_download(temporary_file, &target_file_path)?;
         #[cfg(unix)]
         finalized_file
             .set_permissions(std::os::unix::fs::PermissionsExt::from_mode(0o644))

@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use log::warn;
+
 use crate::constants::*;
 
 /// This function returns the path to the config directory for the application.
@@ -35,7 +37,13 @@ pub fn get_data_dir() -> Option<PathBuf> {
         .join(DATA_SUBDIR)
         .join(GITHUB_SUBDIR);
     #[cfg(unix)]
-    ensure_private_managed_dir(&data_dir).ok()?;
+    if let Err(error) = ensure_private_managed_dir(&data_dir) {
+        warn!(
+            "Cannot secure managed directory {}: {error}",
+            data_dir.display()
+        );
+        return None;
+    }
     #[cfg(not(unix))]
     if !data_dir.exists() {
         std::fs::create_dir_all(&data_dir).ok()?;
@@ -56,7 +64,13 @@ pub fn get_data_dir() -> Option<PathBuf> {
 pub fn get_bin_dir() -> Option<PathBuf> {
     let bin_dir = dirs::data_dir()?.join(APP_NAME).join(BIN_SUBDIR);
     #[cfg(unix)]
-    ensure_private_managed_dir(&bin_dir).ok()?;
+    if let Err(error) = ensure_private_managed_dir(&bin_dir) {
+        warn!(
+            "Cannot secure managed directory {}: {error}",
+            bin_dir.display()
+        );
+        return None;
+    }
     #[cfg(not(unix))]
     if !bin_dir.exists() {
         std::fs::create_dir_all(&bin_dir).ok()?;
@@ -77,7 +91,13 @@ pub fn get_bin_dir() -> Option<PathBuf> {
 pub fn get_cache_dir() -> Option<PathBuf> {
     let cache_dir = dirs::cache_dir()?.join(APP_NAME);
     #[cfg(unix)]
-    ensure_private_managed_dir(&cache_dir).ok()?;
+    if let Err(error) = ensure_private_managed_dir(&cache_dir) {
+        warn!(
+            "Cannot secure managed directory {}: {error}",
+            cache_dir.display()
+        );
+        return None;
+    }
     #[cfg(not(unix))]
     if !cache_dir.exists() {
         std::fs::create_dir_all(&cache_dir).ok()?;
