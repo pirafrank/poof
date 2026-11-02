@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: "Report a vulnerability privately"
+    url: "https://github.com/pirafrank/poof/security/advisories/new"
+    about: "Coordinate security reports privately with the maintainer."
   - name: "Documentation"
     url: "https://poof.fpira.com/docs/intro"
   - name: "Roadmap"

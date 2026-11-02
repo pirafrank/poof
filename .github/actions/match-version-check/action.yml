@@ -13,9 +13,11 @@ runs:
     - name: Match version check
       id: match_version_check
       shell: bash
+      env:
+        APP_VERSION: ${{ inputs.app_version }}
+        COMPARE_TO: ${{ inputs.compare_to }}
       run: |
-        APP_VERSION="${{ inputs.app_version }}"
-        TAG=$(echo "${{ inputs.compare_to }}" | sed -e 's,.*/\(.*\),\1,')
+        TAG=${COMPARE_TO#refs/tags/}
         if [[ $TAG == v* ]]; then
           TAG=${TAG:1}
         fi

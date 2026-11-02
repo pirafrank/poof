@@ -1,0 +1,5 @@
+# Python cache directories
+__pycache__/
+
+# Ruff cache directory
+.ruff_cache/
