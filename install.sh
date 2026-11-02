@@ -111,11 +111,17 @@ if ! command -v tar >/dev/null 2>&1; then
     exit 1
 fi
 
-# Get latest version
-echo "Fetching latest version..."
-LATEST_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
-RELEASE_JSON=$(curl -sL "$LATEST_URL")
-TAG_NAME=$(echo "$RELEASE_JSON" | grep -m 1 '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+# POOF_TAG selects an exact release (used by the Docker release workflow).
+TAG_NAME=${POOF_TAG:-}
+if [ -z "$TAG_NAME" ]; then
+    echo "Fetching latest version..."
+    LATEST_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
+    RELEASE_JSON=$(curl -fsSL "$LATEST_URL")
+    TAG_NAME=$(echo "$RELEASE_JSON" | grep -m 1 '"tag_name":' | sed -E 's/.*"([^" ]+)".*/\1/')
+fi
+case "$TAG_NAME" in
+    *[!a-zA-Z0-9._-]*|.|..) echo "Error: Invalid release tag"; exit 1 ;;
+esac
 # Remove 'v' prefix for filename construction
 VERSION="${TAG_NAME#v}"
 
@@ -135,7 +141,7 @@ if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "null" ]; then
     exit 1
 fi
 
-echo "Latest release: $TAG_NAME"
+echo "Selected release: $TAG_NAME"
 
 # Construct Filename
 # Format matches release.yml: poof-<version>-<target>.tar.gz

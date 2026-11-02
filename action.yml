@@ -50,11 +50,10 @@ runs:
 
         if [ "$POOF_VERSION" = "latest" ]; then
           echo "Installing latest poof via install.sh..."
-          curl -fsSL \
-            "https://raw.githubusercontent.com/pirafrank/poof/main/install.sh" \
-            | sh
+          sh "$GITHUB_ACTION_PATH/install.sh"
         else
           # Normalize: add 'v' prefix if missing
+          [[ "$POOF_VERSION" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]] || exit 1
           TAG="$POOF_VERSION"
           [[ "$TAG" != v* ]] && TAG="v$TAG"
           VERSION="${TAG#v}"
@@ -133,6 +132,7 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
+        PACKAGES: ${{ inputs.packages }}
       run: |
         set -euo pipefail
 
@@ -157,4 +157,4 @@ runs:
             echo "Installing ${pkg} with poof..."
             poof install "$pkg"
           fi
-        done < <(echo '${{ inputs.packages }}' | tr ',' '\n')
+        done < <(printf '%s\n' "$PACKAGES" | tr ',' '\n')

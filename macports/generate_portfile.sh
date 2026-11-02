@@ -78,6 +78,11 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: Version must be a stable release in X.Y.Z form."
+    exit 1
+fi
+
 # 1. Cleanup local dir and prepare
 echo "🧹 Cleaning up local directory..."
 cleanup_local_dir
