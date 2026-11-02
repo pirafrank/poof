@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thank you for reporting a potential security issue. Please provide as much detail as possible.
-        If this is a sensitive report, consider [responsible disclosure](https://securitytxt.org/) and do not share confidential info in public.
+        Report vulnerabilities through [private vulnerability reporting](https://github.com/pirafrank/poof/security/advisories/new). Do not post exploit details or confidential information in this public form. See [SECURITY.md](https://github.com/pirafrank/poof/blob/main/SECURITY.md).
 
   - type: input
     id: dependency

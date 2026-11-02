@@ -303,3 +303,8 @@ file for details.
 
 *poof* software is born out of a necessity of mine, yet its name is a tribute to
 the much more famous [poof](https://fairlyoddparents.fandom.com/wiki/Poof).
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for supported versions, private vulnerability reporting,
+release attestation verification, and the release validation gates.

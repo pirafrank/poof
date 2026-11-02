@@ -29,50 +29,35 @@ runs:
     - name: Compress and archive
       id: archive
       shell: bash
+      env:
+        FILENAMEBASE: ${{ inputs.filenamebase }}
+        FILES: ${{ inputs.files }}
+        BINARY_PATH: ${{ inputs.binary_path }}
       run: |
-        # Create temporary release directory
+        set -euo pipefail
+        [[ "$FILENAMEBASE" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]] || exit 1
         mkdir -p _temp/release
-
-        FILENAMEBASE="${{ inputs.filenamebase }}"
-
-        # Copy files to release directory
-        for file in ${{ inputs.files }}; do
-          if [ -f "$file" ]; then
-            cp "$file" _temp/release/
-          fi
+        # Whitespace-separated literal filenames; no shell evaluation or glob expansion.
+        read -r -a files <<< "$FILES"
+        for file in "${files[@]}"; do
+          cp -- "$file" _temp/release/
         done
-
-        # Determine SHA command based on runner OS
-        if [[ "$RUNNER_OS" == "macOS" ]]; then
-          SHACMD="shasum -a 256"
-        else
-          # Linux and Windows use 'sha256sum'
-          SHACMD="sha256sum"
-        fi
-
-        # Create archive based on OS
+        cp -- "$BINARY_PATH" _temp/release/
         if [[ "$RUNNER_OS" == "Windows" ]]; then
-          # Windows: copy binary with .exe extension and create zip
-          cp "${{ inputs.binary_path }}" _temp/release/
-          cd _temp/release
-          7z a -tzip ../${FILENAMEBASE}.zip *
-          echo "archive_name=${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
-          echo "archive_path=_temp/${FILENAMEBASE}.zip" >> $GITHUB_OUTPUT
-          # Generate SHA256 checksum for the compressed archive
-          cd ..
-          ${SHACMD} ${FILENAMEBASE}.zip > ${FILENAMEBASE}.zip.sha256
-          echo "sha256_name=${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
-          echo "sha256_path=_temp/${FILENAMEBASE}.zip.sha256" >> $GITHUB_OUTPUT
+          ARCHIVE="$FILENAMEBASE.zip"
+          (cd _temp/release && 7z a -tzip "../$ARCHIVE" ./*)
         else
-          # Linux/macOS: copy binary without extension and create tar.gz
-          cp "${{ inputs.binary_path }}" _temp/release/
-          cd _temp/release
-          tar -czvf ../${FILENAMEBASE}.tar.gz * > /dev/null
-          echo "archive_name=${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
-          echo "archive_path=_temp/${FILENAMEBASE}.tar.gz" >> $GITHUB_OUTPUT
-          # Generate SHA256 checksum for the compressed archive
-          cd ..
-          ${SHACMD} ${FILENAMEBASE}.tar.gz > ${FILENAMEBASE}.tar.gz.sha256
-          echo "sha256_name=${FILENAMEBASE}.tar.gz.sha256" >> $GITHUB_OUTPUT
-          echo "sha256_path=_temp/${FILENAMEBASE}.tar.gz.sha256" >> $GITHUB_OUTPUT
+          ARCHIVE="$FILENAMEBASE.tar.gz"
+          tar -czf "_temp/$ARCHIVE" -C _temp/release .
         fi
+        (cd _temp
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256"
+          else
+            sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+          fi
+        )
+        echo "archive_name=$ARCHIVE" >> "$GITHUB_OUTPUT"
+        echo "archive_path=_temp/$ARCHIVE" >> "$GITHUB_OUTPUT"
+        echo "sha256_name=$ARCHIVE.sha256" >> "$GITHUB_OUTPUT"
+        echo "sha256_path=_temp/$ARCHIVE.sha256" >> "$GITHUB_OUTPUT"
