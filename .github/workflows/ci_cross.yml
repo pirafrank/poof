@@ -8,6 +8,8 @@ on:
       - release/**
       - pre/**
     paths:
+      - '.github/**'
+      - 'justfile'
       - '**/*.rs'
       - '**/*.ron'
       - '**/*.toml'
@@ -22,6 +24,9 @@ on:
 
 env:
   BIN_NAME: poof
+
+permissions:
+  contents: read
 
 jobs:
   make_matrix:
@@ -39,7 +44,7 @@ jobs:
 
       - id: set-matrix
         run: |
-          echo "matrix=$(grep -v '//' $MATRIX_FILE | jq -c '.')" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(grep -v '//' "$MATRIX_FILE" | jq -c '.')" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build for ${{ matrix.target }}
@@ -71,7 +76,12 @@ jobs:
         run: cargo install cross
 
       - name: Build project using ${{ matrix.builder }}
-        run: ${{ matrix.builder }} build --target ${{ matrix.target }}
+        env:
+          BUILDER: ${{ matrix.builder }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          case "$BUILDER" in cargo|cross) ;; *) exit 1 ;; esac
+          "$BUILDER" build --target "$TARGET" --locked
 
       - name: Install just runner
         uses: extractions/setup-just@v4

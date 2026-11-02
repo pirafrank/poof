@@ -5,6 +5,7 @@ on:
     branches:
       - pre/**
     paths:
+      - '.github/**'
       - '**/Cargo.toml'
       - '**/Cargo.lock'
       - 'deny.toml'
@@ -12,18 +13,18 @@ on:
     branches:
       - main
     paths:
+      - '.github/**'
       - '**/Cargo.toml'
       - '**/Cargo.lock'
       - 'deny.toml'
   workflow_dispatch:
 
-permissions:
-  checks: write
-  contents: read
-  pull-requests: write
+permissions: {}
 
 jobs:
   licenses_check:
+    permissions:
+      contents: read
     name: Licenses check
     runs-on: ubuntu-latest
     steps:

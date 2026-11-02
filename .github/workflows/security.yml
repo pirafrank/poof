@@ -5,26 +5,29 @@ on:
     branches:
       - pre/**
     paths:
+      - '.github/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
   pull_request:
     branches:
       - main
     paths:
+      - '.github/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
   schedule:
     - cron: '0 0 * * 1' # Every Monday at midnight
   workflow_dispatch:
 
-permissions:
-  issues: write
-  checks: write
-  contents: read
-  pull-requests: write
+permissions: {}
 
 jobs:
   security_audit:
+    permissions:
+      issues: write
+      checks: write
+      contents: read
+      pull-requests: write
     name: Security audit
     runs-on: ubuntu-latest
     steps:

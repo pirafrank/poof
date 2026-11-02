@@ -5,15 +5,30 @@ on:
     branches:
       - main
     paths:
+      - '.github/**'
+      - 'justfile'
+      - '**/*.rs'
+      - 'rust-toolchain.toml'
       - 'Cargo.toml'
       - 'Cargo.lock'
   pull_request:
     branches:
       - main
     paths:
+      - '.github/**'
+      - 'justfile'
+      - '**/*.rs'
+      - 'rust-toolchain.toml'
       - 'Cargo.toml'
       - 'Cargo.lock'
+  workflow_call:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MSRV: "1.93"
 
 jobs:
   msrv_check:
@@ -21,19 +36,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone repo
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
-          toolchain: stable
-          profile: minimal
+          toolchain: ${{ env.MSRV }}
 
       - name: Setup just runner
-        uses: extractions/setup-just@v4
-
-      - name: Install cargo-msrv
-        run: cargo install cargo-msrv
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Verify MSRV
-        run: just msrv
+        run: cargo +${{ env.MSRV }} check --all-targets --locked

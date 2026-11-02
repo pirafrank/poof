@@ -104,7 +104,7 @@ make-release version:
 
 # Build for release
 release:
-  cargo build --release
+  cargo build --release --locked
 
 # Run cargo artifacts
 clean:
@@ -171,7 +171,7 @@ licenses:
   cargo deny check licenses
 
 # Run CI checks
-ci: clean fmt-check lint build test
+ci: clean fmt-check lint-all build test
 
 # Run compliance checks (audit and license)
 compliance: audit licenses
@@ -199,7 +199,8 @@ codecov:
 
 # Rust MSRV check
 msrv:
-  cargo msrv verify
+  version=$(grep 'rust-version =' Cargo.toml | cut -d '=' -f2 | cut -d '"' -f2); \
+  cargo +"$version" check --all-targets --locked
 
 # Build poof Docker image
 docker-build:
