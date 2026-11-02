@@ -22,7 +22,7 @@ install-cargo-plugins:
   cargo install cargo-audit --locked
   cargo install cargo-llvm-cov
   cargo binstall git-cliff
-  cargo install cargo-msrv
+  python -m pip install diff-cover
 
 # Check for errors in all targets
 check:
@@ -179,6 +179,10 @@ compliance: audit licenses
 # Run code coverage
 coverage:
   cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+
+# Check coverage of the current diff against the Codecov patch threshold
+coverage-diff: coverage
+  python3 -m diff_cover.diff_cover_tool lcov.info --compare-branch=origin/main --fail-under=90 --total-percent-float --exclude 'tests/*' 'src/core/tests/**' 'build.rs' '*/tests.rs' '*/tests/*'
 
 # Browse coverage report
 browse-coverage: coverage
