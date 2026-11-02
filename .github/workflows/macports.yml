@@ -12,11 +12,12 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   macports-portfile:
+    permissions:
+      contents: read
     name: Generate and submit Portfile
     runs-on: macos-15
     env:
@@ -26,13 +27,13 @@ jobs:
       SOURCES_CONF: "/opt/local/etc/macports/sources.conf"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0  # Fetch all tags
 
       - name: Setup MacPorts
         run: |
-          curl -LO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/master/macports-ci
+          curl -fsSLO https://raw.githubusercontent.com/GiovanniBussi/macports-ci/7e72ecdc52a15803c199ec11667b7a9e21695f7b/macports-ci
           source ./macports-ci install
 
       - name: Install pipx
@@ -41,7 +42,7 @@ jobs:
 
       - name: Install cargo2ports
         run: |
-          pipx install git+https://github.com/herbygillot/cargo2ports.git
+          pipx install git+https://github.com/herbygillot/cargo2ports.git@7a011907707618f27b1668daede76d7600300b46
 
       - name: Configure local ports tree
         run: |
@@ -53,12 +54,14 @@ jobs:
           echo "Prepended '$LOCAL_PORTS' to $SOURCES_CONF"
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
 
       - name: Generate Portfile
+        env:
+          VERSION: ${{ inputs.version || github.event.release.tag_name }}
         run: |
           chmod +x macports/generate_portfile.sh
-          ./macports/generate_portfile.sh
+          ./macports/generate_portfile.sh "${VERSION#v}"
 
       - name: Test Portfile by installing the package
         id: install
@@ -71,10 +74,6 @@ jobs:
         if: steps.install.outcome != 'success'  # Only show logs if installation failed
         run: cat /opt/local/var/macports/logs/_*poof*/poof/main.log || true
 
-      - name: Setup tmate session
-        if: steps.install.outcome != 'success'  # Only start tmate if installation failed
-        uses: mxschmitt/action-tmate@v3
-
       - name: Test poof installation
         if: steps.install.outcome == 'success'
         run: |
@@ -82,7 +81,7 @@ jobs:
 
       - name: Add Portfile to artifacts
         if: steps.install.outcome == 'success'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: Portfile
           path: "./macports/Portfile"
@@ -90,8 +89,4 @@ jobs:
           retention-days: 7
           compression-level: 0  # no compression
 
-      - name: Submit MacPorts PR
-        if: false  # Disable PR submission for now, enable when ready
-        run: |
-          chmod +x macports/macport_pr.sh
-          ./macports/macport_pr.sh "$(pwd -P)/macports/Portfile"
+      # PR submission remains disabled; run macports/macport_pr.sh explicitly when needed.

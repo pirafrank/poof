@@ -12,6 +12,9 @@ runs:
   steps:
     - name: Match version check
       id: match_version_check
+      env:
+        APP_VERSION: ${{ inputs.app_version }}
+        COMPARE_TO: ${{ inputs.compare_to }}
       shell: bash
       env:
         APP_VERSION: ${{ inputs.app_version }}

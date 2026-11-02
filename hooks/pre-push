@@ -2,6 +2,7 @@
 
 echo "Running pre-push checks..."
 
+# shellcheck disable=SC2034
 while read local_ref local_sha remote_ref remote_sha; do
   # Check if this is a delete operation (local_sha is all zeros)
   if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then
@@ -19,7 +20,7 @@ while read local_ref local_sha remote_ref remote_sha; do
     echo "✅ Pre-tag-push checks passed."
     exit 0
   else
-    if ! git diff $(git rev-parse --abbrev-ref @{upstream})..$(git rev-parse --abbrev-ref HEAD) --name-only | grep -Eq '.rs|.toml|.lock'; then
+    if ! git diff "$(git rev-parse --abbrev-ref '@{upstream}')..$(git rev-parse --abbrev-ref HEAD)" --name-only | grep -Eq '\.(rs|toml|lock)$'; then
         echo "✅ No Rust files, Cargo.toml, or Cargo.lock have changed, skipping pre-push checks."
         exit 0
     fi
