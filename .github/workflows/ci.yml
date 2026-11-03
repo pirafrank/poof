@@ -2,20 +2,6 @@ name: CI
 run-name: CI on ${{ github.ref_name }}
 
 on:
-  push:
-    branches-ignore:
-      - main
-    paths:
-      - '.github/**'
-      - 'justfile'
-      - '**/*.rs'
-      - '**/*.ron'
-      - '**/*.toml'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'clippy.toml'
-      - 'rust-toolchain.toml'
-      - 'rustfmt.toml'
   pull_request:
     paths:
       - '.github/**'
