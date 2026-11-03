@@ -98,12 +98,10 @@ fn render_subcommand(sub: &Command, buf: &mut Vec<u8>) -> Result<()> {
         if opt_str.is_empty() {
             // Positional argument
             opt_str.push_str(&format!("\\fI<{}>\\fR", arg.get_id()));
-        } else if takes_value {
-            if let Some(val_names) = arg.get_value_names() {
-                // Options with values
-                for val in val_names {
-                    opt_str.push_str(&format!(" \\fI<{}>\\fR", val));
-                }
+        } else if takes_value && let Some(val_names) = arg.get_value_names() {
+            // Options with values
+            for val in val_names {
+                opt_str.push_str(&format!(" \\fI<{}>\\fR", val));
             }
         }
 

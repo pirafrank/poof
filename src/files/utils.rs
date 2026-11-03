@@ -161,34 +161,29 @@ pub fn find_similar_repos(data_dir: &Path, target_repo: &str) -> Vec<String> {
 
     if let Ok(entries) = std::fs::read_dir(data_dir) {
         for entry in entries.flatten() {
-            if let Ok(file_type) = entry.file_type() {
-                if file_type.is_dir() {
-                    if let Some(username) = entry.file_name().to_str() {
-                        // Check subdirectories (repos) within each user directory
-                        let user_dir = data_dir.join(username);
-                        if let Ok(repo_entries) = std::fs::read_dir(user_dir) {
-                            for repo_entry in repo_entries.flatten() {
-                                if let Ok(repo_file_type) = repo_entry.file_type() {
-                                    if repo_file_type.is_dir() {
-                                        if let Some(repo_name) = repo_entry.file_name().to_str() {
-                                            let full_repo = format!("{}/{}", username, repo_name);
+            if let Ok(file_type) = entry.file_type()
+                && file_type.is_dir()
+                && let Some(username) = entry.file_name().to_str()
+            {
+                // Check subdirectories (repos) within each user directory
+                let user_dir = data_dir.join(username);
+                if let Ok(repo_entries) = std::fs::read_dir(user_dir) {
+                    for repo_entry in repo_entries.flatten() {
+                        if let Ok(repo_file_type) = repo_entry.file_type()
+                            && repo_file_type.is_dir()
+                            && let Some(repo_name) = repo_entry.file_name().to_str()
+                        {
+                            let full_repo = format!("{}/{}", username, repo_name);
 
-                                            // Calculate similarity
-                                            let distance =
-                                                levenshtein_distance(target_repo, &full_repo);
-                                            let max_len =
-                                                std::cmp::max(target_repo.len(), full_repo.len());
+                            // Calculate similarity
+                            let distance = levenshtein_distance(target_repo, &full_repo);
+                            let max_len = std::cmp::max(target_repo.len(), full_repo.len());
 
-                                            // Consider repos with distance <= 3 or similarity >= 70%
-                                            if distance <= 3
-                                                || (max_len > 0
-                                                    && distance as f32 / max_len as f32 <= 0.3)
-                                            {
-                                                similar_repos.push(full_repo);
-                                            }
-                                        }
-                                    }
-                                }
+                            // Consider repos with distance <= 3 or similarity >= 70%
+                            if distance <= 3
+                                || (max_len > 0 && distance as f32 / max_len as f32 <= 0.3)
+                            {
+                                similar_repos.push(full_repo);
                             }
                         }
                     }

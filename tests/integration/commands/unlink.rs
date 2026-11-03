@@ -43,10 +43,10 @@ fn run_unlink_with_input(
     // reading from stdin, e.g. when the target is not a symlink.
     {
         let mut stdin = child.stdin.take().expect("Cannot open stdin");
-        if let Err(e) = stdin.write_all(input).and_then(|_| stdin.flush()) {
-            if e.kind() != std::io::ErrorKind::BrokenPipe {
-                return Err(e.into());
-            }
+        if let Err(e) = stdin.write_all(input).and_then(|_| stdin.flush())
+            && e.kind() != std::io::ErrorKind::BrokenPipe
+        {
+            return Err(e.into());
         }
     }
 

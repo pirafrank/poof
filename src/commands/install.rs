@@ -276,17 +276,22 @@ fn install_binary(
     // if the binary is already installed and points to the wrong place, we warn the user
     // and proceed with the installation.
     let mut skip_symlink = false;
-    if let Err(e) = check_for_same_named_binary_in_bin_dir(slug, &symlink_path) {
-        warn!("{}", e);
-        skip_symlink = true;
-    } else if binary_in_path_is_not_managed_by_poof(exec_name, &bin_dir) {
-        // proceed with installation anyway, but warn the user
-        warn!(
-            "A third-party managed binary named '{}' is already installed in PATH.",
-            exec_name.to_string_lossy()
-        );
-        warn!("Installation may shadow/be shadowed by it. Please check your PATH.\n");
-        skip_symlink = false;
+    match check_for_same_named_binary_in_bin_dir(slug, &symlink_path) {
+        Err(e) => {
+            warn!("{}", e);
+            skip_symlink = true;
+        }
+        _ => {
+            if binary_in_path_is_not_managed_by_poof(exec_name, &bin_dir) {
+                // proceed with installation anyway, but warn the user
+                warn!(
+                    "A third-party managed binary named '{}' is already installed in PATH.",
+                    exec_name.to_string_lossy()
+                );
+                warn!("Installation may shadow/be shadowed by it. Please check your PATH.\n");
+                skip_symlink = false;
+            }
+        }
     }
 
     // copy the executable files to the install directory
