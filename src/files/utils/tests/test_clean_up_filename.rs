@@ -41,3 +41,17 @@ fn test_clean_up_filename_with_os_in_name() {
     );
     assert_eq!(result, "linuxtool");
 }
+
+#[test]
+fn cleanup_preserves_variants_and_collapses_mixed_separators() {
+    let tokens = vec![
+        "x86".into(),
+        "x86_64".into(),
+        "linux".into(),
+        "v1.2.3".into(),
+    ];
+    assert_eq!(
+        clean_up_filename("linuxtool_v1.2.3-LINUX--_x86_64__pkcs11key!", tokens),
+        "linuxtool_pkcs11key"
+    );
+}

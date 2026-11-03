@@ -1371,16 +1371,16 @@ mod binary_in_path_is_not_managed_by_poof_tests {
     }
 }
 
-/// Exercise raw assets and real archive extraction with distinct binary payloads.
+/// Select assets from release fixtures, then install raw binaries and archives with distinct payloads.
 #[test]
-fn release_variants_keep_distinct_commands() -> Result<()> {
+fn fixture_backed_release_variants_keep_distinct_commands() -> Result<()> {
     let env = TestEnv::new()?;
     env.with_test_env(|| -> Result<()> {
-        for (repo, version, archived, assets) in [
+        for (repo, version, fixture, expected_assets) in [
             (
                 "sigstore/cosign",
                 "3.1.4",
-                false,
+                include_str!("../../core/selector/tests/assets/sigstore@cosign.ron"),
                 vec![
                     ("cosign-linux-amd64", "cosign", "cosign"),
                     (
@@ -1393,7 +1393,7 @@ fn release_variants_keep_distinct_commands() -> Result<()> {
             (
                 "zellij-org/zellij",
                 "0.45.1",
-                true,
+                include_str!("../../core/selector/tests/assets/zellij-org@zellij.ron"),
                 vec![
                     (
                         "zellij-x86_64-unknown-linux-musl.tar.gz",
@@ -1409,14 +1409,23 @@ fn release_variants_keep_distinct_commands() -> Result<()> {
             ),
             (
                 "ahmetb/kubectx",
-                "0.11.0",
-                true,
+                "0.9.5",
+                include_str!("../../core/selector/tests/assets/ahmetb@kubectx.ron"),
                 vec![
-                    ("kubectx_v0.11.0_linux_x86_64.tar.gz", "kubectx", "kubectx"),
-                    ("kubens_v0.11.0_linux_x86_64.tar.gz", "kubens", "kubens"),
+                    ("kubectx_v0.9.5_linux_x86_64.tar.gz", "kubectx", "kubectx"),
+                    ("kubens_v0.9.5_linux_x86_64.tar.gz", "kubens", "kubens"),
                 ],
             ),
         ] {
+            use crate::core::selector::get_triple_compatible_assets;
+            use crate::models::asset_triple::AssetTriple;
+
+            let release_assets: Vec<String> = ron::from_str(fixture)?;
+            // Selection is fixed for reproducibility; executable headers match the test host.
+            let triple = AssetTriple::new("linux".into(), "x86_64".into(), false);
+            let assets = get_triple_compatible_assets(&release_assets, &triple, |name| name)
+                .context("No compatible fixture assets")?;
+            assert_eq!(assets.len(), expected_assets.len(), "{repo}");
             let slug = Slug::new(repo)?;
             for reverse in [false, true] {
                 let install_dir = get_install_dir(repo, &format!("{version}-{reverse}"))?;
@@ -1425,7 +1434,14 @@ fn release_variants_keep_distinct_commands() -> Result<()> {
                 if reverse {
                     assets.reverse();
                 }
-                for (asset, internal_name, expected) in assets {
+                let mut expected_payloads = Vec::new();
+                for asset in assets {
+                    let (_, internal_name, expected) = expected_assets
+                        .iter()
+                        .find(|(name, _, _)| *name == asset)
+                        .with_context(|| {
+                            format!("Unexpected asset selected for {repo}: {asset}")
+                        })?;
                     let download_dir = env.create_dir(&format!("downloads/{asset}"))?;
                     let source = download_dir.join("source");
                     env.create_platform_executable(&source)?;
@@ -1435,13 +1451,13 @@ fn release_variants_keep_distinct_commands() -> Result<()> {
                         .open(&source)?
                         .write_all(expected.as_bytes())?;
                     let payload = fs::read(&source)?;
-                    let downloaded = download_dir.join(asset);
-                    if archived {
+                    let downloaded = download_dir.join(&asset);
+                    if asset.ends_with(".tar.gz") {
                         let file = fs::File::create(&downloaded)?;
                         let gzip =
                             flate2::write::GzEncoder::new(file, flate2::Compression::default());
                         let mut archive = tar::Builder::new(gzip);
-                        archive.append_path_with_name(&source, internal_name)?;
+                        archive.append_path_with_name(&source, *internal_name)?;
                         archive.into_inner()?.finish()?;
                     } else {
                         fs::copy(&source, &downloaded)?;
@@ -1454,6 +1470,10 @@ fn release_variants_keep_distinct_commands() -> Result<()> {
                         &install_dir,
                         &asset.to_string(),
                     )?;
+                    expected_payloads.push((*expected, payload));
+                }
+                // Verify all contents after every asset has been processed.
+                for (expected, payload) in expected_payloads {
                     assert_eq!(fs::read(install_dir.join(expected))?, payload);
                     #[cfg(unix)]
                     assert_eq!(
