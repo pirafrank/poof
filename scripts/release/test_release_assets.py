@@ -9,7 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from build_environment import collect, prepare_cross
+from build_environment import CROSS_VERSION, collect, prepare_cross
 from finalize_assets import finalize, sha256
 
 
@@ -141,8 +141,15 @@ class EnvironmentTests(unittest.TestCase):
             old_cwd = Path.cwd()
             self.addCleanup(os.chdir, old_cwd)
             os.chdir(root)
-            (root / "Cross.toml").write_text('[target.example-target]\nimage="image:tag"')
-            resolved = "image@sha256:" + "a" * 64
+            target = "x86_64-unknown-linux-gnu"
+            repository = "ghcr.io/cross-rs/" + target
+            (root / "matrix.jsonc").write_text(
+                json.dumps({"include": [{"target": target, "builder": "cross"}]})
+            )
+            (root / "Cross.toml").write_text(
+                f'[target."{target}"]\nimage="{repository}:{CROSS_VERSION}"'
+            )
+            resolved = repository + "@sha256:" + "a" * 64
 
             def probe(*args, required=False):
                 if args[:3] == ("docker", "image", "inspect"):
@@ -150,6 +157,7 @@ class EnvironmentTests(unittest.TestCase):
                         [
                             {
                                 "RepoDigests": [resolved],
+                                "Os": "linux",
                                 "Architecture": "amd64",
                                 "Config": {"Env": []},
                             }
@@ -163,16 +171,109 @@ class EnvironmentTests(unittest.TestCase):
 
             with (
                 patch.dict(os.environ, {"GITHUB_ENV": str(root / "job-env")}),
+                patch.dict(os.environ, {"RUNNER_OS": "Linux", "RUNNER_ARCH": "X64"}),
                 patch("build_environment.command", side_effect=probe),
             ):
-                prepare_cross("example-target")
+                prepare_cross(target)
             self.assertEqual(
-                (root / "job-env").read_text(), f"CROSS_TARGET_EXAMPLE_TARGET_IMAGE={resolved}\n"
+                (root / "job-env").read_text(), f"CROSS_TARGET_X86_64_UNKNOWN_LINUX_GNU_IMAGE={resolved}\n"
             )
+            record = json.loads((root / "_temp/cross-environment.json").read_text())
+            self.assertEqual(record["image_digest"], resolved)
+            self.assertTrue(record["verification"]["verified"])
             self.assertEqual(
-                json.loads((root / "_temp/cross-environment.json").read_text())["image_digest"],
-                resolved,
+                record["verification"]["expected_platform"],
+                {"os": "linux", "architecture": "amd64"},
             )
+
+    def test_cross_rejects_invalid_image_identity_and_target(self):
+        """Reject unknown targets and images outside the exact target repository."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old_cwd = Path.cwd()
+            self.addCleanup(os.chdir, old_cwd)
+            os.chdir(root)
+            target = "x86_64-unknown-linux-gnu"
+            (root / "matrix.jsonc").write_text(json.dumps({"include": [
+                {"target": target, "builder": "cross"}
+            ]}))
+            (root / "Cross.toml").write_text(
+                f'[target."{target}"]\nimage="ghcr.io/other/{target}:tag"'
+            )
+            with patch.dict(os.environ, {"RUNNER_OS": "Linux", "RUNNER_ARCH": "X64"}):
+                with self.assertRaisesRegex(ValueError, "repository"):
+                    prepare_cross(target)
+            with self.assertRaisesRegex(ValueError, "Unsupported Cross target"):
+                prepare_cross("../../invalid")
+
+    def test_cross_rejects_missing_matching_digest(self):
+        """Require an explicit digest for the exact configured repository."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old_cwd = Path.cwd()
+            self.addCleanup(os.chdir, old_cwd)
+            os.chdir(root)
+            target = "x86_64-unknown-linux-gnu"
+            repository = "ghcr.io/cross-rs/" + target
+            (root / "matrix.jsonc").write_text(json.dumps({"include": [
+                {"target": target, "builder": "cross"}
+            ]}))
+            (root / "Cross.toml").write_text(
+                f'[target."{target}"]\nimage="{repository}:tag"'
+            )
+
+            def probe(*args, required=False):
+                if args[:3] == ("docker", "image", "inspect"):
+                    return json.dumps([{
+                        "RepoDigests": ["ghcr.io/cross-rs/unrelated@sha256:" + "a" * 64],
+                        "Os": "linux", "Architecture": "amd64", "Config": {"Env": []},
+                    }])
+                if required:
+                    return "{}"
+                return "fixture"
+
+            with (
+                patch.dict(os.environ, {"RUNNER_OS": "Linux", "RUNNER_ARCH": "X64"}),
+                patch("build_environment.command", side_effect=probe),
+            ):
+                with self.assertRaisesRegex(ValueError, "exactly one resolved digest"):
+                    prepare_cross(target)
+            self.assertFalse((root / "job-env").exists())
+
+    def test_cross_platform_verification_failure_stops_before_override(self):
+        """Reject a digest-resolved image whose platform does not match its target."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old_cwd = Path.cwd()
+            self.addCleanup(os.chdir, old_cwd)
+            os.chdir(root)
+            target = "x86_64-unknown-linux-gnu"
+            repository = "ghcr.io/cross-rs/" + target
+            (root / "matrix.jsonc").write_text(json.dumps({"include": [
+                {"target": target, "builder": "cross"}
+            ]}))
+            (root / "Cross.toml").write_text(
+                f'[target."{target}"]\nimage="{repository}:tag"'
+            )
+            resolved = repository + "@sha256:" + "b" * 64
+
+            def probe(*args, required=False):
+                if args[:3] == ("docker", "image", "inspect"):
+                    return json.dumps([{
+                        "RepoDigests": [resolved], "Os": "linux", "Architecture": "arm64",
+                        "Config": {"Env": []},
+                    }])
+                if required:
+                    return "{}"
+                return "fixture"
+
+            with (
+                patch.dict(os.environ, {"RUNNER_OS": "Linux", "RUNNER_ARCH": "X64"}),
+                patch("build_environment.command", side_effect=probe),
+            ):
+                with self.assertRaisesRegex(ValueError, "platform mismatch"):
+                    prepare_cross(target)
+            self.assertFalse((root / "job-env").exists())
 
 
 if __name__ == "__main__":
