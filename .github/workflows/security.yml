@@ -3,6 +3,7 @@ name: Security audit
 on:
   push:
     branches:
+      - main
       - pre/**
     paths:
       - '.github/**'
