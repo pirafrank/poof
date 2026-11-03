@@ -6,6 +6,7 @@ use std::{cmp::max, collections::HashMap};
 
 use crate::constants::SUPPORTED_EXTENSIONS;
 
+/// Returns the aliases registered for `key` in an alias table.
 fn aliases_for<'a>(table: &'a [(&str, &'a [&str])], key: &str) -> Option<&'a [&'a str]> {
     table
         .iter()
@@ -13,6 +14,7 @@ fn aliases_for<'a>(table: &'a [(&str, &'a [&str])], key: &str) -> Option<&'a [&'
         .map(|(_, aliases)| *aliases)
 }
 
+/// Operating-system names and aliases recognized by release asset selection.
 const OPERATING_SYSTEM: &[(&str, &[&str])] = &[
     // ("windows", &["windows", "win"]),
     ("macos", &["macos", "darwin", "osx", "mac"]),
@@ -22,6 +24,7 @@ const OPERATING_SYSTEM: &[(&str, &[&str])] = &[
     // ("netbsd", &["netbsd"]),
 ];
 
+/// CPU architecture names and aliases recognized by release asset selection.
 const CPU_ARCH: &[(&str, &[&str])] = &[
     (
         "x86",
