@@ -68,6 +68,10 @@ lint-all:
 fix:
   cargo clippy --no-deps --fix --allow-dirty -- -D warnings
 
+# Auto-fix clippy warnings for all targets
+fix-all:
+  cargo clippy --all-targets --no-deps --fix --allow-dirty -- -D warnings
+
 # Run the formatter and linter on all source files
 better: fmt lint-all
 
