@@ -44,9 +44,13 @@ fn test_update_all_and_repo_conflict() -> Result<(), Box<dyn std::error::Error>>
 #[serial]
 #[test]
 fn test_update_with_repo() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+
     // Test that update accepts a repo argument
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd.arg("update").arg("user/repo").output()?;
+    cmd.arg("update").arg("user/repo");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     // Should not fail on argument parsing
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -62,9 +66,13 @@ fn test_update_with_repo() -> Result<(), Box<dyn std::error::Error>> {
 #[serial]
 #[test]
 fn test_update_all_flag() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+
     // Test that --all flag is accepted
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd.arg("update").arg("--all").output()?;
+    cmd.arg("update").arg("--all");
+    set_test_env(&mut cmd, &fixture);
+    let output = cmd.output()?;
 
     // Should not fail on argument parsing
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -115,6 +123,13 @@ fn test_update_with_nonexistent_repo() -> Result<(), Box<dyn std::error::Error>>
 #[test]
 fn test_update_with_installed_repo() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
+    let mut mock_github = super::common::fixtures::mock_github::MockGitHub::new();
+    let _release = mock_github
+        .server
+        .mock("GET", "/testuser/testrepo/releases/latest")
+        .with_status(500)
+        .with_body("Mock API failure")
+        .create();
 
     // Create a fake installation
     let repo = "testuser/testrepo";
@@ -125,6 +140,7 @@ fn test_update_with_installed_repo() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("update").arg(repo);
     set_test_env(&mut cmd, &fixture);
+    cmd.env("POOF_GITHUB_API_URL", mock_github.base_url());
 
     let output = cmd.output()?;
 
@@ -138,6 +154,7 @@ fn test_update_with_installed_repo() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_update_all_with_installations() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
+    let mock_github = super::common::fixtures::mock_github::MockGitHub::new();
 
     // Create multiple fake installations
     fixture.create_fake_installation("user1/repo1", "1.0.0")?;
@@ -147,6 +164,7 @@ fn test_update_all_with_installations() -> Result<(), Box<dyn std::error::Error>
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("update").arg("--all");
     set_test_env(&mut cmd, &fixture);
+    cmd.env("POOF_GITHUB_API_URL", mock_github.base_url());
 
     let output = cmd.output()?;
 

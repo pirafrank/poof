@@ -166,11 +166,11 @@ pub fn run(shell: SupportedShell) -> Result<()> {
     }
 
     /* 4 ─ create parent directories if needed */
-    if let Some(parent) = config_path.parent() {
-        if !parent.exists() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("Cannot create directory {}", parent.display()))?;
-        }
+    if let Some(parent) = config_path.parent()
+        && !parent.exists()
+    {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("Cannot create directory {}", parent.display()))?;
     }
 
     /* 5 ─ append the configuration content */

@@ -47,12 +47,11 @@ pub fn run_what(args: &WhatArgs) -> Result<()> {
 
     let mut versions: Vec<String> = Vec::new();
     for entry in entries.flatten() {
-        if let Ok(file_type) = entry.file_type() {
-            if file_type.is_dir() {
-                if let Some(version_name) = entry.file_name().to_str() {
-                    versions.push(version_name.to_string());
-                }
-            }
+        if let Ok(file_type) = entry.file_type()
+            && file_type.is_dir()
+            && let Some(version_name) = entry.file_name().to_str()
+        {
+            versions.push(version_name.to_string());
         }
     }
 

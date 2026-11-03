@@ -36,15 +36,16 @@ pub fn target_prefers_musl() -> bool {
 #[cfg(target_os = "linux")]
 fn get_ldd() -> String {
     use std::process::Command;
-    if let Ok(output) = Command::new("ldd").arg("--version").output() {
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            stdout.to_lowercase()
-        } else {
-            String::new()
+    match Command::new("ldd").arg("--version").output() {
+        Ok(output) => {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                stdout.to_lowercase()
+            } else {
+                String::new()
+            }
         }
-    } else {
-        String::new()
+        _ => String::new(),
     }
 }
 

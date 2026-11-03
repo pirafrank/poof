@@ -61,11 +61,11 @@ pub fn find_exec_files_in_dir(dir: &Path, deep: bool) -> Vec<PathBuf> {
 pub fn is_executable(path: &PathBuf) -> bool {
     // Check if the file is executable
     use std::os::unix::fs::PermissionsExt;
-    if let Ok(metadata) = std::fs::metadata(path) {
-        if metadata.is_file() {
-            let permissions = metadata.permissions();
-            return permissions.mode() & 0o111 != 0;
-        }
+    if let Ok(metadata) = std::fs::metadata(path)
+        && metadata.is_file()
+    {
+        let permissions = metadata.permissions();
+        return permissions.mode() & 0o111 != 0;
     }
     false
 }

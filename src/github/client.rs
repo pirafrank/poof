@@ -55,8 +55,9 @@ pub fn get_release(repo: &str, tag: Option<&str>) -> Result<Release> {
         request = request.header("Authorization", format!("Bearer {}", token));
     }
 
-    // Make the request
-    match request.send() {
+    // Bind the result so its drop order relative to `client` is explicit in Edition 2024.
+    let response_result = request.send();
+    match response_result {
         Ok(response) => {
             debug!("Response Status: {}", response.status());
             let status = response.status(); // we store for error case

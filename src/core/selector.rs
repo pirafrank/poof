@@ -2,49 +2,53 @@ use crate::{
     files::utils::{contains_alias_token, is_checksum_file, is_signature_file},
     models::asset_triple::AssetTriple,
 };
-use lazy_static::lazy_static;
 use std::{cmp::max, collections::HashMap};
 
 use crate::constants::SUPPORTED_EXTENSIONS;
 
-lazy_static! {
-    static ref OPERATING_SYSTEM: HashMap<&'static str, Vec<&'static str>> = {
-        let mut m = HashMap::new();
-        //m.insert("windows", vec!["windows", "win"]);
-        m.insert("macos", vec!["macos", "darwin", "osx", "mac"]);
-        m.insert("linux", vec!["linux"]);
-        //m.insert("openbsd", vec!["openbsd"]);
-        //m.insert("freebsd", vec!["freebsd"]);
-        //m.insert("netbsd", vec!["netbsd"]);
-        m
-    };
+/// Returns the aliases registered for `key` in an alias table.
+fn aliases_for<'a>(table: &'a [(&str, &'a [&str])], key: &str) -> Option<&'a [&'a str]> {
+    table
+        .iter()
+        .find(|(name, _)| *name == key)
+        .map(|(_, aliases)| *aliases)
 }
 
-lazy_static! {
-    static ref CPU_ARCH: HashMap<&'static str, Vec<&'static str>> = {
-        let mut m = HashMap::new();
-        m.insert("x86", vec!["x86", "i386", "i586", "i686", "386", "586", "686", "32-bit"]);
-        m.insert("x86_64", vec!["x86_64", "x86-64", "x64", "amd64"]);
-        // order matters here, from more specific to less specific
-        // arm assets will run on any armv7 device the armv7 poof build target runs on.
-        // armhf is a more specific alias for armv7, so it should be listed before armv7,
-        // yet it may be some armv6 asset, which armv7 would run anyway, so we list it
-        // but after armv7 to let it have less priority than armv7.
-        m.insert("armv7", vec!["armv7l", "armv7", "armhf", "armv6", "arm"]);
-        m.insert("aarch64", vec!["aarch64", "arm64"]);
-        // powerpc64le support
-        m.insert("powerpc", vec!["powerpcle", "ppcle"]);
-        m.insert("powerpc64", vec!["powerpc64le", "ppc64le"]);
-        // note: de-facto are all riscv64 are riscv64gc if they run can Linux,
-        // as linux needs the gc extensions.
-        m.insert("riscv64", vec!["riscv64gc", "riscv64"]);
-        // s390x 64bit support
-        m.insert("s390x", vec!["s390x"]);
-        // loongarch64 support
-        m.insert("loongarch64", vec!["loongarch64"]);
-        m
-    };
-}
+/// Operating-system names and aliases recognized by release asset selection.
+const OPERATING_SYSTEM: &[(&str, &[&str])] = &[
+    // ("windows", &["windows", "win"]),
+    ("macos", &["macos", "darwin", "osx", "mac"]),
+    ("linux", &["linux"]),
+    // ("openbsd", &["openbsd"]),
+    // ("freebsd", &["freebsd"]),
+    // ("netbsd", &["netbsd"]),
+];
+
+/// CPU architecture names and aliases recognized by release asset selection.
+const CPU_ARCH: &[(&str, &[&str])] = &[
+    (
+        "x86",
+        &["x86", "i386", "i586", "i686", "386", "586", "686", "32-bit"],
+    ),
+    ("x86_64", &["x86_64", "x86-64", "x64", "amd64"]),
+    // order matters here, from more specific to less specific
+    // arm assets will run on any armv7 device the armv7 poof build target runs on.
+    // armhf is a more specific alias for armv7, so it should be listed before armv7,
+    // yet it may be some armv6 asset, which armv7 would run anyway, so we list it
+    // but after armv7 to let it have less priority than armv7.
+    ("armv7", &["armv7l", "armv7", "armhf", "armv6", "arm"]),
+    ("aarch64", &["aarch64", "arm64"]),
+    // powerpc64le support
+    ("powerpc", &["powerpcle", "ppcle"]),
+    ("powerpc64", &["powerpc64le", "ppc64le"]),
+    // note: de-facto are all riscv64 are riscv64gc if they run can Linux,
+    // as linux needs the gc extensions.
+    ("riscv64", &["riscv64gc", "riscv64"]),
+    // s390x 64bit support
+    ("s390x", &["s390x"]),
+    // loongarch64 support
+    ("loongarch64", &["loongarch64"]),
+];
 
 /// Returns `true` if `item` has what looks like a real file extension (non-empty, ≤4 chars, not all digits).
 fn has_extension(item: &str) -> bool {
@@ -164,7 +168,7 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     }
 
     // OPERATING_SYSTEM
-    let Some(os_aliases) = OPERATING_SYSTEM.get(current_os) else {
+    let Some(os_aliases) = aliases_for(OPERATING_SYSTEM, current_os) else {
         // If current operating system is not in the OPERATING_SYSTEM hashmap, return -1
         // as deal-breaker. 'None' case happens when the hashmap misses the
         // operating system poof is currently running on. This is unlikely to happen,
@@ -195,7 +199,7 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     } else {
         current_arch
     };
-    let Some(arch_aliases) = CPU_ARCH.get(current_arch) else {
+    let Some(arch_aliases) = aliases_for(CPU_ARCH, current_arch) else {
         // If current architecture is not in the CPU_ARCH hashmap, return -1
         // as deal-breaker. 'None' case happens when the hashmap misses the
         // architecture poof is currently running on. This is unlikely to happen,
@@ -290,11 +294,11 @@ pub fn platforms_strings() -> Vec<String> {
     // get info of the current platform
     let t: AssetTriple = AssetTriple::default();
     let current_arch = t.get_arch().as_str();
-    let Some(arch_aliases) = CPU_ARCH.get(current_arch) else {
+    let Some(arch_aliases) = aliases_for(CPU_ARCH, current_arch) else {
         return Vec::new();
     };
     let current_os = t.get_os().as_str();
-    let Some(os_aliases) = OPERATING_SYSTEM.get(current_os) else {
+    let Some(os_aliases) = aliases_for(OPERATING_SYSTEM, current_os) else {
         return Vec::new();
     };
     // return the platform strings

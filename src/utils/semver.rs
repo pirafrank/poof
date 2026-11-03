@@ -1,12 +1,15 @@
-use lazy_static::lazy_static;
 use regex::Regex;
 use semver::{BuildMetadata, Prerelease};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::LazyLock};
 
-lazy_static! {
-    static ref SEMVER_REGEX: Regex =
-        Regex::new(r"(?i)^(?:[a-z\-\s]*)(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[.\-](.*))?$").unwrap();
-}
+// Constants
+
+/// Compiled pattern that restricts version strings to a loose semver-like format.
+/// LazyLock will compile the regex only once, on first use,
+/// ensuring efficient repeated validation.
+static SEMVER_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:[a-z\-\s]*)(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[.\-](.*))?$").unwrap()
+});
 
 /// Parses a version string loosely, handling leading zeros, 'v'/'r' prefixes, etc.
 pub fn parse_lenient(version_str: &str) -> Option<semver::Version> {

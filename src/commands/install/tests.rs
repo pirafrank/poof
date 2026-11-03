@@ -527,14 +527,14 @@ mod install_binary_tests {
         let exec_stem = OsString::from("mybinary");
         let result = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
         // If bin_dir cannot be determined, skip the assertion
-        if let Err(e) = &result {
-            if format!("{:?}", e).contains("Cannot determine") {
-                eprintln!(
+        if let Err(e) = &result
+            && format!("{:?}", e).contains("Cannot determine")
+        {
+            eprintln!(
                     "Skipping test_install_binary_basic: bin_dir unavailable in CI/sandboxed environment. \
                     This is expected when HOME or XDG dirs are not properly configured."
                 );
-                return Ok(());
-            }
+            return Ok(());
         }
 
         result?;

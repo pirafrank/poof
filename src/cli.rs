@@ -222,7 +222,7 @@ pub enum Cmd {
 #[command(
   name = APP_NAME,
   author = AUTHOR,
-version = VERSION,
+  version = VERSION,
   about = short_description(),
   long_version = long_version(),
   help_template = "\n\n{name} - {about}\n\n\
