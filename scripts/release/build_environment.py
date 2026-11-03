@@ -7,9 +7,13 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import tomllib
+
+CONTAINER_RUNTIME = "docker"
+CROSS_VERSION = "0.2.5"
 
 
 def command(*args, required=False):
@@ -53,22 +57,94 @@ def native_tools(prefix=()):
     return {key: command(*prefix, *value) for key, value in probes.items()}
 
 
-def prepare_cross(target):
-    """Pin the Cross image to its resolved digest and record container details."""
-    config = tomllib.loads(Path("Cross.toml").read_text(encoding="utf-8"))
-    image = (
-        config.get("target", {}).get(target, {}).get("image", f"ghcr.io/cross-rs/{target}:0.2.5")
-    )
+def cross_targets():
+    """Return targets configured for the Cross builder in the release matrix."""
+    lines = [
+        line
+        for line in Path("matrix.jsonc").read_text(encoding="utf-8").splitlines()
+        if not line.lstrip().startswith("//")
+    ]
+    matrix = json.loads("\n".join(lines))
+    return {entry["target"] for entry in matrix["include"] if entry["builder"] == "cross"}
+
+
+def runner_platform(target):
+    """Map a supported Cross target's runner architecture to its Docker platform."""
+    if target not in cross_targets():
+        raise ValueError(f"Unsupported Cross target: {target}")
+    runner_os = os.environ.get("RUNNER_OS")
+    runner_architecture = os.environ.get("RUNNER_ARCH")
+    if runner_os != "Linux":
+        raise ValueError(f"Cross builds require a Linux runner, got {runner_os!r}")
+    docker_architecture = {"X64": "amd64", "ARM64": "arm64"}.get(runner_architecture)
+    if docker_architecture is None:
+        raise ValueError(f"Unsupported GitHub Actions runner architecture: {runner_architecture!r}")
+    return {"os": "linux", "architecture": docker_architecture}
+
+
+def validate_image_reference(image, target):
+    """Require the exact Cross repository for target and a valid optional tag."""
     if not isinstance(image, str):
         raise ValueError("Cross image must be an explicit image reference")
-    command("docker", "pull", image, required=True)
-    info = json.loads(command("docker", "image", "inspect", image, required=True))[0]
-    resolved = info["RepoDigests"][0]
+    repository = f"ghcr.io/cross-rs/{target}"
+    reference_pattern = re.escape(repository) + r"(?::[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?"
+    if not re.fullmatch(reference_pattern, image):
+        raise ValueError(f"Cross image must use repository {repository} with an optional tag")
+
+
+def resolve_image_digest(repo_digests, repository):
+    """Find and validate the digest corresponding to the requested repository."""
+    matches = [
+        item
+        for item in repo_digests or []
+        if isinstance(item, str) and item.startswith(repository + "@")
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"Expected exactly one resolved digest for {repository}")
+    resolved = matches[0]
+    if not re.fullmatch(re.escape(repository) + r"@sha256:[0-9a-f]{64}", resolved):
+        raise ValueError(f"Invalid resolved image digest for {repository}")
+    return resolved
+
+
+def prepare_cross(target):
+    """Pin the Cross image to its resolved digest and record container details."""
+    platform = runner_platform(target)
+    config = tomllib.loads(Path("Cross.toml").read_text(encoding="utf-8"))
+    image = (
+        config.get("target", {}).get(target, {}).get(
+            "image", f"ghcr.io/cross-rs/{target}:{CROSS_VERSION}"
+        )
+    )
+    repository = f"ghcr.io/cross-rs/{target}"
+    validate_image_reference(image, target)
+    # Run the container runtime on the host to pull the specified image
+    command(CONTAINER_RUNTIME, "pull", image, required=True)
+    info = json.loads(command(CONTAINER_RUNTIME, "image", "inspect", image, required=True))[0]
+    resolved = resolve_image_digest(info.get("RepoDigests"), repository)
+    observed_platform = {"os": info.get("Os"), "architecture": info.get("Architecture")}
+    verification = {
+        "target": target,
+        "expected_platform": platform,
+        "observed_platform": observed_platform,
+        "image_digest": resolved,
+        "checks": {
+            "target_supported": True,
+            "image_identity": True,
+            "digest_resolved": True,
+            "platform_matches": observed_platform == platform,
+        },
+        "verified": observed_platform == platform,
+    }
+    if not verification["verified"]:
+        raise ValueError(
+            f"Cross image platform mismatch: expected {platform}, observed {observed_platform}"
+        )
     # Force the subsequent build to use exactly the image inspected here.
     key = "CROSS_TARGET_" + target.upper().replace("-", "_") + "_IMAGE"
     with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
         output.write(f"{key}={resolved}\n")
-    prefix = ("docker", "run", "--rm", "--entrypoint", "/bin/sh", resolved, "-c")
+    prefix = (CONTAINER_RUNTIME, "run", "--rm", "--entrypoint", "/bin/sh", resolved, "-c")
     linker_key = "CARGO_TARGET_" + target.upper().replace("-", "_") + "_LINKER"
     container_env = dict(item.split("=", 1) for item in info["Config"]["Env"])
     linker = container_env.get(linker_key)
@@ -84,18 +160,21 @@ def prepare_cross(target):
             "image": image,
             "image_digest": resolved,
             "container_architecture": info["Architecture"],
-            "runtime": "docker",
+            "verification": verification,
+            "runtime": CONTAINER_RUNTIME,
             "runtime_versions": json.loads(
-                command("docker", "version", "--format", "{{json .}}", required=True)
+                command(CONTAINER_RUNTIME, "version", "--format", "{{json .}}", required=True)
             ),
-            "native_toolchain": native_tools(("docker", "run", "--rm", resolved)),
+            "native_toolchain": native_tools((CONTAINER_RUNTIME, "run", "--rm", resolved)),
             "target_toolchain": tools,
             "linker": linker,
-            "linker_version": command("docker", "run", "--rm", resolved, linker, "--version")
+            "linker_version": command(
+                CONTAINER_RUNTIME, "run", "--rm", resolved, linker, "--version"
+            )
             if linker
             else None,
             "version": command("cross", "--version", required=True),
-            "installation": {"source": "crates.io", "version": "0.2.5", "locked": True},
+            "installation": {"source": "crates.io", "version": CROSS_VERSION, "locked": True},
             "config_sha256": digest("Cross.toml"),
             "custom_dockerfile": None,
             "base_image": None,
