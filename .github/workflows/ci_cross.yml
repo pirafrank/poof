@@ -8,18 +8,11 @@ on:
       - release/**
       - pre/**
     paths:
-      - '.github/**'
-      - 'justfile'
-      - '**/*.rs'
-      - '**/*.ron'
-      - '**/*.toml'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'clippy.toml'
-      - 'cross.toml'
-      - 'Cross.toml'
       - 'matrix.jsonc'
-      - 'rust-toolchain.toml'
+      - 'Cross.toml'
+      - 'cross.toml'
+      - '.github/workflows/ci_cross.yml'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
 
 env:
