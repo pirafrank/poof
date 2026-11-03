@@ -36,6 +36,3 @@ pub const SUPPORTED_EXTENSIONS: [&str; 15] = [
 
 /// Sentinel string returned when a value cannot be determined at runtime.
 pub const UNKNOWN: &str = "Unknown";
-
-/// Characters used as separators inside release asset file names (e.g. `mytool_1.0.0-linux`).
-pub const FILENAME_SEPARATORS: [&str; 3] = ["_", "-", "."];

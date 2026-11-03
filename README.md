@@ -246,6 +246,11 @@ alias poof='docker run --rm -u $(id -u):$(id -g) -v ~/.local/share/poof:/.local/
 `poof` installs binaries in its own data directory, then symlinks them to its bin
 directory.
 
+Command names omit platform and version information while preserving variants such
+as `cosign-pivkey-pkcs11key` and `zellij-no-web`. If commands from the same release
+still have identical names after cleanup, poof keeps the first, reports the skipped
+duplicates, and continues installing the other commands without overwriting files.
+
 You can run `poof info` at any time to know where it does store data.
 
 Having a dedicated directory for `poof` binaries is a good practice, as it allows

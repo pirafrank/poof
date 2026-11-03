@@ -1,13 +1,8 @@
 //! File path utilities and fuzzy repository name matching.
 
-use crate::constants::FILENAME_SEPARATORS;
 use crate::constants::SUPPORTED_EXTENSIONS;
 use crate::utils::string::levenshtein_distance;
-use crate::utils::string::strip_repeated_separator;
-use std::{
-    ffi::{OsStr, OsString},
-    path::Path,
-};
+use std::path::Path;
 
 /// Return the file extension of `archive_path` as a string slice.
 ///
@@ -68,47 +63,63 @@ pub fn strip_supported_extensions(path: &Path) -> &str {
         })
 }
 
-/// Clean up a filename by removing all instances of the strings in to_remove array
-/// and then removing all instances of double separators.
+/// Remove complete tokens case-insensitively, then sanitize the command name.
+///
+/// Longer tokens are removed first to preserve compound aliases such as `x86_64`.
+/// Runs of separators collapse to their first character; meaningful digits remain.
 ///
 /// # Arguments
 ///
 /// * `filename` - The filename to clean up.
-/// * `to_remove` - The strings to remove from the filename.
+/// * `to_remove` - Tokens to remove at non-alphanumeric boundaries, ignoring ASCII case.
 ///
 /// # Returns
 ///
-/// The cleaned up filename.
-pub fn clean_up_filename(filename: &str, to_remove: Vec<String>) -> String {
+/// A command name containing ASCII letters, digits, hyphens, and underscores. Dots become
+/// hyphens, other special characters are removed, and leading/trailing separators are trimmed.
+/// Adjacent separators collapse to one separator rather than being removed entirely.
+pub fn clean_up_filename(filename: &str, mut to_remove: Vec<String>) -> String {
+    to_remove.sort_by_key(|token| std::cmp::Reverse(token.len()));
     let mut result = filename.to_string();
-    // Remove tokens only when they are separated by known filename separators.
-    for remove in to_remove {
-        for sep in FILENAME_SEPARATORS {
-            let mid = format!("{sep}{remove}{sep}");
-            while result.contains(&mid) {
-                result = result.replace(&mid, sep);
-            }
-
-            let prefix = format!("{remove}{sep}");
-            while let Some(stripped) = result.strip_prefix(&prefix) {
-                result = stripped.to_owned();
-            }
-
-            let suffix = format!("{sep}{remove}");
-            while let Some(stripped) = result.strip_suffix(&suffix) {
-                result = stripped.to_owned();
-            }
+    for token in to_remove {
+        // An empty removal token would match indefinitely without shortening the filename.
+        if token.is_empty() {
+            continue;
         }
-
-        if result == remove {
-            result.clear();
+        let token = token.to_ascii_lowercase();
+        loop {
+            let lower = result.to_ascii_lowercase();
+            // Remove whole tokens only; preserve platform text embedded in command names.
+            let found = lower.match_indices(&token).find_map(|(start, _)| {
+                let end = start + token.len();
+                let left_ok = lower[..start]
+                    .chars()
+                    .next_back()
+                    .is_none_or(|c| !c.is_ascii_alphanumeric());
+                let right_ok = lower[end..]
+                    .chars()
+                    .next()
+                    .is_none_or(|c| !c.is_ascii_alphanumeric());
+                (left_ok && right_ok).then_some(start..end)
+            });
+            let Some(range) = found else { break };
+            result.replace_range(range, "");
         }
     }
 
-    for sep in FILENAME_SEPARATORS {
-        result = strip_repeated_separator(&result, sep);
+    // Normalize filename separators (-, _, .) without joining meaningful name components.
+    let mut cleaned = String::new();
+    for ch in result.chars() {
+        if ch.is_ascii_alphanumeric() {
+            cleaned.push(ch);
+        } else if matches!(ch, '-' | '_' | '.')
+            && !cleaned.is_empty()
+            && !cleaned.ends_with(['-', '_'])
+        {
+            cleaned.push(if ch == '.' { '-' } else { ch });
+        }
     }
-    result
+    cleaned.trim_end_matches(['-', '_']).to_string()
 }
 
 /// Returns `true` if `item` contains the alias token, ignoring case,
@@ -132,27 +143,6 @@ pub fn contains_alias_token(item: &str, alias: &str) -> bool {
             .is_none_or(|c| !c.is_ascii_alphanumeric());
         left_ok && right_ok
     })
-}
-
-/// Return the "stem" of `file_name` trimmed at the first [`FILENAME_SEPARATORS`] character.
-///
-/// For example, `mytool-1.0.0-linux-x86_64` becomes `mytool`. Trailing ASCII
-/// digits are also removed after the trim. This is used when an asset is a
-/// raw executable (not an archive) so that the installed binary gets a clean,
-/// version-agnostic name.
-pub fn get_stem_name_trimmed_at_first_separator(file_name: &OsStr) -> OsString {
-    let x = FILENAME_SEPARATORS
-        .iter()
-        .fold(file_name.to_string_lossy().to_string(), |acc, sep| {
-            if let Some(index) = acc.find(sep) {
-                acc[..index].to_string()
-            } else {
-                acc
-            }
-        })
-        .trim_end_matches(|c: char| c.is_ascii_digit())
-        .to_string();
-    OsString::from(x)
 }
 
 /// Find similar repo names in the data directory based on fuzzy matching

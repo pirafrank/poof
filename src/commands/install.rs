@@ -16,7 +16,7 @@ use crate::{
     files::{
         archives, datadirs, filesys,
         magic::is_exec_for_current_arch,
-        utils::{clean_up_filename, get_stem_name_trimmed_at_first_separator},
+        utils::{clean_up_filename, strip_supported_extensions},
     },
     github::{
         client::{get_assets, get_release},
@@ -37,7 +37,9 @@ use log::{debug, info, warn};
 /// directory so the binary is available in `PATH`.
 pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     Slug::validate(repo)?;
-    let (release, assets) = select_assets(repo, tag)?;
+    let (release, mut assets) = select_assets(repo, tag)?;
+    // Stable asset order determines which binary is kept if normalized names collide.
+    assets.sort_by(|left, right| left.name().cmp(right.name()));
     let version: String = release.tag_name().strip_v();
     validate_version(&version).context("Release tag is not a safe version path component")?;
 
@@ -114,12 +116,17 @@ fn process_install(
         let file_name = &downloaded_file
             .file_name()
             .ok_or_else(|| anyhow!("Cannot get filename from {}", downloaded_file.display()))?;
-        // Get the stem name trimmed at the first separator for non-archived executable files.
-        // This is useful to avoid installing files with names like "mytool-1.0.0" or "mytool-linux-x86_64"
-        // and instead use just "mytool", which is how the binary will be used when in PATH.
-        let exec_name = get_stem_name_trimmed_at_first_separator(file_name);
-        install_binary(slug, downloaded_file, install_dir, &exec_name)
-            .with_context(|| format!("Cannot install executable {}", asset_name))?;
+        // Remove platform and version labels from bare executable names for use in PATH.
+        // Keep meaningful suffixes: "cosign-linux-pivkey-pkcs11key-amd64" becomes
+        // "cosign-pivkey-pkcs11key", rather than shortening every variant to "cosign".
+        let exec_name = normalized_exec_name(&file_name.to_string_lossy(), version);
+        install_binary(
+            slug,
+            downloaded_file,
+            install_dir,
+            &OsString::from(exec_name),
+        )
+        .with_context(|| format!("Cannot install executable {}", asset_name))?;
     } else {
         // extract executables
         let staging = tempfile::Builder::new()
@@ -131,7 +138,7 @@ fn process_install(
         debug!("Extracted {} to {}", asset_name, download_to.display());
 
         // install executables
-        install_binaries(slug, version, &extracted, install_dir)
+        install_binaries(slug, version, &extracted, install_dir, asset_name)
             .with_context(|| format!("Cannot extract executables from archive {}", asset_name))?;
     }
     Ok(())
@@ -222,22 +229,51 @@ fn check_if_installed(install_dir: &Path) -> Result<bool> {
     }
 }
 
+/// Normalize platform, target-triple, and version metadata without losing variants.
+///
+/// For example, `mytool-1.0.0-linux-x86_64` becomes `mytool` for version `1.0.0`.
+/// Separators within command names and meaningful digits such as `pkcs11key` remain.
+fn normalized_exec_name(name: &str, version: &str) -> String {
+    let mut tokens = platforms_strings();
+    tokens.extend(
+        [
+            "unknown",
+            "apple",
+            "pc",
+            "gnu",
+            "glibc",
+            "musl",
+            "gnueabihf",
+            "musleabi",
+            "musleabihf",
+        ]
+        .map(str::to_string),
+    );
+    tokens.extend([version.to_string(), format!("v{version}")]);
+    clean_up_filename(name, tokens)
+}
+
 /// Finds all executables within an extracted archive and installs each one into `install_dir`.
 fn install_binaries(
     slug: &Slug,
     version: &str,
     extracted_path: &Path,
     install_dir: &Path,
+    asset_name: &str,
 ) -> Result<()> {
     // TODO: ensure filesys::find_exec_files_from_extracted_archive returns Result if needed
     // assuming for now it returns Vec<PathBuf> and handles its own errors internally or doesn't fail often
-    let execs_to_install: Vec<PathBuf> = filesys::find_exec_files_in_dir(extracted_path, true);
+    let mut execs_to_install: Vec<PathBuf> = filesys::find_exec_files_in_dir(extracted_path, true);
 
     if execs_to_install.is_empty() {
         // we interpret this as an error
         bail!("No executables found to install. Please check the archive contents.");
     }
 
+    // Filesystem traversal order varies; sort paths to keep the same first binary on collisions.
+    execs_to_install.sort();
+    let asset_stem = strip_supported_extensions(Path::new(asset_name));
+    let asset_command = normalized_exec_name(asset_stem, version);
     for exec in execs_to_install {
         debug!("Installing executable: {}", exec.display());
         // if we have multiple executables, we install each one.
@@ -246,11 +282,19 @@ fn install_binaries(
             .file_name()
             .ok_or_else(|| anyhow!("Cannot get filename from {}", exec.display()))?;
 
-        // get the platform aliases and clean up the executable name
-        // this to avoid installing files with names like "mytool-1.0.0-linux-x86_64" or "mytool-1.0.0-macos-arm64"
-        let mut platform_aliases: Vec<String> = platforms_strings();
-        platform_aliases.push(version.to_string());
-        let exec_name = clean_up_filename(&exec_name.to_string_lossy(), platform_aliases);
+        // Clean platform aliases and the release version from extracted executable names,
+        // so "mytool-1.0.0-linux-x86_64" and "mytool-1.0.0-macos-arm64" become "mytool".
+        let mut exec_name = normalized_exec_name(&exec_name.to_string_lossy(), version);
+        // Carry variant information from the container when it extends this command's name.
+        // For example, zellij-no-web-<platform>.tar.gz contains a binary named zellij.
+        // Preserve unrelated internal command names, such as kubens in a multi-tool release.
+        if !exec_name.is_empty()
+            && asset_command
+                .strip_prefix(&exec_name)
+                .is_some_and(|suffix| suffix.starts_with(['-', '_']))
+        {
+            exec_name = asset_command.clone();
+        }
 
         // install the binary
         install_binary(slug, &exec, install_dir, &OsString::from(exec_name))
@@ -267,14 +311,30 @@ fn install_binary(
     install_dir: &Path,
     exec_name: &OsString,
 ) -> Result<()> {
+    if exec_name.is_empty() {
+        warn!(
+            "Skipping {}: command name is empty after cleanup.",
+            exec.display()
+        );
+        return Ok(());
+    }
     let installed_exec = install_dir.join(exec_name);
+    // Copy the executable into the version's install directory without overwriting an
+    // earlier binary from the same release. Skip duplicates before changing any symlinks.
+    if !filesys::copy_file(exec, &installed_exec).map_err(|error| anyhow!(error))? {
+        warn!(
+            "Skipping duplicate {}: destination {} already exists; keeping the first binary.",
+            exec.display(),
+            installed_exec.display()
+        );
+        return Ok(());
+    }
 
     let bin_dir: PathBuf = datadirs::get_bin_dir().context("Cannot determine bin directory")?;
     let symlink_path = bin_dir.join(exec_name);
 
-    // none of these checks should bail, they should only warn
-    // if the binary is already installed and points to the wrong place, we warn the user
-    // and proceed with the installation.
+    // Bin-directory conflicts skip symlink creation but keep the installed binary.
+    // An unrelated command elsewhere in PATH only triggers a shadowing warning.
     let mut skip_symlink = false;
     match check_for_same_named_binary_in_bin_dir(slug, &symlink_path) {
         Err(e) => {
@@ -294,19 +354,7 @@ fn install_binary(
         }
     }
 
-    // copy the executable files to the install directory
-    filesys::copy_file(exec, &installed_exec).map_err(|e| {
-        anyhow!(
-            "Cannot copy {} to install dir ({}): {}",
-            exec.display(),
-            installed_exec.display(),
-            e
-        )
-    })?;
-
-    // We skip symlink creation in bin dir (where files are added in PATH) if a
-    // binary with the same name is already installed in bin dir or if the user has
-    // a binary with the same name in PATH. We warn the user to force
+    // Preserve a conflicting bin-directory entry; the binary remains in its version directory.
     if skip_symlink {
         warn!(
             "Skipping creation of symlink '{}' -> '{}'.",
@@ -325,9 +373,8 @@ fn install_binary(
     {
         // Make the file executable on Unix-like systems
         filesys::make_executable(&installed_exec);
-        // Create a symlink in the bin directory, overwriting existing to default
-        // using the new version. This is a UX feature to save the user from having to
-        // manually set the default version after installation (most cases).
+        // Make the new version the default command. Replace an existing symlink only
+        // when its resolved target belongs to this repository; preserve foreign entries.
         let data_dir = datadirs::get_data_dir().context("Cannot determine data directory")?;
         let repo_root = datadirs::get_versions_nest(&data_dir, slug.as_str());
         match filesys::create_repo_symlink(&installed_exec, &symlink_path, &repo_root) {
