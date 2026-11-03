@@ -21,6 +21,16 @@ const MAX_EXPANDED_BYTES: u64 = 1024 * 1024 * 1024;
 /// Maximum number of entries permitted in an archive.
 const MAX_ARCHIVE_ENTRIES: usize = 50_000;
 
+/// Extracts a TAR archive without restoring special permissions or extended attributes
+/// for security reasons. In fact, restoring them could apply unsafe metadata to extracted files.
+fn unpack_tar<R: Read>(reader: R, extract_to: &Path) -> Result<()> {
+    let mut archive = Archive::new(reader);
+    archive.set_preserve_permissions(false);
+    archive.set_unpack_xattrs(false);
+    archive.unpack(extract_to)?;
+    Ok(())
+}
+
 /// Copies data from a reader to an output file, enforcing a maximum size limit.
 /// If the copied data exceeds `MAX_EXPANDED_BYTES`, the output file is removed and an error is returned.
 fn copy_limited<R: Read>(reader: &mut R, output_path: &Path) -> Result<()> {
@@ -447,8 +457,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
             validate_tar_limits(GzDecoder::new(File::open(archive_path)?))?;
             let tar_gz_file = File::open(archive_path)?;
             let tar = GzDecoder::new(tar_gz_file);
-            let mut archive = Archive::new(tar);
-            archive.unpack(extract_to)?;
+            unpack_tar(tar, extract_to)?;
             debug!(
                 "Successfully extracted tar.gz archive to {}",
                 extract_to.display()
@@ -459,8 +468,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
             validate_tar_limits(XzDecoder::new(File::open(archive_path)?))?;
             let tar_xz_file = File::open(archive_path)?;
             let tar = XzDecoder::new(tar_xz_file);
-            let mut archive = Archive::new(tar);
-            archive.unpack(extract_to)?;
+            unpack_tar(tar, extract_to)?;
             debug!(
                 "Successfully extracted tar.xz archive to {}",
                 extract_to.display()
@@ -471,8 +479,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
             validate_tar_limits(BzDecoder::new(File::open(archive_path)?))?;
             let tar_bz2_file = File::open(archive_path)?;
             let tar = BzDecoder::new(tar_bz2_file);
-            let mut archive = Archive::new(tar);
-            archive.unpack(extract_to)?;
+            unpack_tar(tar, extract_to)?;
             debug!(
                 "Successfully extracted tar.bz2 archive to {}",
                 extract_to.display()
@@ -483,8 +490,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
             validate_tar_limits(zstd::stream::read::Decoder::new(File::open(archive_path)?)?)?;
             let tar_zstd_file = File::open(archive_path)?;
             let tar = zstd::stream::read::Decoder::new(tar_zstd_file)?;
-            let mut archive = Archive::new(tar);
-            archive.unpack(extract_to)?;
+            unpack_tar(tar, extract_to)?;
             debug!(
                 "Successfully extracted tar.zst archive to {}",
                 extract_to.display()
@@ -494,8 +500,7 @@ pub fn extract_to_dir(archive_path: &PathBuf, extract_to: &PathBuf) -> Result<()
             debug!("Extracting tar archive: {}", archive_path.display());
             validate_tar_limits(File::open(archive_path)?)?;
             let tar_file = File::open(archive_path)?;
-            let mut archive = Archive::new(tar_file);
-            archive.unpack(extract_to)?;
+            unpack_tar(tar_file, extract_to)?;
             debug!(
                 "Successfully extracted tar archive to {}",
                 extract_to.display()
