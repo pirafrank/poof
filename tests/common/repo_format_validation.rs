@@ -3,6 +3,8 @@
 //! These functions can be used to test repository format validation
 //! across different commands (install, update, download, etc.)
 
+use super::fixtures::{mock_github::MockGitHub, test_env::TestFixture};
+use super::helpers::set_test_env;
 use assert_cmd::cargo;
 use std::process::Command;
 
@@ -58,6 +60,8 @@ pub fn test_invalid_repo_formats_for_command(
 pub fn test_valid_repo_formats_for_command(
     command: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+    let mock_github = MockGitHub::new();
     let valid_formats = vec![
         "user/repo",
         "user-name/repo-name",
@@ -68,7 +72,10 @@ pub fn test_valid_repo_formats_for_command(
 
     for valid in valid_formats {
         let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-        let output = cmd.arg(command).arg(valid).output()?;
+        cmd.arg(command).arg(valid);
+        set_test_env(&mut cmd, &fixture);
+        cmd.env("POOF_GITHUB_API_URL", mock_github.base_url());
+        let output = cmd.output()?;
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         // Should not fail with format error

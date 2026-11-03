@@ -26,20 +26,49 @@ fn test_install_comprehensive_invalid_repo_formats() -> Result<(), Box<dyn std::
 #[serial]
 #[test]
 fn test_install_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::error::Error>> {
-    test_valid_repo_formats_for_command("install")
+    let fixture = TestFixture::new()?;
+    let mock_github = super::common::fixtures::mock_github::MockGitHub::new();
+    let valid_formats = [
+        "user/repo",
+        "user-name/repo-name",
+        "user_name/repo_name",
+        "user123/repo123",
+        "user/repo-name",
+    ];
+
+    for repo in valid_formats {
+        let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+        cmd.arg("install").arg(repo);
+        set_test_env(&mut cmd, &fixture);
+        cmd.env("POOF_GITHUB_API_URL", mock_github.base_url());
+        let output = cmd.output()?;
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            !stderr.contains("Repository must be in the format"),
+            "Install should accept format '{}', but got format error: {}",
+            repo,
+            stderr
+        );
+    }
+
+    Ok(())
 }
 
 #[serial]
 #[test]
 fn test_install_with_tag() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+    let mock_github = super::common::fixtures::mock_github::MockGitHub::new();
+
     // Test that --tag flag is accepted
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    let output = cmd
-        .arg("install")
+    cmd.arg("install")
         .arg("user/repo")
         .arg("--tag")
-        .arg("v1.0.0")
-        .output()?;
+        .arg("v1.0.0");
+    set_test_env(&mut cmd, &fixture);
+    cmd.env("POOF_GITHUB_API_URL", mock_github.base_url());
+    let output = cmd.output()?;
 
     // Should not fail on argument parsing
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -56,11 +85,13 @@ fn test_install_with_tag() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_install_creates_directories() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
+    let mock_github = super::common::fixtures::mock_github::MockGitHub::new();
 
     // Even if install fails (network, etc.), it should attempt to create cache/data dirs
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("install").arg("nonexistent/repo");
     set_test_env(&mut cmd, &fixture);
+    cmd.env("POOF_GITHUB_API_URL", mock_github.base_url());
     let _output = cmd.output()?;
 
     // Cache and data directories should exist (created by datadirs functions)
