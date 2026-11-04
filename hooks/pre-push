@@ -20,9 +20,14 @@ while read local_ref local_sha remote_ref remote_sha; do
     echo "✅ Pre-tag-push checks passed."
     exit 0
   else
-    if ! git diff "$(git rev-parse --abbrev-ref '@{upstream}')..$(git rev-parse --abbrev-ref HEAD)" --name-only | grep -Eq '\.(rs|toml|lock)$'; then
-        echo "✅ No Rust files, Cargo.toml, or Cargo.lock have changed, skipping pre-push checks."
-        exit 0
+    # A newly pushed branch has no upstream configured until after this hook
+    # finishes. In that case, run checks instead of treating git diff's failure
+    # as an empty diff (the hook's pipe would otherwise hide the failure).
+    if git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' >/dev/null 2>&1; then
+        if ! git diff "@{upstream}..HEAD" --name-only | grep -Eq '\.(rs|toml|lock)$'; then
+            echo "✅ No Rust files, Cargo.toml, or Cargo.lock have changed, skipping pre-push checks."
+            exit 0
+        fi
     fi
     # Run just pre-push task
     if ! just pre-push; then
