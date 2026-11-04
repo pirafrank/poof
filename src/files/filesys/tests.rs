@@ -17,7 +17,7 @@ fn test_copy_file_success() {
     let src = write_tmp_file(&dir, "src.bin", b"hello");
     let dst = dir.path().join("dst.bin");
     let result = copy_file(&src, &dst);
-    assert!(result.is_ok());
+    assert!(result.unwrap());
     assert_eq!(std::fs::read(&dst).unwrap(), b"hello");
 }
 
@@ -29,6 +29,10 @@ fn test_copy_file_missing_source() {
     let result = copy_file(&src, &dst);
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Error copying"));
+    assert!(
+        !dst.exists(),
+        "Failed copies must not leave an installed file"
+    );
 }
 
 // *** is_broken_symlink **************************************************

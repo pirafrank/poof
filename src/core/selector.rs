@@ -289,23 +289,16 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     score
 }
 
-/// Return an array of the aliases for the current architecture and operating system.
+/// Return all CPU and operating-system aliases recognized by asset selection.
+///
+/// Filename cleanup uses the complete alias tables rather than just the current platform,
+/// so it can strip any recognized platform label while preserving command variants.
 pub fn platforms_strings() -> Vec<String> {
-    // get info of the current platform
-    let t: AssetTriple = AssetTriple::default();
-    let current_arch = t.get_arch().as_str();
-    let Some(arch_aliases) = aliases_for(CPU_ARCH, current_arch) else {
-        return Vec::new();
-    };
-    let current_os = t.get_os().as_str();
-    let Some(os_aliases) = aliases_for(OPERATING_SYSTEM, current_os) else {
-        return Vec::new();
-    };
-    // return the platform strings
-    let mut s: Vec<String> = Vec::new();
-    s.extend(arch_aliases.iter().map(|alias| alias.to_string()));
-    s.extend(os_aliases.iter().map(|alias| alias.to_string()));
-    s
+    CPU_ARCH
+        .iter()
+        .chain(OPERATING_SYSTEM)
+        .flat_map(|(_, aliases)| aliases.iter().map(|alias| alias.to_string()))
+        .collect()
 }
 
 #[cfg(test)]

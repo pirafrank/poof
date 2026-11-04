@@ -89,24 +89,39 @@ pub fn make_executable(file: &Path) {
     debug!("Set executable permissions for {}", file.display());
 }
 
-/// Copy `source` to `target`, returning a descriptive error string on failure.
-pub fn copy_file(source: &PathBuf, target: &PathBuf) -> Result<(), String> {
-    debug!(
-        "Copying file from {} to {}",
-        source.display(),
-        target.display()
-    );
-    if let Err(e) = std::fs::copy(source, target) {
-        let e_msg = format!(
-            "Error copying {} to {}: {}",
-            source.display(),
-            target.display(),
-            e
-        );
-        return Err(e_msg);
+/// Copy a binary without overwriting any existing destination.
+///
+/// Returns `false` when the destination already exists, including dangling symlinks.
+/// Removes the newly created destination if copying fails.
+///
+/// # Returns
+///
+/// `Ok(true)` after copying the contents and permissions, or `Ok(false)` for a skipped copy.
+/// Returns a descriptive error string if creating or copying the file fails.
+pub fn copy_file(source: &PathBuf, target: &PathBuf) -> Result<bool, String> {
+    // Exclusive creation atomically rejects existing entries, including dangling symlinks,
+    // without a race between checking the destination and opening it for writing.
+    let mut destination = match std::fs::File::create_new(target) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => return Ok(false),
+        Err(error) => return Err(format!("Cannot create {}: {error}", target.display())),
     };
-    debug!("File copied successfully");
-    Ok(())
+    let copy_result = (|| -> std::io::Result<()> {
+        let mut source = std::fs::File::open(source)?;
+        std::io::copy(&mut source, &mut destination)?;
+        destination.set_permissions(source.metadata()?.permissions())?;
+        Ok(())
+    })();
+    if let Err(error) = copy_result {
+        drop(destination);
+        let _ = std::fs::remove_file(target);
+        return Err(format!(
+            "Error copying {} to {}: {error}",
+            source.display(),
+            target.display()
+        ));
+    }
+    Ok(true)
 }
 
 /// Replace a symlink only when its current target belongs to `repo_root`.

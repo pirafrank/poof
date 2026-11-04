@@ -873,7 +873,13 @@ mod install_binaries_tests {
         fs::write(&archive_path, b"dummy archive")?;
 
         let slug = TestEnv::test_slug();
-        let result = install_binaries(&slug, "1.0.0", temp_extract.path(), &install_dir);
+        let result = install_binaries(
+            &slug,
+            "1.0.0",
+            temp_extract.path(),
+            &install_dir,
+            "archive.zip",
+        );
 
         // Note: This may fail if bin_dir cannot be created
         match result {
@@ -923,7 +929,7 @@ mod install_binaries_tests {
         fs::write(&archive_path, b"dummy archive")?;
 
         let slug = TestEnv::test_slug();
-        let result = install_binaries(&slug, "1.0.0", &archive_path, &install_dir);
+        let result = install_binaries(&slug, "1.0.0", &archive_path, &install_dir, "archive.zip");
 
         assert!(
             result.is_err(),
@@ -1362,5 +1368,217 @@ mod binary_in_path_is_not_managed_by_poof_tests {
         });
 
         Ok(())
+    }
+}
+
+/// Select assets from release fixtures, then install raw binaries and archives with distinct payloads.
+#[test]
+fn fixture_backed_release_variants_keep_distinct_commands() -> Result<()> {
+    let env = TestEnv::new()?;
+    env.with_test_env(|| -> Result<()> {
+        for (repo, version, fixture, expected_assets) in [
+            (
+                "sigstore/cosign",
+                "3.1.4",
+                include_str!("../../core/selector/tests/assets/sigstore@cosign.ron"),
+                vec![
+                    ("cosign-linux-amd64", "cosign", "cosign"),
+                    (
+                        "cosign-linux-pivkey-pkcs11key-amd64",
+                        "cosign",
+                        "cosign-pivkey-pkcs11key",
+                    ),
+                ],
+            ),
+            (
+                "zellij-org/zellij",
+                "0.45.1",
+                include_str!("../../core/selector/tests/assets/zellij-org@zellij.ron"),
+                vec![
+                    (
+                        "zellij-x86_64-unknown-linux-musl.tar.gz",
+                        "zellij",
+                        "zellij",
+                    ),
+                    (
+                        "zellij-no-web-x86_64-unknown-linux-musl.tar.gz",
+                        "zellij",
+                        "zellij-no-web",
+                    ),
+                ],
+            ),
+            (
+                "ahmetb/kubectx",
+                "0.9.5",
+                include_str!("../../core/selector/tests/assets/ahmetb@kubectx.ron"),
+                vec![
+                    ("kubectx_v0.9.5_linux_x86_64.tar.gz", "kubectx", "kubectx"),
+                    ("kubens_v0.9.5_linux_x86_64.tar.gz", "kubens", "kubens"),
+                ],
+            ),
+        ] {
+            use crate::core::selector::get_triple_compatible_assets;
+            use crate::models::asset_triple::AssetTriple;
+
+            let release_assets: Vec<String> = ron::from_str(fixture)?;
+            // Selection is fixed for reproducibility; executable headers match the test host.
+            let triple = AssetTriple::new("linux".into(), "x86_64".into(), false);
+            let assets = get_triple_compatible_assets(&release_assets, &triple, |name| name)
+                .context("No compatible fixture assets")?;
+            assert_eq!(assets.len(), expected_assets.len(), "{repo}");
+            let slug = Slug::new(repo)?;
+            for reverse in [false, true] {
+                let install_dir = get_install_dir(repo, &format!("{version}-{reverse}"))?;
+                prepare_install_dir(&install_dir)?;
+                let mut assets = assets.clone();
+                if reverse {
+                    assets.reverse();
+                }
+                let mut expected_payloads = Vec::new();
+                for asset in assets {
+                    let (_, internal_name, expected) = expected_assets
+                        .iter()
+                        .find(|(name, _, _)| *name == asset)
+                        .with_context(|| {
+                            format!("Unexpected asset selected for {repo}: {asset}")
+                        })?;
+                    let download_dir = env.create_dir(&format!("downloads/{asset}"))?;
+                    let source = download_dir.join("source");
+                    env.create_platform_executable(&source)?;
+                    use std::io::Write;
+                    fs::OpenOptions::new()
+                        .append(true)
+                        .open(&source)?
+                        .write_all(expected.as_bytes())?;
+                    let payload = fs::read(&source)?;
+                    let downloaded = download_dir.join(&asset);
+                    if asset.ends_with(".tar.gz") {
+                        let file = fs::File::create(&downloaded)?;
+                        let gzip =
+                            flate2::write::GzEncoder::new(file, flate2::Compression::default());
+                        let mut archive = tar::Builder::new(gzip);
+                        archive.append_path_with_name(&source, *internal_name)?;
+                        archive.into_inner()?.finish()?;
+                    } else {
+                        fs::copy(&source, &downloaded)?;
+                    }
+                    process_install(
+                        &slug,
+                        version,
+                        &downloaded,
+                        &download_dir,
+                        &install_dir,
+                        &asset.to_string(),
+                    )?;
+                    expected_payloads.push((*expected, payload));
+                }
+                // Verify all contents after every asset has been processed.
+                for (expected, payload) in expected_payloads {
+                    assert_eq!(fs::read(install_dir.join(expected))?, payload);
+                    #[cfg(unix)]
+                    assert_eq!(
+                        fs::read_link(
+                            datadirs::get_bin_dir()
+                                .context("Missing test bin directory")?
+                                .join(expected)
+                        )?,
+                        install_dir.join(expected)
+                    );
+                }
+                assert_eq!(fs::read_dir(&install_dir)?.count(), 2);
+            }
+        }
+        Ok(())
+    })
+}
+
+#[test]
+fn duplicate_commands_preserve_existing_destinations() -> Result<()> {
+    let env = TestEnv::new()?;
+    env.with_test_env(|| -> Result<()> {
+        let slug = TestEnv::test_slug();
+        let install_dir = env.create_dir("install")?;
+        let source = env.home_dir.join("source");
+        env.create_platform_executable(&source)?;
+        let original = install_dir.join("tool");
+        fs::write(&original, b"original")?;
+        install_binary(&slug, &source, &install_dir, &OsString::from("tool"))?;
+        assert_eq!(fs::read(&original)?, b"original");
+        fs::create_dir(install_dir.join("directory"))?;
+        install_binary(&slug, &source, &install_dir, &OsString::from("directory"))?;
+        assert!(install_dir.join("directory").is_dir());
+        #[cfg(unix)]
+        {
+            let missing = env.home_dir.join("missing");
+            let link = install_dir.join("dangling");
+            std::os::unix::fs::symlink(&missing, &link)?;
+            install_binary(&slug, &source, &install_dir, &OsString::from("dangling"))?;
+            assert_eq!(fs::read_link(&link)?, missing);
+            assert!(!missing.exists());
+        }
+        install_binary(&slug, &source, &install_dir, &OsString::new())?;
+        install_binary(&slug, &source, &install_dir, &OsString::from("other"))?;
+        assert_eq!(fs::read(install_dir.join("other"))?, fs::read(&source)?);
+        assert!(!datadirs::get_bin_dir()
+            .context("Missing test bin directory")?
+            .join("tool")
+            .exists());
+        Ok(())
+    })
+}
+
+#[test]
+fn archive_duplicates_are_skipped_in_sorted_order() -> Result<()> {
+    let env = TestEnv::new()?;
+    env.with_test_env(|| -> Result<()> {
+        let extracted = env.create_dir("extracted")?;
+        let install_dir = env.create_dir("install")?;
+        // Create in reverse order to ensure filesystem traversal does not pick the winner.
+        for (path, marker) in [
+            ("b/tool-amd64", b"second"),
+            ("a/tool-linux", b"first!"),
+            ("other", b"other!"),
+        ] {
+            let path = extracted.join(path);
+            env.create_platform_executable(&path)?;
+            use std::io::Write;
+            fs::OpenOptions::new()
+                .append(true)
+                .open(&path)?
+                .write_all(marker)?;
+        }
+        install_binaries(
+            &TestEnv::test_slug(),
+            "1.0.0",
+            &extracted,
+            &install_dir,
+            "bundle.tar.gz",
+        )?;
+        assert_eq!(
+            fs::read(install_dir.join("tool"))?,
+            fs::read(extracted.join("a/tool-linux"))?
+        );
+        assert_eq!(
+            fs::read(install_dir.join("other"))?,
+            fs::read(extracted.join("other"))?
+        );
+        assert_eq!(fs::read_dir(&install_dir)?.count(), 2);
+        Ok(())
+    })
+}
+
+#[test]
+fn normalize_release_command_names() {
+    for (name, expected) in [
+        ("tool_v1.2.3_LINUX-x86_64", "tool"),
+        ("tool-linux--_amd64__no-web", "tool-no-web"),
+        ("linuxtool-arm64helper-linux-amd64", "linuxtool-arm64helper"),
+        ("tool-x86-64-unknown-linux-gnu", "tool"),
+        ("tool-aarch64-apple-darwin", "tool"),
+        ("tool32-linux-amd64", "tool32"),
+        ("tool!@#-linux-amd64", "tool"),
+        ("linux-amd64", ""),
+    ] {
+        assert_eq!(normalized_exec_name(name, "1.2.3"), expected, "{name}");
     }
 }

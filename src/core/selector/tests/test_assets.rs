@@ -510,4 +510,82 @@ mod tests {
         assert!(!binaries.is_empty() && binaries.len() == 1);
         assert!(binaries[0].contains("duf_0.9.1_linux_arm64.tar.gz"));
     }
+    #[test]
+    fn cosign_release_assets_preserve_commands() {
+        let assets: Vec<String> =
+            ron::from_str(include_str!("assets/sigstore@cosign.ron")).unwrap();
+        for os in ["linux", "macos"] {
+            for arch in ["x86_64", "aarch64"] {
+                for musl in [false, true] {
+                    let triple = AssetTriple::new(os.into(), arch.into(), musl);
+                    let mut selected =
+                        get_triple_compatible_assets(&assets, &triple, |asset| asset).unwrap();
+                    let os = if os == "macos" { "darwin" } else { os };
+                    let arch = if arch == "x86_64" { "amd64" } else { "arm64" };
+                    let mut expected = vec![
+                        format!("cosign-{os}-{arch}"),
+                        format!("cosign-linux-pivkey-pkcs11key-{arch}"),
+                    ];
+                    if os == "darwin" {
+                        expected.truncate(1);
+                    }
+                    selected.sort();
+                    expected.sort();
+                    assert_eq!(selected, expected, "{os} {arch} musl={musl}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn zellij_release_assets_preserve_commands() {
+        let assets: Vec<String> =
+            ron::from_str(include_str!("assets/zellij-org@zellij.ron")).unwrap();
+        for os in ["linux", "macos"] {
+            for arch in ["x86_64", "aarch64"] {
+                for musl in [false, true] {
+                    let triple = AssetTriple::new(os.into(), arch.into(), musl);
+                    let mut selected =
+                        get_triple_compatible_assets(&assets, &triple, |asset| asset).unwrap();
+                    let os = if os == "macos" {
+                        "apple-darwin"
+                    } else {
+                        "unknown-linux-musl"
+                    };
+                    let mut expected = vec![
+                        format!("zellij-{arch}-{os}.tar.gz"),
+                        format!("zellij-no-web-{arch}-{os}.tar.gz"),
+                    ];
+
+                    selected.sort();
+                    expected.sort();
+                    assert_eq!(selected, expected, "{os} {arch} musl={musl}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn kubectx_release_assets_preserve_commands() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/ahmetb@kubectx.ron")).unwrap();
+        for os in ["linux", "macos"] {
+            for arch in ["x86_64", "aarch64"] {
+                for musl in [false, true] {
+                    let triple = AssetTriple::new(os.into(), arch.into(), musl);
+                    let mut selected =
+                        get_triple_compatible_assets(&assets, &triple, |asset| asset).unwrap();
+                    let os = if os == "macos" { "darwin" } else { os };
+                    let arch = if arch == "aarch64" { "arm64" } else { arch };
+                    let mut expected = vec![
+                        format!("kubectx_v0.9.5_{os}_{arch}.tar.gz"),
+                        format!("kubens_v0.9.5_{os}_{arch}.tar.gz"),
+                    ];
+
+                    selected.sort();
+                    expected.sort();
+                    assert_eq!(selected, expected, "{os} {arch} musl={musl}");
+                }
+            }
+        }
+    }
 }
