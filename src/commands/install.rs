@@ -311,6 +311,14 @@ fn install_binary(
     install_dir: &Path,
     exec_name: &OsString,
 ) -> Result<()> {
+    // Shared libraries can have executable magic bytes; check the original filename.
+    if exec
+        .file_name()
+        .is_some_and(|name| name.to_string_lossy().contains(".so"))
+    {
+        debug!("Skipping shared library: {}", exec.display());
+        return Ok(());
+    }
     if exec_name.is_empty() {
         warn!(
             "Skipping {}: command name is empty after cleanup.",
