@@ -1,6 +1,10 @@
+// https://github.com/agavra/tuicr/releases/tag/v0.28.0
 [
-    "tuicr-0.2.0-aarch64-apple-darwin.tar.gz",
-    "tuicr-0.2.0-aarch64-unknown-linux-gnu.tar.gz",
-    "tuicr-0.2.0-x86_64-pc-windows-msvc.zip",
-    "tuicr-0.2.0-x86_64-unknown-linux-gnu.tar.gz",
+    "tuicr-0.28.0-aarch64-apple-darwin.tar.gz",
+    "tuicr-0.28.0-aarch64-unknown-linux-gnu.tar.gz",
+    "tuicr-0.28.0-aarch64-unknown-linux-musl.tar.gz",
+    "tuicr-0.28.0-x86_64-apple-darwin.tar.gz",
+    "tuicr-0.28.0-x86_64-pc-windows-msvc.zip",
+    "tuicr-0.28.0-x86_64-unknown-linux-gnu.tar.gz",
+    "tuicr-0.28.0-x86_64-unknown-linux-musl.tar.gz",
 ]

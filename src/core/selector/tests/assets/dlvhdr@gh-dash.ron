@@ -1,0 +1,18 @@
+// https://github.com/dlvhdr/gh-dash/releases/tag/v4.26.2
+[
+    "checksums.txt",
+    "gh-dash_v4.26.2_android-arm64",
+    "gh-dash_v4.26.2_darwin-amd64",
+    "gh-dash_v4.26.2_darwin-arm64",
+    "gh-dash_v4.26.2_freebsd-386",
+    "gh-dash_v4.26.2_freebsd-amd64",
+    "gh-dash_v4.26.2_freebsd-arm64",
+    "gh-dash_v4.26.2_freebsd-arm_7",
+    "gh-dash_v4.26.2_linux-386",
+    "gh-dash_v4.26.2_linux-amd64",
+    "gh-dash_v4.26.2_linux-arm64",
+    "gh-dash_v4.26.2_linux-arm_7",
+    "gh-dash_v4.26.2_windows-386.exe",
+    "gh-dash_v4.26.2_windows-amd64.exe",
+    "gh-dash_v4.26.2_windows-arm64.exe",
+]

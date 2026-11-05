@@ -1,0 +1,8 @@
+// https://github.com/herdrdev/herdr/releases/tag/v0.9.5
+[
+    "herdr-linux-aarch64",
+    "herdr-linux-x86_64",
+    "herdr-macos-aarch64",
+    "herdr-macos-x86_64",
+    "herdr-windows-x86_64.zip",
+]
