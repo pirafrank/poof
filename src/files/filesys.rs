@@ -56,6 +56,24 @@ pub fn find_exec_files_in_dir(dir: &Path, deep: bool) -> Vec<PathBuf> {
     result
 }
 
+/// Find binaries eligible for linking, including executable scripts and nested binaries.
+pub fn find_usable_binaries(dir: &Path) -> Vec<PathBuf> {
+    find_exec_files_in_dir(dir, false)
+        .into_iter()
+        .filter(|path| {
+            #[cfg(not(target_os = "windows"))]
+            {
+                is_executable(path)
+            }
+            #[cfg(target_os = "windows")]
+            {
+                let _ = path;
+                true
+            }
+        })
+        .collect()
+}
+
 /// Return `true` when `path` is a regular file with at least one executable bit set (Unix only).
 #[cfg(not(target_os = "windows"))]
 pub fn is_executable(path: &PathBuf) -> bool {

@@ -125,10 +125,15 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
     // Get the bin directory
     let bin_dir = datadirs::get_bin_dir().context("Cannot get bin directory")?;
 
-    // List of binaries to set as default
+    // List of binaries (just the filenames) to set as default
     let mut binaries: Vec<String> = Vec::new();
+    // List of executables to link
+    let usable_binaries = filesys::find_usable_binaries(&install_dir);
+    if usable_binaries.is_empty() {
+        bail!("No binaries found to set as default for version {} of {}. Consider reinstalling the version.", resolved_version, repo);
+    }
     // Process each binary in wanted_dir
-    for path in filesys::find_exec_files_in_dir(&install_dir, false) {
+    for path in usable_binaries {
         // Skip non-executable files (they all should be since they have
         // been installed, but just in case).
         // Note: Windows does not require setting executable permissions
@@ -146,6 +151,13 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
             let symlink_path = bin_dir.join(file_name);
             let repo_root = datadirs::get_versions_nest(&data_dir, repo);
             filesys::create_repo_symlink(&path, &symlink_path, &repo_root)
+                .map(|()| {
+                    debug!(
+                        "Created symlink from {} to {}",
+                        path.display(),
+                        symlink_path.display()
+                    )
+                })
                 .map_err(anyhow::Error::msg)
                 .with_context(|| {
                     format!(
@@ -153,7 +165,7 @@ pub fn set_default(repo: &str, version: Option<&str>) -> Result<()> {
                         path.display(),
                         symlink_path.display()
                     )
-                })?;
+                })?
         }
     }
     info!("Version {} set as default for:", resolved_version);
