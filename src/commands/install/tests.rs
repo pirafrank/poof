@@ -515,6 +515,25 @@ mod install_binary_tests {
     use super::*;
 
     #[test]
+    fn test_install_binary_skips_shared_libraries() -> Result<()> {
+        let env = TestEnv::new()?;
+        let install_dir = env.create_dir("install")?;
+        let slug = TestEnv::test_slug();
+
+        for filename in ["libexample.so", "libexample.so.1", "tool.so-linux-amd64"] {
+            let source = env.home_dir.join("source").join(filename);
+            env.create_platform_executable(&source)?;
+            assert!(is_exec_for_current_arch(&source)?);
+
+            // The source filename must be checked even when the command name is cleaned up.
+            install_binary(&slug, &source, &install_dir, &OsString::from("example"))?;
+            assert_eq!(fs::read_dir(&install_dir)?.count(), 0);
+        }
+
+        Ok(())
+    }
+
+    #[test]
     fn test_install_binary_basic() -> Result<()> {
         let env = TestEnv::new()?;
         let source_exec = env.home_dir.join("source/mybinary");
