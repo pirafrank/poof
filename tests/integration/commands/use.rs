@@ -25,86 +25,21 @@ fn test_use_missing_repo() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_use_without_version_auto_selects_latest() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
-
     let repo = "testuser/testrepo";
-    let version1 = "1.0.0";
-    let version2 = "2.0.0";
-    let version3 = "3.0.0";
+    fixture.create_fake_installation(repo, "1.0.0")?;
+    fixture.create_fake_installation(repo, "2.0.0")?;
+    let latest = fixture.create_fake_installation(repo, "3.0.0")?;
 
-    // Create three versions
-    let install_dir1 = fixture.create_fake_installation(repo, version1)?;
-    let install_dir2 = fixture.create_fake_installation(repo, version2)?;
-    let install_dir3 = fixture.create_fake_installation(repo, version3)?;
-
-    // Get binary name
-    let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
-
-    // Verify all binaries exist
-    assert!(
-        install_dir1.join(binary_name).exists(),
-        "Version 1 binary should exist"
-    );
-    assert!(
-        install_dir2.join(binary_name).exists(),
-        "Version 2 binary should exist"
-    );
-    assert!(
-        install_dir3.join(binary_name).exists(),
-        "Version 3 binary should exist"
-    );
-
-    // Use latest version automatically (no version specified)
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
     cmd.arg("use").arg(repo);
     set_test_env(&mut cmd, &fixture);
-    let output = cmd.output()?;
-
-    // Check if command succeeded or if it failed with expected error
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let stdout = String::from_utf8_lossy(&output.stdout);
-
-    // The "use" command should succeed if the version exists
-    if !output.status.success() {
-        // Command failed - check if it's because binary wasn't found or not executable
-        assert!(
-            stderr.contains("not installed")
-                || stderr.contains("not found")
-                || stderr.contains("executable"),
-            "Command should fail gracefully. stderr: {}, stdout: {}",
-            stderr,
-            stdout
-        );
-    } else {
-        // Command succeeded - verify it auto-selected latest version
-        assert!(
-            stderr
-                .to_lowercase()
-                .contains("newest installed version as default"),
-            "Should indicate auto-selecting latest version. stderr: {}",
-            stderr
-        );
-
-        // Verify symlink points to version 3 (latest)
-        let symlink_path = fixture.bin_dir.join(binary_name);
-        #[cfg(not(target_os = "windows"))]
-        {
-            if symlink_path.exists() {
-                let target = std::fs::read_link(&symlink_path)?;
-                let target_str = target.to_string_lossy();
-                let install_dir3 = fixture.get_install_path(repo, version3);
-                let expected_binary_path = install_dir3.join(binary_name);
-
-                assert!(
-                    target_str.contains(version3) || target == expected_binary_path,
-                    "Symlink should point to version 3 (latest). Target: {}, Expected to contain: {} or be: {}",
-                    target_str,
-                    version3,
-                    expected_binary_path.display()
-                );
-            }
-        }
-    }
-
+    cmd.assert().success().stderr(predicate::str::contains(
+        "newest installed version as default",
+    ));
+    assert_eq!(
+        std::fs::read_link(fixture.bin_dir.join("testrepo"))?,
+        latest.join("testrepo")
+    );
     Ok(())
 }
 
@@ -184,77 +119,19 @@ fn test_use_with_nonexistent_version() -> Result<(), Box<dyn std::error::Error>>
 #[test]
 fn test_use_sets_default_version() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = TestFixture::new()?;
-
     let repo = "testuser/testrepo";
-    let version1 = "1.0.0";
-    let version2 = "2.0.0";
+    let previous = fixture.create_fake_installation(repo, "1.0.0")?;
+    let selected = fixture.create_fake_installation(repo, "2.0.0")?;
+    fixture.create_bin_symlink("testrepo", &previous.join("testrepo"))?;
 
-    // Create two versions
-    let install_dir1 = fixture.create_fake_installation(repo, version1)?;
-    let install_dir2 = fixture.create_fake_installation(repo, version2)?;
-
-    // Get binary name
-    let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
-
-    // Verify both binaries exist
-    assert!(
-        install_dir1.join(binary_name).exists(),
-        "Version 1 binary should exist"
-    );
-    assert!(
-        install_dir2.join(binary_name).exists(),
-        "Version 2 binary should exist"
-    );
-
-    // Use version 2.0.0 as default
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    cmd.arg("use").arg(repo).arg(version2);
+    cmd.arg("use").arg(repo).arg("2.0.0");
     set_test_env(&mut cmd, &fixture);
-    let output = cmd.output()?;
-
-    // Check if command succeeded or if it failed with expected error
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let stdout = String::from_utf8_lossy(&output.stdout);
-
-    // The "use" command should succeed if the version exists
-    // If it fails, it might be because the binary isn't detected as executable
-    // In that case, we'll just verify the command ran without crashing
-    if !output.status.success() {
-        // Command failed - check if it's because binary wasn't found or not executable
-        // This is acceptable for a test - we're just verifying the command structure
-        assert!(
-            stderr.contains("not installed")
-                || stderr.contains("not found")
-                || stderr.contains("executable"),
-            "Command should fail gracefully. stderr: {}, stdout: {}",
-            stderr,
-            stdout
-        );
-    } else {
-        // Command succeeded - verify symlink points to version 2
-        let symlink_path = fixture.bin_dir.join(binary_name);
-        #[cfg(not(target_os = "windows"))]
-        {
-            if symlink_path.exists() {
-                let target = std::fs::read_link(&symlink_path)?;
-                let target_str = target.to_string_lossy();
-                // The symlink should point to the install directory for version2
-                let install_dir2 = fixture.get_install_path(repo, version2);
-                let expected_binary_path = install_dir2.join(binary_name);
-
-                assert!(
-                    target_str.contains(version2) || target == expected_binary_path,
-                    "Symlink should point to version 2. Target: {}, Expected to contain: {} or be: {}",
-                    target_str,
-                    version2,
-                    expected_binary_path.display()
-                );
-            }
-            // If symlink doesn't exist, the command might have failed silently
-            // This is acceptable - we're testing command structure, not full functionality
-        }
-    }
-
+    cmd.assert().success();
+    assert_eq!(
+        std::fs::read_link(fixture.bin_dir.join("testrepo"))?,
+        selected.join("testrepo")
+    );
     Ok(())
 }
 
@@ -273,85 +150,145 @@ fn test_use_comprehensive_valid_repo_formats() -> Result<(), Box<dyn std::error:
 fn test_use_explicit_version_with_multiple_installations() -> Result<(), Box<dyn std::error::Error>>
 {
     let fixture = TestFixture::new()?;
-
     let repo = "testuser/testrepo";
-    let version1 = "1.0.0";
-    let version2 = "2.0.0";
-    let version3 = "3.0.0";
+    let selected = fixture.create_fake_installation(repo, "1.0.0")?;
+    fixture.create_fake_installation(repo, "2.0.0")?;
+    fixture.create_fake_installation(repo, "3.0.0")?;
 
-    // Create three versions
-    let install_dir1 = fixture.create_fake_installation(repo, version1)?;
-    let install_dir2 = fixture.create_fake_installation(repo, version2)?;
-    let install_dir3 = fixture.create_fake_installation(repo, version3)?;
-
-    // Get binary name
-    let binary_name = repo.split('/').next_back().unwrap_or("testrepo");
-
-    // Verify all binaries exist
-    assert!(
-        install_dir1.join(binary_name).exists(),
-        "Version 1 binary should exist"
-    );
-    assert!(
-        install_dir2.join(binary_name).exists(),
-        "Version 2 binary should exist"
-    );
-    assert!(
-        install_dir3.join(binary_name).exists(),
-        "Version 3 binary should exist"
-    );
-
-    // Explicitly use version 1.0.0 (not the latest)
     let mut cmd = Command::new(cargo::cargo_bin!("poof"));
-    cmd.arg("use").arg(repo).arg(version1);
+    cmd.arg("use").arg(repo).arg("1.0.0");
     set_test_env(&mut cmd, &fixture);
-    let output = cmd.output()?;
+    cmd.assert().success();
+    assert_eq!(
+        std::fs::read_link(fixture.bin_dir.join("testrepo"))?,
+        selected.join("testrepo")
+    );
+    Ok(())
+}
 
-    // Check if command succeeded or if it failed with expected error
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let stdout = String::from_utf8_lossy(&output.stdout);
+#[serial]
+#[test]
+fn test_use_empty_installation_preserves_default() -> Result<(), Box<dyn std::error::Error>> {
+    let fixture = TestFixture::new()?;
+    let repo = "testuser/testrepo";
+    let previous = fixture
+        .create_fake_installation(repo, "1.0.0")?
+        .join("testrepo");
+    fixture.create_bin_symlink("testrepo", &previous)?;
+    std::fs::create_dir_all(fixture.get_install_path(repo, "2.0.0"))?;
 
-    // The "use" command should succeed if the version exists
-    if !output.status.success() {
-        // Command failed - check if it's because binary wasn't found or not executable
-        assert!(
-            stderr.contains("not installed")
-                || stderr.contains("not found")
-                || stderr.contains("executable"),
-            "Command should fail gracefully. stderr: {}, stdout: {}",
-            stderr,
-            stdout
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("use").arg(repo).arg("2.0.0");
+    set_test_env(&mut cmd, &fixture);
+    cmd.assert()
+        .failure()
+        .stderr(
+            predicate::str::contains("No binaries found").and(predicate::str::contains(
+                "Consider reinstalling the version",
+            )),
         );
-    } else {
-        // Command succeeded - verify symlink points to version 1 (not the latest)
-        let symlink_path = fixture.bin_dir.join(binary_name);
-        #[cfg(not(target_os = "windows"))]
-        {
-            if symlink_path.exists() {
-                let target = std::fs::read_link(&symlink_path)?;
-                let target_str = target.to_string_lossy();
-                let install_dir1 = fixture.get_install_path(repo, version1);
-                let expected_binary_path = install_dir1.join(binary_name);
+    assert_eq!(
+        std::fs::read_link(fixture.bin_dir.join("testrepo"))?,
+        previous
+    );
+    Ok(())
+}
 
-                assert!(
-                    target_str.contains(version1) || target == expected_binary_path,
-                    "Symlink should point to version 1 (explicitly selected, not latest). Target: {}, Expected to contain: {} or be: {}",
-                    target_str,
-                    version1,
-                    expected_binary_path.display()
-                );
+#[serial]
+#[test]
+fn test_use_non_executable_installation_preserves_default() -> Result<(), Box<dyn std::error::Error>>
+{
+    use std::os::unix::fs::PermissionsExt;
 
-                // Also verify it does NOT point to version 3 (the latest)
-                let latest_binary_path = install_dir3.join(binary_name);
-                assert!(
-                    !target_str.contains(version3) && target != latest_binary_path,
-                    "Symlink should NOT point to version 3 (latest). Target: {}, Should not contain: {}",
-                    target_str,
-                    version3
-                );
-            }
-        }
-    }
+    let fixture = TestFixture::new()?;
+    let repo = "testuser/testrepo";
+    let previous = fixture
+        .create_fake_installation(repo, "1.0.0")?
+        .join("testrepo");
+    fixture.create_bin_symlink("testrepo", &previous)?;
+    let selected = fixture
+        .create_fake_installation(repo, "2.0.0")?
+        .join("testrepo");
+    std::fs::set_permissions(selected, std::fs::Permissions::from_mode(0o644))?;
 
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("use").arg(repo).arg("2.0.0");
+    set_test_env(&mut cmd, &fixture);
+    cmd.assert()
+        .failure()
+        .stderr(
+            predicate::str::contains("No binaries found").and(predicate::str::contains(
+                "Consider reinstalling the version",
+            )),
+        );
+    assert_eq!(
+        std::fs::read_link(fixture.bin_dir.join("testrepo"))?,
+        previous
+    );
+    Ok(())
+}
+
+#[serial]
+#[test]
+fn test_use_links_only_usable_files_including_nested_binaries(
+) -> Result<(), Box<dyn std::error::Error>> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let fixture = TestFixture::new()?;
+    let repo = "testuser/testrepo";
+    let install = fixture.create_fake_installation(repo, "1.0.0")?;
+    let nested_dir = install.join("nested");
+    std::fs::create_dir_all(&nested_dir)?;
+    // A native executable alongside the top-level shebang script.
+    let nested_binary = nested_dir.join("helper");
+    std::fs::copy(cargo::cargo_bin!("poof"), &nested_binary)?;
+    std::fs::set_permissions(&nested_binary, std::fs::Permissions::from_mode(0o755))?;
+    let disabled = install.join("disabled");
+    std::fs::write(&disabled, b"#!/bin/sh\necho disabled\n")?;
+    std::fs::set_permissions(disabled, std::fs::Permissions::from_mode(0o644))?;
+    fixture.create_executable_with_perms(&install.join("README"), b"Not an executable\n")?;
+
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("use").arg(repo).arg("1.0.0");
+    set_test_env(&mut cmd, &fixture);
+    cmd.assert().success();
+    assert_eq!(
+        std::fs::read_link(fixture.bin_dir.join("testrepo"))?,
+        install.join("testrepo")
+    );
+    assert_eq!(
+        std::fs::read_link(fixture.bin_dir.join("helper"))?,
+        nested_binary
+    );
+    assert!(std::fs::symlink_metadata(fixture.bin_dir.join("disabled")).is_err());
+    assert!(std::fs::symlink_metadata(fixture.bin_dir.join("README")).is_err());
+    assert_eq!(std::fs::read_dir(&fixture.bin_dir)?.count(), 2);
+    Ok(())
+}
+
+#[serial]
+#[test]
+fn test_use_empty_latest_installation_preserves_default() -> Result<(), Box<dyn std::error::Error>>
+{
+    let fixture = TestFixture::new()?;
+    let repo = "testuser/testrepo";
+    let previous = fixture
+        .create_fake_installation(repo, "1.0.0")?
+        .join("testrepo");
+    fixture.create_bin_symlink("testrepo", &previous)?;
+    std::fs::create_dir_all(fixture.get_install_path(repo, "2.0.0"))?;
+
+    let mut cmd = Command::new(cargo::cargo_bin!("poof"));
+    cmd.arg("use").arg(repo);
+    set_test_env(&mut cmd, &fixture);
+    cmd.assert().failure().stderr(
+        predicate::str::contains("No binaries found to set as default for version 2.0.0").and(
+            predicate::str::contains("Consider reinstalling the version"),
+        ),
+    );
+    assert_eq!(
+        std::fs::read_link(fixture.bin_dir.join("testrepo"))?,
+        previous
+    );
     Ok(())
 }
