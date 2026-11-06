@@ -2,10 +2,53 @@
 
 All notable changes to the project will be documented in this file.
 
-## [0.6.2] - 2026-07-09
+## [0.6.3] - 2026-11-06
 
-This is a maintenance release, mainly due to update dependencies and delivery
-repository chores.
+### 🐛 Bug Fixes
+
+- Just recipe
+- *(setup)* Pre-push script did not work as intended when branch missed upstream
+- Better handling of multi-asset repositories (#246)
+- `use` command should not link to empty installs (#249)
+- Do not install assets that have .so in their filename (#250)
+
+### 🧪 Testing
+
+- Added tests for AI terminal tools
+
+### 🔧 Setup & Quality
+
+- Run doc checks on PRs as well
+- Enhance flake-update recipe to avoid github rate limit and fix uid perms
+- Added diff-cover recipe to justfile
+- Reduce number of CI runs by running cross checks only when needed
+- Update security badge faster by running cargo audit for pushes on main
+- Run release scripts tests in CI on file updates
+
+### 🛡️ Security
+
+- Replace `rustsec/audit-check` action with `pirafrank/audit-check-action` (#220)
+- *(ci)* Harden GitHub Actions workflows and tighten CI checks (#242)
+
+### ⚙️ Miscellaneous Tasks
+
+- Update actions to use node 24
+- Bump just github action
+- Disabled automatic coderabbit code reviews
+- Update gh release action
+- Added rust-analyzer to rust-toolchain components
+- Update toolchain to 1.99.1
+- Bump macos-14 hosted runners to macos-15 due to phase-out
+- Add option to manual trigger release workflow for testing purpose
+- Added workflow edit event to nix wf
+
+### 💼 Other
+
+- *(ci)* Pin release versions in install tooling (#241)
+- Harden and verify Cross release build images (#243)
+- Remove compressed archive metadata (#245)
+
+## [0.6.2] - 2026-07-09
 
 ### 🚀 Features
 
