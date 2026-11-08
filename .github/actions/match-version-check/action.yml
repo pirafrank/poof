@@ -16,9 +16,6 @@ runs:
         APP_VERSION: ${{ inputs.app_version }}
         COMPARE_TO: ${{ inputs.compare_to }}
       shell: bash
-      env:
-        APP_VERSION: ${{ inputs.app_version }}
-        COMPARE_TO: ${{ inputs.compare_to }}
       run: |
         TAG=${COMPARE_TO#refs/tags/}
         if [[ $TAG == v* ]]; then
