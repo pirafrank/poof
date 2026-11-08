@@ -5,9 +5,15 @@ on:
   push:
     paths:
       - 'action.yml'
+      - 'install.sh'
+      - 'scripts/action/**'
+      - '.github/workflows/ci_action.yml'
   pull_request:
     paths:
       - 'action.yml'
+      - 'install.sh'
+      - 'scripts/action/**'
+      - '.github/workflows/ci_action.yml'
   workflow_dispatch:
 
 jobs:

@@ -161,7 +161,12 @@ It is available in the [Actions Marketplace](https://github.com/marketplace/acti
 - `token` (optional): GitHub token used for API requests inside poof to
   avoid rate limiting or access private releases. Defaults to the workflow's
   built-in `GITHUB_TOKEN`.
-- `version` (optional): version of poof itself to install.
+- `version` (optional): version of poof itself to install, with or without the `v`
+  prefix. Defaults to `latest`, which installs the latest release when poof is absent
+  and reuses an existing installation otherwise. When an explicit version is requested,
+  an existing installation is reused only if its version matches.
+  The reference in `uses: pirafrank/poof@...` selects the Action code; it does not
+  select the poof binary version.
 
 ### Usage
 
@@ -172,8 +177,7 @@ Setup only:
   uses: pirafrank/poof@main
 ```
 
-Setup and/or install multiple software at once (it won't reinstall poof
-is already installed):
+Setup and/or install multiple software at once:
 
 ```yaml
 - name: Setup poof and install packages
@@ -184,7 +188,8 @@ is already installed):
       ms-jpq/sad@v0.4.32
 ```
 
-Or pin a specific version of poof itself:
+Or pin a specific version of poof itself (it won't reinstall poof
+if the requested version of poof is already installed):
 
 ```yaml
 - name: Setup poof and install packages
@@ -194,6 +199,8 @@ Or pin a specific version of poof itself:
     packages: pirafrank/vault-conductor
     token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+For reproducible workflows, specify both the Action tag/commit and `version` input argument.
 
 ## Devcontainer Feature
 
