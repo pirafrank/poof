@@ -48,7 +48,8 @@ runs:
           (cd _temp/release && 7z a -tzip "../$ARCHIVE" ./*)
         else
           ARCHIVE="$FILENAMEBASE.tar.gz"
-          tar -czf "_temp/$ARCHIVE" -C _temp/release .
+          # Archive the filenames directly to preserve the flat release layout.
+          (cd _temp/release && tar -czf "../$ARCHIVE" -- *)
         fi
         (cd _temp
           if [[ "$RUNNER_OS" == "macOS" ]]; then
