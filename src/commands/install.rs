@@ -229,36 +229,75 @@ fn check_if_installed(install_dir: &Path) -> Result<bool> {
     }
 }
 
+/// Recognize platform labels and contextual target-triple/libc packaging metadata.
+/// Feature names are deliberately not enumerated: unmatched text belongs to the command.
+fn filename_metadata_tokens(name: &str) -> Vec<String> {
+    use std::sync::LazyLock;
+
+    use regex::Regex;
+
+    static CONTEXTUAL_METADATA: LazyLock<[Regex; 3]> = LazyLock::new(|| {
+        let aliases = platforms_strings()
+            .into_iter()
+            .chain(["arm_7".to_string()])
+            .map(|alias| regex::escape(&alias))
+            .collect::<Vec<_>>()
+            .join("|");
+        [
+            "(?:unknown|apple|pc)[-_.](?:linux|darwin|macos|windows)".to_string(),
+            format!("(?:{aliases})[-_.](?:gnueabihf|musleabihf|musleabi|glibc|gnu|musl)(?:[-_.][0-9]+)*"),
+            "(?:(?:macos|darwin|osx|mac)[-_.]universal|universal[-_.](?:macos|darwin|osx|mac))".to_string(),
+        ].map(|pattern| Regex::new(&format!("(?i){pattern}")).expect("Valid packaging metadata pattern"))
+    });
+
+    let mut tokens = platforms_strings();
+    // Cleanup only: do not change selection ranking or introduce a new target.
+    tokens.push("arm_7".to_string());
+    for pattern in CONTEXTUAL_METADATA.iter() {
+        // clean_up_filename enforces separator boundaries for these compound tokens too.
+        tokens.extend(
+            pattern
+                .find_iter(name)
+                .map(|matched| matched.as_str().to_string()),
+        );
+    }
+    tokens
+}
+
 /// Normalize platform, target-triple, and version metadata without losing variants.
 ///
 /// For example, `mytool-1.0.0-linux-x86_64` becomes `mytool` for version `1.0.0`.
 /// Separators within command names and meaningful digits such as `pkcs11key` remain.
 fn normalized_exec_name(name: &str, version: &str) -> String {
-    let mut tokens = platforms_strings();
-    tokens.extend(
-        [
-            "unknown",
-            "apple",
-            "pc",
-            "gnu",
-            "glibc",
-            "musl",
-            "gnueabihf",
-            "musleabi",
-            "musleabihf",
-        ]
-        .map(str::to_string),
-    );
-    // Product-prefixed tags such as `bws-v2.0.0` identify a release, but the
-    // product prefix is part of the command name and must not be removed.
-    let command_version = version
-        .char_indices()
-        .find(|(_, ch)| ch.is_ascii_digit())
-        .map(|(index, _)| &version[index..])
-        .filter(|suffix| semver::Version::parse(suffix).is_ok())
-        .unwrap_or(version);
+    // Remove a complete tag decoration first, but never erase the command itself.
+    // A product-prefixed tag at the beginning can itself contain the command:
+    // `bws-v2.0.0-linux-amd64` must keep `bws`, not just its platform labels.
+    let name = if name
+        .to_ascii_lowercase()
+        .starts_with(&version.to_ascii_lowercase())
+    {
+        name.to_string()
+    } else {
+        clean_up_filename(name, vec![version.to_string()])
+    };
+    // Search every possible version start: product prefixes can themselves contain digits.
+    let command_version = version.char_indices().find_map(|(index, ch)| {
+        if !ch.is_ascii_digit() {
+            return None;
+        }
+        let prefix = &version[..index];
+        let boundary = prefix.is_empty()
+            || prefix.ends_with(['-', '_', '.'])
+            || prefix
+                .strip_suffix(['v', 'V'])
+                .is_some_and(|prefix| prefix.is_empty() || prefix.ends_with(['-', '_', '.']));
+        let suffix = &version[index..];
+        (boundary && semver::Version::parse(suffix).is_ok()).then_some(suffix)
+    });
+    let mut tokens = filename_metadata_tokens(&name);
+    let command_version = command_version.unwrap_or(version);
     tokens.extend([command_version.to_string(), format!("v{command_version}")]);
-    clean_up_filename(name, tokens)
+    clean_up_filename(&name, tokens)
 }
 
 /// Finds all executables within an extracted archive and installs each one into `install_dir`.

@@ -246,10 +246,16 @@ alias poof='docker run --rm -u $(id -u):$(id -g) -v ~/.local/share/poof:/.local/
 `poof` installs binaries in its own data directory, then symlinks them to its bin
 directory.
 
-Command names omit platform and version information while preserving variants such
-as `cosign-pivkey-pkcs11key` and `zellij-no-web`. If commands from the same release
-still have identical names after cleanup, poof keeps the first, reports the skipped
-duplicates, and continues installing the other commands without overwriting files.
+Command naming preserves internal executable names, including punctuation such as
+`python3.13` and `clang++`, while removing platform and release-version decorations.
+Archive packaging labels do not rename internal commands. Archive variants are
+derived dynamically from the meaningful suffix left after removing packaging
+metadata (for example, `zellij-no-web`).
+Bare executable variants retain their meaningful suffixes, such as
+`cosign-pivkey-pkcs11key`. If commands from the same release still have identical
+names after cleanup, poof keeps the first, reports the skipped duplicates, and
+continues without overwriting files.
+Previously misnamed installations need to be removed and reinstalled explicitly.
 
 You can run `poof info` at any time to know where it does store data.
 

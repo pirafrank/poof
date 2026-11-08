@@ -1595,8 +1595,8 @@ fn normalize_release_command_names() {
         ("tool-x86-64-unknown-linux-gnu", "tool"),
         ("tool-aarch64-apple-darwin", "tool"),
         ("tool32-linux-amd64", "tool32"),
-        ("tool!@#-linux-amd64", "tool"),
-        ("linux-amd64", ""),
+        ("tool!@#-linux-amd64", "tool!@#"),
+        ("linux-amd64", "linux-amd64"),
     ] {
         assert_eq!(normalized_exec_name(name, "1.2.3"), expected, "{name}");
     }
@@ -1606,6 +1606,7 @@ fn normalize_release_command_names() {
 fn normalize_product_prefixed_release_tags() {
     for (name, version, expected) in [
         ("bws-v2.0.0", "bws-v2.0.0", "bws"),
+        ("bws-v2.0.0-linux-amd64", "bws-v2.0.0", "bws"),
         ("bws-x86_64-unknown-linux-gnu-2.0.0", "bws-v2.0.0", "bws"),
         ("bws", "bws-v2.0.0", "bws"),
         ("bws-no-web-v2.0.0-linux-amd64", "bws-v2.0.0", "bws-no-web"),
@@ -1678,4 +1679,171 @@ fn product_prefixed_tag_installs_unversioned_command() -> Result<()> {
         })?;
     }
     Ok(())
+}
+
+/// Packaging labels cannot override authoritative names inside an archive.
+#[test]
+fn archive_metadata_and_internal_names_regressions() -> Result<()> {
+    let env = TestEnv::new()?;
+    env.with_test_env(|| -> Result<()> {
+        for (index, (asset, version, commands)) in [
+            (
+                "tool-linux-x86_64-gnu-2-17.tar.gz",
+                "1.2.3",
+                vec![("tool", "tool")],
+            ),
+            (
+                "tool-linux-amd64-glibc-2.17.tar.gz",
+                "1.2.3",
+                vec![("tool", "tool")],
+            ),
+            (
+                "tool-macos-universal-1.2.3.tar.gz",
+                "1.2.3",
+                vec![("tool", "tool")],
+            ),
+            (
+                "tool-release-1.2.3.tar.gz",
+                "release-1.2.3",
+                vec![("tool", "tool")],
+            ),
+            (
+                "tool-linux-1.2.3.tar.gz",
+                "tool2-v1.2.3",
+                vec![("tool", "tool")],
+            ),
+            (
+                "tool-unknown-feature-linux-amd64.tar.gz",
+                "1.2.3",
+                vec![("tool", "tool-unknown-feature")],
+            ),
+            (
+                "tool-custom-feature-linux-amd64.tar.gz",
+                "1.2.3",
+                vec![("tool", "tool-custom-feature"), ("helper", "helper")],
+            ),
+            (
+                "tool-custom-feature2-linux-x86_64-gnu-2-17.tar.gz",
+                "1.2.3",
+                vec![("tool", "tool-custom-feature2")],
+            ),
+            (
+                "tool_no-web_linux_amd64.tar.gz",
+                "1.2.3",
+                vec![("tool", "tool_no-web")],
+            ),
+            (
+                "bundle.tar.gz",
+                "1.2.3",
+                vec![
+                    ("clang", "clang"),
+                    ("clang++", "clang++"),
+                    ("python3.13", "python3.13"),
+                    ("pc", "pc"),
+                    ("apple", "apple"),
+                    ("gnu", "gnu"),
+                    ("musl", "musl"),
+                    ("unknown", "unknown"),
+                    ("linux", "linux"),
+                    ("amd64", "amd64"),
+                    ("café", "café"),
+                ],
+            ),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let download = env.create_dir(&format!("regressions/{index}/download"))?;
+            let install_dir =
+                get_install_dir(TestEnv::DEFAULT_TEST_SLUG, &format!("regression-{index}"))?;
+            prepare_install_dir(&install_dir)?;
+            let archive_path = download.join(asset);
+            let gzip = flate2::write::GzEncoder::new(
+                fs::File::create(&archive_path)?,
+                flate2::Compression::default(),
+            );
+            let mut archive = tar::Builder::new(gzip);
+            let mut expected = Vec::new();
+            for (command, name) in commands {
+                let source = download.join(command);
+                env.create_platform_executable(&source)?;
+                use std::io::Write;
+                fs::OpenOptions::new()
+                    .append(true)
+                    .open(&source)?
+                    .write_all(command.as_bytes())?;
+                archive.append_path_with_name(&source, command)?;
+                expected.push((name, fs::read(source)?));
+            }
+            archive.into_inner()?.finish()?;
+            process_install(
+                &TestEnv::test_slug(),
+                version,
+                &archive_path,
+                &download,
+                &install_dir,
+                &asset.to_string(),
+            )?;
+            assert_eq!(fs::read_dir(&install_dir)?.count(), expected.len());
+            for (command, payload) in expected {
+                assert_eq!(fs::read(install_dir.join(command))?, payload);
+                #[cfg(unix)]
+                assert_eq!(
+                    fs::read_link(
+                        datadirs::get_bin_dir()
+                            .context("Missing bin dir")?
+                            .join(command)
+                    )?,
+                    install_dir.join(command)
+                );
+            }
+        }
+        Ok(())
+    })
+}
+
+#[test]
+fn version_and_architecture_naming_regressions() {
+    for (name, tag, expected) in [
+        ("tool-1.2.3-linux-amd64", "tool2-v1.2.3", "tool"),
+        ("tool-tool2-v1.2.3-linux-amd64", "tool2-v1.2.3", "tool"),
+        ("tool-release-1.2.3", "release-1.2.3", "tool"),
+        (
+            "tool-v1.2.3-beta.1+build.2",
+            "tool2-v1.2.3-beta.1+build.2",
+            "tool",
+        ),
+        ("tool-1.2.30", "tool2-v1.2.3", "tool-1.2.30"),
+        ("tool-nightly", "nightly", "tool"),
+        ("tool2-v1.2.3-linux-amd64", "tool2-v1.2.3", "tool2"),
+        ("tool-r35", "r35", "tool"),
+        ("tool-v1.2-linux-amd64", "1.2", "tool"),
+        ("tool-vnightly", "nightly", "tool"),
+        ("gh-dash_v4.26.2_linux-arm_7", "4.26.2", "gh-dash"),
+        ("python3.13", "1.2.3", "python3.13"),
+        ("clang++-linux-amd64", "1.2.3", "clang++"),
+        ("pc", "1.2.3", "pc"),
+        ("apple", "1.2.3", "apple"),
+        ("gnu", "1.2.3", "gnu"),
+        (
+            "tool-unknown-feature-linux-amd64",
+            "1.2.3",
+            "tool-unknown-feature",
+        ),
+        ("apple-tool-aarch64-apple-darwin", "1.2.3", "apple-tool"),
+        ("tool-gnu", "1.2.3", "tool-gnu"),
+        ("tool-gnu-2.17", "1.2.3", "tool-gnu-2.17"),
+        ("tool-universal-linux-amd64", "1.2.3", "tool-universal"),
+        ("tool-universal-macos-1.2.3", "1.2.3", "tool"),
+        (
+            "tool-aarch64-unknown-linux-musl-1-2-custom",
+            "1.2.3",
+            "tool-custom",
+        ),
+        ("tool-linux-gnueabihf-feature2", "1.2.3", "tool-feature2"),
+        ("tool-linux-musleabihf-feature2", "1.2.3", "tool-feature2"),
+        ("tool-LINUX-X86_64-GNU-2-17-FIPS", "1.2.3", "tool-FIPS"),
+    ] {
+        assert_eq!(normalized_exec_name(name, tag), expected, "{name}, {tag}");
+    }
 }

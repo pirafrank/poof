@@ -51,7 +51,44 @@ fn cleanup_preserves_variants_and_collapses_mixed_separators() {
         "v1.2.3".into(),
     ];
     assert_eq!(
-        clean_up_filename("linuxtool_v1.2.3-LINUX--_x86_64__pkcs11key!", tokens),
+        clean_up_filename("linuxtool_v1.2.3-LINUX--_x86_64__pkcs11key", tokens),
         "linuxtool_pkcs11key"
+    );
+}
+
+#[test]
+fn cleanup_preserves_untouched_names_and_punctuation() {
+    let tokens = vec![
+        "linux".into(),
+        "amd64".into(),
+        "pc".into(),
+        "apple".into(),
+        "gnu".into(),
+    ];
+    for name in [
+        "python3.13",
+        "clang++",
+        "café",
+        "tool..name",
+        "tool__name",
+        "pc",
+        "apple",
+        "gnu",
+        "linux-amd64",
+    ] {
+        assert_eq!(clean_up_filename(name, tokens.clone()), name);
+    }
+    assert_eq!(
+        clean_up_filename("clang++-linux-amd64", tokens.clone()),
+        "clang++"
+    );
+    assert_eq!(
+        clean_up_filename("tool+linux", tokens.clone()),
+        "tool+linux"
+    );
+    assert_eq!(clean_up_filename("café-linux-amd64", tokens), "café");
+    assert_eq!(
+        clean_up_filename("tool-linux.helper", vec!["linux".into(), String::new()]),
+        "tool-helper"
     );
 }
