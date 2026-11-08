@@ -1,0 +1,14 @@
+// https://github.com/bitwarden/sdk-sm/releases/tag/bws-v2.0.0
+[
+    "bws-aarch64-apple-darwin-2.0.0.zip",
+    "bws-aarch64-pc-windows-msvc-2.0.0.zip",
+    "bws-aarch64-unknown-linux-gnu-2.0.0.zip",
+    "bws-aarch64-unknown-linux-musl-2.0.0.zip",
+    "bws-macos-universal-2.0.0.zip",
+    "bws-sha256-checksums-2.0.0.txt",
+    "bws-x86_64-apple-darwin-2.0.0.zip",
+    "bws-x86_64-pc-windows-msvc-2.0.0.zip",
+    "bws-x86_64-unknown-linux-gnu-2.0.0.zip",
+    "bws-x86_64-unknown-linux-musl-2.0.0.zip",
+    "THIRDPARTY.html",
+]

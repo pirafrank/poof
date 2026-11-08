@@ -1601,3 +1601,81 @@ fn normalize_release_command_names() {
         assert_eq!(normalized_exec_name(name, "1.2.3"), expected, "{name}");
     }
 }
+
+#[test]
+fn normalize_product_prefixed_release_tags() {
+    for (name, version, expected) in [
+        ("bws-v2.0.0", "bws-v2.0.0", "bws"),
+        ("bws-x86_64-unknown-linux-gnu-2.0.0", "bws-v2.0.0", "bws"),
+        ("bws", "bws-v2.0.0", "bws"),
+        ("bws-no-web-v2.0.0-linux-amd64", "bws-v2.0.0", "bws-no-web"),
+        ("bws-v2.0.0-beta.1", "bws-v2.0.0-beta.1", "bws"),
+        ("bws-v2.1.0", "bws-v2.1.0", "bws"),
+    ] {
+        assert_eq!(normalized_exec_name(name, version), expected, "{name}");
+    }
+}
+
+#[test]
+fn product_prefixed_tag_installs_unversioned_command() -> Result<()> {
+    use crate::core::selector::get_triple_compatible_assets;
+    use crate::models::asset_triple::AssetTriple;
+
+    let release_assets: Vec<String> = ron::from_str(include_str!(
+        "../../core/selector/tests/assets/bitwarden@sdk-sm.ron"
+    ))?;
+    for (arch, musl, expected_asset) in [
+        ("x86_64", false, "bws-x86_64-unknown-linux-gnu-2.0.0.zip"),
+        ("x86_64", true, "bws-x86_64-unknown-linux-musl-2.0.0.zip"),
+        ("aarch64", false, "bws-aarch64-unknown-linux-gnu-2.0.0.zip"),
+        ("aarch64", true, "bws-aarch64-unknown-linux-musl-2.0.0.zip"),
+    ] {
+        let triple = AssetTriple::new("linux".into(), arch.into(), musl);
+        let assets = get_triple_compatible_assets(&release_assets, &triple, |name| name)
+            .context("No compatible Bitwarden release assets")?;
+        assert_eq!(assets, vec![expected_asset.to_string()]);
+        let asset_name = &assets[0];
+        let env = TestEnv::new()?;
+        env.with_test_env(|| -> Result<()> {
+            let slug = Slug::new("bitwarden/sdk-sm")?;
+            let version = "bws-v2.0.0";
+            let download_dir = env.create_dir("downloads")?;
+            let install_dir = get_install_dir("bitwarden/sdk-sm", version)?;
+            prepare_install_dir(&install_dir)?;
+            let source = download_dir.join("bws");
+            // Selection uses a fixed target; executable bytes match the test host.
+            env.create_platform_executable(&source)?;
+            let downloaded = download_dir.join(asset_name);
+            let file = fs::File::create(&downloaded)?;
+            let mut archive = zip::ZipWriter::new(file);
+            archive.start_file(
+                "bws",
+                zip::write::SimpleFileOptions::default().unix_permissions(0o755),
+            )?;
+            use std::io::Write;
+            archive.write_all(&fs::read(&source)?)?;
+            archive.finish()?;
+            process_install(
+                &slug,
+                version,
+                &downloaded,
+                &download_dir,
+                &install_dir,
+                asset_name,
+            )?;
+            assert_eq!(fs::read(install_dir.join("bws"))?, fs::read(&source)?);
+            assert_eq!(fs::read_dir(&install_dir)?.count(), 1);
+            #[cfg(unix)]
+            assert_eq!(
+                fs::read_link(
+                    datadirs::get_bin_dir()
+                        .context("Missing bin dir")?
+                        .join("bws")
+                )?,
+                install_dir.join("bws")
+            );
+            Ok(())
+        })?;
+    }
+    Ok(())
+}

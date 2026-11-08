@@ -249,7 +249,15 @@ fn normalized_exec_name(name: &str, version: &str) -> String {
         ]
         .map(str::to_string),
     );
-    tokens.extend([version.to_string(), format!("v{version}")]);
+    // Product-prefixed tags such as `bws-v2.0.0` identify a release, but the
+    // product prefix is part of the command name and must not be removed.
+    let command_version = version
+        .char_indices()
+        .find(|(_, ch)| ch.is_ascii_digit())
+        .map(|(index, _)| &version[index..])
+        .filter(|suffix| semver::Version::parse(suffix).is_ok())
+        .unwrap_or(version);
+    tokens.extend([command_version.to_string(), format!("v{command_version}")]);
     clean_up_filename(name, tokens)
 }
 
