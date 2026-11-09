@@ -56,7 +56,7 @@ fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> 
 
     let highest_installed = Version::parse(&highest_installed_str).with_context(|| {
         format!(
-            "Cannot parse highest installed version '{}' as semver",
+            "Cannot parse highest installed version '{}' as a supported version",
             highest_installed_str
         )
     })?;
@@ -74,7 +74,7 @@ fn update_single_repo_internal(repo: &str, spell: Option<&Spell>) -> Result<()> 
     let latest_version =
         Version::parse(latest_version_str.strip_v().as_str()).with_context(|| {
             format!(
-                "Cannot parse latest release tag '{}' as semver",
+                "Cannot parse latest release tag '{}' as a supported version",
                 latest_version_str
             )
         })?;
