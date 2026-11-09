@@ -557,25 +557,23 @@ mod install_binary_tests {
         use std::os::unix::fs::PermissionsExt;
 
         let env = TestEnv::new()?;
-        let source_exec = env.home_dir.join("source/executable");
-        let install_dir = env.create_dir("install")?;
-        fs::create_dir_all(&install_dir)?;
+        env.with_test_env(|| -> Result<()> {
+            let source_exec = env.home_dir.join("source/executable");
+            let install_dir = env.create_dir("install")?;
+            env.create_mock_executable(&source_exec)?;
+            fs::set_permissions(&source_exec, fs::Permissions::from_mode(0o644))?;
+            assert_eq!(fs::metadata(&source_exec)?.permissions().mode() & 0o111, 0);
 
-        env.create_mock_executable(&source_exec)?;
+            let slug = TestEnv::test_slug();
+            let exec_stem = OsString::from("executable");
+            install_binary(&slug, &source_exec, &install_dir, &exec_stem)?;
 
-        let slug = TestEnv::test_slug();
-        let exec_stem = OsString::from("executable");
-        let _ = install_binary(&slug, &source_exec, &install_dir, &exec_stem);
-
-        let installed = install_dir.join("executable");
-        if installed.exists() {
-            let metadata = fs::metadata(&installed)?;
-            let mode = metadata.permissions().mode();
-            // Check that executable bit is set (0o111 means any execute bit)
+            let installed = install_dir.join("executable");
+            assert!(installed.is_file(), "Installed executable should exist");
+            let mode = fs::metadata(&installed)?.permissions().mode();
             assert_ne!(mode & 0o111, 0, "Executable permissions should be set");
-        }
-
-        Ok(())
+            Ok(())
+        })
     }
 
     #[test]
@@ -782,7 +780,7 @@ mod name_normalization_tests {
             ("tool-v1.2-linux-amd64", "1.2", "tool"),
             ("tool-vnightly", "nightly", "tool"),
             ("gh-dash_v4.26.2_linux-arm_7", "4.26.2", "gh-dash"),
-            ("python3.13", "1.2.3", "python3.13"),
+            ("python3.13", "3.13.3", "python3.13"),
             ("clang++-linux-amd64", "1.2.3", "clang++"),
             (
                 "tool-unknown-feature-linux-amd64",
