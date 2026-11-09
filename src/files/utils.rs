@@ -63,63 +63,66 @@ pub fn strip_supported_extensions(path: &Path) -> &str {
         })
 }
 
-/// Remove complete tokens case-insensitively, then sanitize the command name.
+/// Remove complete metadata tokens at filename separator boundaries, ignoring ASCII case.
 ///
-/// Longer tokens are removed first to preserve compound aliases such as `x86_64`.
-/// Runs of separators collapse to their first character; meaningful digits remain.
-///
-/// # Arguments
-///
-/// * `filename` - The filename to clean up.
-/// * `to_remove` - Tokens to remove at non-alphanumeric boundaries, ignoring ASCII case.
-///
-/// # Returns
-///
-/// A command name containing ASCII letters, digits, hyphens, and underscores. Dots become
-/// hyphens, other special characters are removed, and leading/trailing separators are trimmed.
-/// Adjacent separators collapse to one separator rather than being removed entirely.
+/// Compound aliases such as `x86_64` and overlapping metadata spans are removed whole. Only separator
+/// runs touching removed metadata are collapsed; all other characters remain unchanged.
+/// If removal would erase the command entirely, return the original filename.
 pub fn clean_up_filename(filename: &str, mut to_remove: Vec<String>) -> String {
     to_remove.sort_by_key(|token| std::cmp::Reverse(token.len()));
-    let mut result = filename.to_string();
+    let lower = filename.to_ascii_lowercase();
+    let mut removed = vec![false; filename.len()];
+    let separator = |ch: char| matches!(ch, '-' | '_' | '.');
     for token in to_remove {
-        // An empty removal token would match indefinitely without shortening the filename.
         if token.is_empty() {
             continue;
         }
-        let token = token.to_ascii_lowercase();
-        loop {
-            let lower = result.to_ascii_lowercase();
-            // Remove whole tokens only; preserve platform text embedded in command names.
-            let found = lower.match_indices(&token).find_map(|(start, _)| {
-                let end = start + token.len();
-                let left_ok = lower[..start]
-                    .chars()
-                    .next_back()
-                    .is_none_or(|c| !c.is_ascii_alphanumeric());
-                let right_ok = lower[end..]
-                    .chars()
-                    .next()
-                    .is_none_or(|c| !c.is_ascii_alphanumeric());
-                (left_ok && right_ok).then_some(start..end)
-            });
-            let Some(range) = found else { break };
-            result.replace_range(range, "");
+        for (start, matched) in lower.match_indices(&token.to_ascii_lowercase()) {
+            let end = start + matched.len();
+            let left = lower[..start].chars().next_back();
+            let right = lower[end..].chars().next();
+            if left.is_none_or(separator) && right.is_none_or(separator) {
+                removed[start..end].fill(true);
+            }
         }
     }
 
-    // Normalize filename separators (-, _, .) without joining meaningful name components.
+    let chars: Vec<_> = filename.char_indices().collect();
     let mut cleaned = String::new();
-    for ch in result.chars() {
-        if ch.is_ascii_alphanumeric() {
+    let mut index = 0;
+    while index < chars.len() {
+        let (offset, ch) = chars[index];
+        if !removed[offset] && !separator(ch) {
             cleaned.push(ch);
-        } else if matches!(ch, '-' | '_' | '.')
-            && !cleaned.is_empty()
-            && !cleaned.ends_with(['-', '_'])
-        {
-            cleaned.push(if ch == '.' { '-' } else { ch });
+            index += 1;
+            continue;
+        }
+        let start = index;
+        let mut has_removed = false;
+        while index < chars.len() {
+            let (offset, ch) = chars[index];
+            if !removed[offset] && !separator(ch) {
+                break;
+            }
+            has_removed |= removed[offset];
+            index += 1;
+        }
+        if has_removed {
+            if !cleaned.is_empty()
+                && index < chars.len()
+                && let Some((_, ch)) = chars[start..index].iter().find(|(_, ch)| separator(*ch))
+            {
+                cleaned.push(*ch);
+            }
+        } else {
+            cleaned.extend(chars[start..index].iter().map(|(_, ch)| ch));
         }
     }
-    cleaned.trim_end_matches(['-', '_']).to_string()
+    if cleaned.is_empty() {
+        filename.to_string()
+    } else {
+        cleaned
+    }
 }
 
 /// Returns `true` if `item` contains the alias token, ignoring case,

@@ -1,35 +1,8 @@
-//! Release asset selection for terminal tools on Linux amd64 and macOS arm64.
+//! Release asset selection for AI terminal tools on Linux amd64 and macOS arm64.
 //!
 //! These offline tests simulate both platforms; they do not execute downloaded binaries.
 
-use crate::core::selector::get_triple_compatible_assets;
-use crate::models::asset_triple::AssetTriple;
-
-fn assert_selected_assets(fixture: &str, os: &str, arch: &str, expected: &[&str]) {
-    let assets: Vec<String> = ron::from_str(fixture).expect("valid release asset fixture");
-    let platform = AssetTriple::new(os.to_string(), arch.to_string(), false);
-    let selected = get_triple_compatible_assets(&assets, &platform, |asset| asset)
-        .expect("release should have matching assets");
-    assert_eq!(selected, expected, "unexpected assets for {os}/{arch}");
-}
-
-macro_rules! terminal_tool_tests {
-    ($tool:ident, $fixture:literal, $linux:literal, $macos:literal) => {
-        mod $tool {
-            use super::assert_selected_assets;
-
-            #[test]
-            fn linux_amd64() {
-                assert_selected_assets(include_str!($fixture), "linux", "x86_64", &[$linux]);
-            }
-
-            #[test]
-            fn macos_arm64() {
-                assert_selected_assets(include_str!($fixture), "macos", "aarch64", &[$macos]);
-            }
-        }
-    };
-}
+use crate::terminal_tool_tests;
 
 terminal_tool_tests!(
     herdr,

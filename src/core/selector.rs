@@ -36,6 +36,10 @@ const CPU_ARCH: &[(&str, &[&str])] = &[
     // armhf is a more specific alias for armv7, so it should be listed before armv7,
     // yet it may be some armv6 asset, which armv7 would run anyway, so we list it
     // but after armv7 to let it have less priority than armv7.
+    // Also, ARM ABI suffixes are packaging metadata: armv7/armhf/arm aliases match hard-float
+    // targets, and the musl score adjustment handles musleabihf. Do NOT treat musleabi
+    // as equivalent: it is soft-float and may be incompatible. macOS universal assets
+    // match through the 'macos' OS label. Architecture-specific assets rank higher when available.
     ("armv7", &["armv7l", "armv7", "armhf", "armv6", "arm"]),
     ("aarch64", &["aarch64", "arm64"]),
     // powerpc64le support
@@ -242,9 +246,9 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     }
 
     // FILENAME_PATTERN
-    if !item.contains(".") {
-        // if the executable name does not contain a dot, it does not have an extension,
-        // so it's likely a compatible non-archived executable. we give it a lower bonus point.
+    if !item.contains(".") || (!has_extension(&item) && found_os && found_arch) {
+        // Bare executables can contain dots in release labels without having an extension.
+        // Require both platform labels for these dotted names; give them the bare-file bonus.
         // keep no-extension support, but require some platform signal
         if !(found_os || found_arch) {
             return -1;

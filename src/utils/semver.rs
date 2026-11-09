@@ -8,14 +8,46 @@ use std::{cmp::Ordering, sync::LazyLock};
 /// LazyLock will compile the regex only once, on first use,
 /// ensuring efficient repeated validation.
 static SEMVER_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(?:[a-z\-\s]*)(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[.\-](.*))?$").unwrap()
+    Regex::new(r"(?i)^(?:[a-z][a-z.-]*[.\-\s]*)?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[.\-](.*))?$")
+        .unwrap()
 });
 
-/// Parses a version string loosely, handling leading zeros, 'v'/'r' prefixes, etc.
+/// Matches common calendar release tags, optionally preceded by a product label.
+/// Captured time fields are optional and normalized into a sortable prerelease.
+static CALENDAR_VERSION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)^(?:[a-z]+[.\-]?)?(\d{4})[.\-](\d{1,2})[.\-](\d{1,2})(?:T(\d{2})[:.\-](\d{2})(?:[:.\-](\d{2}))?Z?)?$",
+    )
+    .unwrap()
+});
+
+/// Parses a version string loosely, handling common prefixes, calendar tags,
+/// leading zeros, and incomplete numeric versions.
 pub fn parse_lenient(version_str: &str) -> Option<semver::Version> {
     // Try standard parse first
     if let Ok(v) = semver::Version::parse(version_str) {
         return Some(v);
+    }
+
+    // Map calendar releases to year.month.day and retain any timestamp so
+    // releases on the same date remain ordered. Text prefixes avoid semver's
+    // restriction on leading zeroes in numeric prerelease identifiers.
+    if let Some(captures) = CALENDAR_VERSION_REGEX.captures(version_str) {
+        let major = captures.get(1)?.as_str().parse().ok()?;
+        let minor = captures.get(2)?.as_str().parse().ok()?;
+        let patch = captures.get(3)?.as_str().parse().ok()?;
+        let time = captures.get(4).map(|hour| {
+            let minute = captures.get(5).map_or("00", |value| value.as_str());
+            let second = captures.get(6).map_or("00", |value| value.as_str());
+            format!("time{}-time{}-time{}", hour.as_str(), minute, second)
+        });
+        return Some(semver::Version {
+            major,
+            minor,
+            patch,
+            pre: Prerelease::new(time.as_deref().unwrap_or("")).ok()?,
+            build: BuildMetadata::default(),
+        });
     }
 
     // Try parsing with regex
@@ -432,6 +464,19 @@ mod tests {
         assert_eq!(parse_lenient("01.02.03").unwrap().to_string(), "1.2.3");
         // r prefix
         assert_eq!(parse_lenient("r35").unwrap().to_string(), "35.0.0");
+        let calendar = parse_lenient("RELEASE.2025-08-13T08-35-41Z").unwrap();
+        let same_day_later = parse_lenient("2025-08-13T09:00:00Z").unwrap();
+        let following_day = parse_lenient("release-2025.8.14").unwrap();
+        assert!(same_day_later > calendar);
+        assert!(following_day > same_day_later);
+        assert_eq!(
+            parse_lenient("2025-08-13").unwrap(),
+            parse_lenient("v2025.8.13").unwrap()
+        );
+        assert_eq!(
+            RawVersion::new("RELEASE.2025-08-13T08-35-41Z".to_string()).to_string(),
+            "RELEASE.2025-08-13T08-35-41Z"
+        );
         // v prefix
         assert_eq!(parse_lenient("v1.2").unwrap().to_string(), "1.2.0");
         // release- prefix
