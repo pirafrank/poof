@@ -272,25 +272,6 @@ mod get_install_dir_tests {
             },
         );
     }
-
-    #[test]
-    fn test_get_install_dir_with_numeric_version() {
-        temp_env::with_vars(
-            vec![
-                ("HOME", Some("/tmp/test_home")),
-                #[cfg(target_os = "linux")]
-                ("XDG_DATA_HOME", Some("/tmp/test_home/.local/share")),
-            ],
-            || {
-                let result = get_install_dir("org/tool", "2.3.4");
-                assert!(result.is_ok());
-
-                let install_dir = result.unwrap();
-                let path_str = install_dir.to_string_lossy();
-                assert!(path_str.contains("2.3.4"));
-            },
-        );
-    }
 }
 
 // =============================================================================
@@ -567,44 +548,6 @@ mod install_binary_tests {
             installed_content, b"#!/bin/sh\necho 'mock binary'",
             "Content should be preserved"
         );
-        Ok(())
-    }
-
-    #[test]
-    fn test_install_binary_preserves_content() -> Result<()> {
-        let env = TestEnv::new()?;
-        let source_exec = env.home_dir.join("source/tool");
-        let install_dir = env.create_dir("install")?;
-        fs::create_dir_all(source_exec.parent().unwrap())?;
-
-        // Create a binary with specific content
-        let content = b"#!/bin/sh\necho 'specific content'";
-        fs::write(&source_exec, content)?;
-
-        #[cfg(not(target_os = "windows"))]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&source_exec)?.permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&source_exec, perms)?;
-        }
-        let slug = TestEnv::test_slug();
-        let exec_stem = OsString::from("tool");
-        // Handle expected failures due to bin_dir issues in test environment
-        if let Err(e) = install_binary(&slug, &source_exec, &install_dir, &exec_stem) {
-            if !format!("{:?}", e).contains("Cannot determine") {
-                return Err(e);
-            } else {
-                eprintln!("Skipping assertion: bin_dir unavailable in test environment");
-                return Ok(());
-            }
-        }
-
-        let installed = install_dir.join("tool");
-        assert!(installed.exists(), "Binary should exist after install");
-        let installed_content = fs::read(&installed)?;
-        assert_eq!(installed_content, content, "Content should be preserved");
-
         Ok(())
     }
 
@@ -1612,62 +1555,6 @@ mod select_assets_success_tests {
 }
 
 // =============================================================================
-// Tests for install function - already installed path
-// =============================================================================
-
-#[cfg(test)]
-mod install_already_installed_tests {
-    use super::*;
-
-    #[test]
-    fn test_install_already_installed_skips() -> Result<()> {
-        // This test requires mocking select_assets and download_asset
-        // For now, we'll test the check_if_installed path indirectly
-        // by verifying that when an installation exists, install would skip
-
-        let env = TestEnv::new()?;
-
-        // Set up environment variables for datadirs
-        temp_env::with_vars(
-            vec![
-                ("HOME", Some(env.home_dir.to_str().unwrap())),
-                #[cfg(target_os = "linux")]
-                (
-                    "XDG_DATA_HOME",
-                    Some(env.home_dir.join(".local/share").to_str().unwrap()),
-                ),
-                #[cfg(target_os = "linux")]
-                (
-                    "XDG_CACHE_HOME",
-                    Some(env.home_dir.join(".cache").to_str().unwrap()),
-                ),
-            ],
-            || {
-                // Create an existing installation
-                let repo = "testuser/testrepo";
-                let version = "1.0.0";
-                let install_dir = get_install_dir(repo, version).unwrap();
-                prepare_install_dir(&install_dir).unwrap();
-
-                // Add a binary to make it "installed"
-                let binary_path = install_dir.join("testrepo");
-                env.create_platform_executable(&binary_path).unwrap();
-
-                // Verify it's detected as installed
-                let is_installed = check_if_installed(&install_dir).unwrap();
-                assert!(is_installed, "Should detect existing installation");
-
-                // Note: We can't easily test the full install() function here without
-                // mocking GitHub API and downloads, but we've verified the key check
-                // that causes the early return
-            },
-        );
-
-        Ok(())
-    }
-}
-
-// =============================================================================
 // Tests for check_for_same_named_binary_in_bin_dir
 // =============================================================================
 
@@ -1785,36 +1672,6 @@ mod check_for_same_named_binary_in_bin_dir_tests {
 
     #[test]
     #[cfg(not(target_os = "windows"))]
-    fn test_symlink_with_data_dir_in_path() -> Result<()> {
-        let env = TestEnv::new()?;
-        let slug = TestEnv::test_slug();
-
-        env.with_test_env(|| {
-            // Create installation with symlink (version 2.0.0 this time)
-            env.create_mock_installation_with_slug(
-                TestEnv::DEFAULT_TEST_SLUG,
-                "2.0.0",
-                TestEnv::DEFAULT_BINARY_NAME,
-                true,
-            )
-            .unwrap();
-
-            // Get the symlink path
-            let symlink_path = env.get_symlink_path(TestEnv::DEFAULT_BINARY_NAME).unwrap();
-
-            // Verify path matching logic works correctly
-            let result = check_for_same_named_binary_in_bin_dir(&slug, &symlink_path);
-            assert!(
-                result.is_ok(),
-                "Should correctly match when data_dir and slug are in symlink target path"
-            );
-        });
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(not(target_os = "windows"))]
     fn test_broken_symlink() -> Result<()> {
         let env = TestEnv::new()?;
         let slug = TestEnv::test_slug();
@@ -1916,6 +1773,10 @@ mod binary_in_path_is_not_managed_by_poof_tests {
 
             // Test with third-party dir in PATH
             env.with_path_extended(&third_party_dir, || {
+                assert!(
+                    which::which("mytool").is_ok(),
+                    "Binary should be found in PATH"
+                );
                 let exec_name = OsString::from("mytool");
                 let result = binary_in_path_is_not_managed_by_poof(&exec_name, &poof_bin_dir);
 
@@ -1923,38 +1784,6 @@ mod binary_in_path_is_not_managed_by_poof_tests {
                     result,
                     "Should return true when binary is in PATH outside poof's bin dir"
                 );
-            });
-        });
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(not(target_os = "windows"))]
-    fn test_path_manipulation_detection() -> Result<()> {
-        let env = TestEnv::new()?;
-
-        env.with_test_env(|| {
-            // Create a temporary directory and add it to PATH
-            let temp_bin = env.create_dir("temp_bin").unwrap();
-            let poof_bin = env.create_dir("poof_bin").unwrap();
-
-            // Create executable in temp_bin
-            let exec_name = "test_collision_tool";
-            let binary_path = temp_bin.join(exec_name);
-            env.create_mock_executable(&binary_path).unwrap();
-
-            // Test with temp_bin in PATH
-            env.with_path_extended(&temp_bin, || {
-                // Verify the binary can be found by which
-                let found_path = which::which(exec_name);
-                assert!(found_path.is_ok(), "Binary should be found in PATH");
-
-                // Now check our function
-                let exec_osstring = OsString::from(exec_name);
-                let result = binary_in_path_is_not_managed_by_poof(&exec_osstring, &poof_bin);
-
-                assert!(result, "Should detect binary in PATH outside poof bin dir");
             });
         });
 
