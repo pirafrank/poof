@@ -119,7 +119,7 @@ fn process_install(
         // Remove platform and version labels from bare executable names for use in PATH.
         // Keep meaningful suffixes: "cosign-linux-pivkey-pkcs11key-amd64" becomes
         // "cosign-pivkey-pkcs11key", rather than shortening every variant to "cosign".
-        let exec_name = normalized_exec_name(&file_name.to_string_lossy(), version);
+        let exec_name = normalized_asset_name(&file_name.to_string_lossy(), version);
         install_binary(
             slug,
             downloaded_file,
@@ -244,10 +244,16 @@ fn filename_metadata_tokens(name: &str) -> Vec<String> {
             .collect::<Vec<_>>()
             .join("|");
         [
-            "(?:unknown|apple|pc)[-_.](?:linux|darwin|macos|windows)".to_string(),
-            format!("(?:{aliases})[-_.](?:gnueabihf|musleabihf|musleabi|glibc|gnu|musl)(?:[-_.][0-9]+)*"),
-            "(?:(?:macos|darwin|osx|mac)[-_.]universal|universal[-_.](?:macos|darwin|osx|mac))".to_string(),
-        ].map(|pattern| Regex::new(&format!("(?i){pattern}")).expect("Valid packaging metadata pattern"))
+            "(?:unknown|apple|pc)[-_](?:linux|darwin|macos|windows)".to_string(),
+            format!(
+                "(?:{aliases})[-_](?:gnueabihf|musleabihf|musleabi|glibc|gnu|musl)(?:[-_.][0-9]+)*"
+            ),
+            "(?:(?:macos|darwin|osx|mac)[-_]universal|universal[-_](?:macos|darwin|osx|mac))"
+                .to_string(),
+        ]
+        .map(|pattern| {
+            Regex::new(&format!("(?i){pattern}")).expect("Valid packaging metadata pattern")
+        })
     });
 
     let mut tokens = platforms_strings();
@@ -264,11 +270,22 @@ fn filename_metadata_tokens(name: &str) -> Vec<String> {
     tokens
 }
 
-/// Normalize platform, target-triple, and version metadata without losing variants.
-///
-/// For example, `mytool-1.0.0-linux-x86_64` becomes `mytool` for version `1.0.0`.
-/// Separators within command names and meaningful digits such as `pkcs11key` remain.
+/// Normalize a release asset from its command-bearing first dot-separated component.
+/// Remove release decorations first so dots inside a known version do not truncate the command.
+fn normalized_asset_name(name: &str, version: &str) -> String {
+    let name = strip_release_decoration(name, version);
+    let command = name.split('.').next().unwrap_or(&name);
+    clean_up_filename(command, filename_metadata_tokens(command))
+}
+
+/// Normalize an internal executable without discarding meaningful dots or variant suffixes.
 fn normalized_exec_name(name: &str, version: &str) -> String {
+    let name = strip_release_decoration(name, version);
+    clean_up_filename(&name, filename_metadata_tokens(&name))
+}
+
+/// Strip complete release tags or their semantic-version suffix without erasing the command.
+fn strip_release_decoration(name: &str, version: &str) -> String {
     // Remove a complete tag decoration first, but never erase the command itself.
     // A product-prefixed tag at the beginning can itself contain the command:
     // `bws-v2.0.0-linux-amd64` must keep `bws`, not just its platform labels.
@@ -287,17 +304,18 @@ fn normalized_exec_name(name: &str, version: &str) -> String {
         }
         let prefix = &version[..index];
         let boundary = prefix.is_empty()
-            || prefix.ends_with(['-', '_', '.'])
+            || prefix.ends_with(['-', '_'])
             || prefix
                 .strip_suffix(['v', 'V'])
-                .is_some_and(|prefix| prefix.is_empty() || prefix.ends_with(['-', '_', '.']));
+                .is_some_and(|prefix| prefix.is_empty() || prefix.ends_with(['-', '_']));
         let suffix = &version[index..];
         (boundary && semver::Version::parse(suffix).is_ok()).then_some(suffix)
     });
-    let mut tokens = filename_metadata_tokens(&name);
     let command_version = command_version.unwrap_or(version);
-    tokens.extend([command_version.to_string(), format!("v{command_version}")]);
-    clean_up_filename(&name, tokens)
+    clean_up_filename(
+        &name,
+        vec![command_version.to_string(), format!("v{command_version}")],
+    )
 }
 
 /// Finds all executables within an extracted archive and installs each one into `install_dir`.
@@ -320,7 +338,7 @@ fn install_binaries(
     // Filesystem traversal order varies; sort paths to keep the same first binary on collisions.
     execs_to_install.sort();
     let asset_stem = strip_supported_extensions(Path::new(asset_name));
-    let asset_command = normalized_exec_name(asset_stem, version);
+    let asset_command = normalized_asset_name(asset_stem, version);
     for exec in execs_to_install {
         debug!("Installing executable: {}", exec.display());
         // if we have multiple executables, we install each one.

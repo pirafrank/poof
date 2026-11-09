@@ -248,6 +248,9 @@ directory.
 
 Command naming preserves internal executable names, including punctuation such as
 `python3.13` and `clang++`, while removing platform and release-version decorations.
+For release asset names, the first dot-separated component takes precedence after
+known release versions are removed; for example, `mc.linux-amd64.RELEASE.…` installs
+as `mc`. Internal executable names inside archives retain their dots.
 Archive packaging labels do not rename internal commands. Archive variants are
 derived dynamically from the meaningful suffix left after removing packaging
 metadata (for example, `zellij-no-web`).

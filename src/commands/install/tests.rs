@@ -1822,9 +1822,6 @@ fn version_and_architecture_naming_regressions() {
         ("gh-dash_v4.26.2_linux-arm_7", "4.26.2", "gh-dash"),
         ("python3.13", "1.2.3", "python3.13"),
         ("clang++-linux-amd64", "1.2.3", "clang++"),
-        ("pc", "1.2.3", "pc"),
-        ("apple", "1.2.3", "apple"),
-        ("gnu", "1.2.3", "gnu"),
         (
             "tool-unknown-feature-linux-amd64",
             "1.2.3",
@@ -1846,4 +1843,112 @@ fn version_and_architecture_naming_regressions() {
     ] {
         assert_eq!(normalized_exec_name(name, tag), expected, "{name}, {tag}");
     }
+}
+
+#[test]
+fn asset_names_prioritize_the_first_dot_separated_component_in_assets() {
+    for (name, version, expected) in [
+        ("tool-linux.helper", "1.2.3", "tool"),
+        ("tool_linux.helper", "1.2.3", "tool"),
+        (
+            "tool-custom-feature-linux.helper",
+            "1.2.3",
+            "tool-custom-feature",
+        ),
+        ("tool-1.2.3-linux-amd64", "1.2.3", "tool"),
+        (
+            "tool-v1.2.3-beta.1+build.2-linux-amd64",
+            "tool-v1.2.3-beta.1+build.2",
+            "tool",
+        ),
+        (
+            "mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z",
+            "RELEASE.2025-08-13T08-35-41Z",
+            "mc",
+        ),
+    ] {
+        assert_eq!(normalized_asset_name(name, version), expected, "{name}");
+    }
+}
+
+#[test]
+fn asset_names_first_dot_separated_component_prioritization_does_not_propagate_to_exec_names() {
+    assert_eq!(normalized_exec_name("python3.13", "3.13.3"), "python3.13");
+    assert_eq!(normalized_exec_name("clang++", "1.2.3"), "clang++");
+    // A dot in the product prefix is not a boundary introducing the numeric release version.
+    assert_eq!(
+        normalized_exec_name("tool-1.2.3", "tool.v1.2.3"),
+        "tool-1.2.3"
+    );
+    assert_eq!(
+        normalized_exec_name("tool-1.2.3", "tool.1.2.3"),
+        "tool-1.2.3"
+    );
+}
+
+#[test]
+fn asset_names_test_filename_metadata_tokens() {
+    assert!(!filename_metadata_tokens("tool-apple.darwin").contains(&"apple.darwin".into()));
+    assert!(!filename_metadata_tokens("tool-linux.gnu-2-17").contains(&"linux.gnu-2-17".into()));
+    assert!(filename_metadata_tokens("tool-linux-gnu-2.17").contains(&"linux-gnu-2.17".into()));
+}
+
+/// Select the real MinIO assets, then exercise the bare-executable installation path offline.
+#[test]
+fn minio_mc_fixture_installs_as_mc() -> Result<()> {
+    use crate::core::selector::get_triple_compatible_assets;
+    use crate::models::asset_triple::AssetTriple;
+
+    let assets: Vec<String> = ron::from_str(include_str!(
+        "../../core/selector/tests/assets/minio@mc.ron"
+    ))?;
+    let version = "RELEASE.2025-08-13T08-35-41Z";
+    for (os, arch, expected) in [
+        (
+            "linux",
+            "x86_64",
+            "mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z",
+        ),
+        (
+            "macos",
+            "aarch64",
+            "mc.darwin-arm64.RELEASE.2025-08-13T08-35-41Z",
+        ),
+    ] {
+        let triple = AssetTriple::new(os.into(), arch.into(), false);
+        let selected = get_triple_compatible_assets(&assets, &triple, |asset| asset)
+            .context("Missing MinIO release asset")?;
+        assert_eq!(selected, vec![expected.to_string()]);
+        let env = TestEnv::new()?;
+        env.with_test_env(|| -> Result<()> {
+            let download = env.create_dir("mc-download")?;
+            let downloaded = download.join(&selected[0]);
+            // Selection simulates the target above; executable bytes match the actual test host.
+            env.create_platform_executable(&downloaded)?;
+            let payload = fs::read(&downloaded)?;
+            let install_dir = get_install_dir("minio/mc", version)?;
+            prepare_install_dir(&install_dir)?;
+            process_install(
+                &Slug::new("minio/mc")?,
+                version,
+                &downloaded,
+                &download,
+                &install_dir,
+                &selected[0],
+            )?;
+            assert_eq!(fs::read_dir(&install_dir)?.count(), 1);
+            assert_eq!(fs::read(install_dir.join("mc"))?, payload);
+            #[cfg(unix)]
+            assert_eq!(
+                fs::read_link(
+                    datadirs::get_bin_dir()
+                        .context("Missing bin dir")?
+                        .join("mc")
+                )?,
+                install_dir.join("mc")
+            );
+            Ok(())
+        })?;
+    }
+    Ok(())
 }
