@@ -15,7 +15,7 @@ inputs:
   version:
     description: >
       Version of poof to bootstrap (e.g. v0.6.0). Defaults to 'latest',
-      which always installs the most recent release.
+      which installs the most recent release when poof is not already installed.
     required: false
     default: 'latest'
   token:
@@ -42,13 +42,14 @@ runs:
         echo "Adding poof bin dir to PATH: $INSTALL_DIR"
         echo "$INSTALL_DIR" >> "$GITHUB_PATH"
 
-        # Check if poof is already installed and it is not a same-named binary in PATH
-        if [[ -f "$INSTALL_DIR/poof" ]] && { "$INSTALL_DIR/poof" --version 2>&1 | grep -q "pirafrank"; }; then
-          echo "poof already installed in $INSTALL_DIR, skipping installation"
-          exit 0
-        fi
-
         if [ "$POOF_VERSION" = "latest" ]; then
+
+          # Check if poof is already installed and it is not a same-named binary in PATH
+          if [[ -f "$INSTALL_DIR/poof" ]] && { "$INSTALL_DIR/poof" --version 2>&1 | grep -q "pirafrank"; }; then
+            echo "poof already installed in $INSTALL_DIR, skipping installation"
+            exit 0
+          fi
+
           echo "Installing latest poof via install.sh..."
           sh "$GITHUB_ACTION_PATH/install.sh"
         else
@@ -57,6 +58,12 @@ runs:
           TAG="$POOF_VERSION"
           [[ "$TAG" != v* ]] && TAG="v$TAG"
           VERSION="${TAG#v}"
+
+          # Check if the request version of poof is already installed and it is not a same-named binary in PATH
+          if [[ -f "$INSTALL_DIR/poof" ]] && { "$INSTALL_DIR/poof" --version 2>&1 | grep "/releases/tag/v${VERSION//./\\.}$" | grep -q "pirafrank"; }; then
+            echo "poof $VERSION already installed in $INSTALL_DIR, skipping installation"
+            exit 0
+          fi
 
           # Detect OS
           OS="$(uname -s)"
