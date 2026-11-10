@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pirafrank/poof/blob/main/scripts/release/build-environment.schema.json",
+  "title": "poof release build environment record",
+  "description": "Allowlisted build provenance metadata emitted by scripts/release/build_environment.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact",
+    "source",
+    "github_actions",
+    "runner",
+    "toolchain",
+    "build",
+    "native_toolchain",
+    "cross",
+    "inputs",
+    "captured_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "target", "sha256", "size_bytes"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size_bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "commit", "tag", "worktree_dirty", "submodules", "lfs_objects"],
+      "properties": {
+        "repository": { "$ref": "#/$defs/nullableString" },
+        "commit": { "type": "string", "minLength": 1 },
+        "tag": { "$ref": "#/$defs/nullableString" },
+        "worktree_dirty": { "type": "boolean" },
+        "submodules": { "type": "array", "items": { "type": "string" } },
+        "lfs_objects": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "github_actions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "repository_id", "workflow", "workflow_ref", "workflow_sha", "run_id", "run_attempt", "run_number", "event_name", "ref", "ref_name", "sha", "actor", "server_url"],
+      "properties": {
+        "repository": { "$ref": "#/$defs/nullableString" },
+        "repository_id": { "$ref": "#/$defs/nullableString" },
+        "workflow": { "$ref": "#/$defs/nullableString" },
+        "workflow_ref": { "$ref": "#/$defs/nullableString" },
+        "workflow_sha": { "$ref": "#/$defs/nullableString" },
+        "run_id": { "$ref": "#/$defs/nullableString" },
+        "run_attempt": { "$ref": "#/$defs/nullableString" },
+        "run_number": { "$ref": "#/$defs/nullableString" },
+        "event_name": { "$ref": "#/$defs/nullableString" },
+        "ref": { "$ref": "#/$defs/nullableString" },
+        "ref_name": { "$ref": "#/$defs/nullableString" },
+        "sha": { "$ref": "#/$defs/nullableString" },
+        "actor": { "$ref": "#/$defs/nullableString" },
+        "server_url": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runs_on", "os", "architecture", "environment", "kernel", "cpu_architecture", "os_release", "image_version"],
+      "properties": {
+        "runs_on": { "type": "string" },
+        "os": { "$ref": "#/$defs/nullableString" },
+        "architecture": { "$ref": "#/$defs/nullableString" },
+        "environment": { "$ref": "#/$defs/nullableString" },
+        "kernel": { "$ref": "#/$defs/nullableString" },
+        "cpu_architecture": { "$ref": "#/$defs/nullableString" },
+        "os_release": { "$ref": "#/$defs/nullableString" },
+        "image_version": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rustc_version_verbose", "cargo_version_verbose", "active_toolchain", "toolchains", "installed_targets", "toolchain_files"],
+      "properties": {
+        "rustc_version_verbose": { "type": "string" },
+        "cargo_version_verbose": { "type": "string" },
+        "active_toolchain": { "type": "string" },
+        "toolchains": { "type": "array", "items": { "type": "string" } },
+        "installed_targets": { "type": "array", "items": { "type": "string" } },
+        "toolchain_files": { "$ref": "#/$defs/digestMap" }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["builder", "target", "target_architecture", "workspace_packages", "command", "profile", "default_features", "additional_features", "resolved_features", "flags", "cargo_home", "cargo_target_dir", "matrix_entry"],
+      "properties": {
+        "builder": { "enum": ["cargo", "cross"] },
+        "target": { "type": "string", "minLength": 1 },
+        "target_architecture": { "type": "string", "minLength": 1 },
+        "workspace_packages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "version"],
+            "properties": { "name": { "type": "string" }, "version": { "type": "string" } }
+          }
+        },
+        "command": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "profile": { "const": "release" },
+        "default_features": { "type": "boolean" },
+        "additional_features": { "type": "array", "items": { "type": "string" } },
+        "resolved_features": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } },
+        "flags": {
+          "type": "object",
+          "required": ["RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CFLAGS", "CXXFLAGS", "LDFLAGS"],
+          "properties": {
+            "RUSTFLAGS": { "$ref": "#/$defs/flagValue" },
+            "CARGO_ENCODED_RUSTFLAGS": { "$ref": "#/$defs/flagValue" },
+            "CFLAGS": { "$ref": "#/$defs/flagValue" },
+            "CXXFLAGS": { "$ref": "#/$defs/flagValue" },
+            "LDFLAGS": { "$ref": "#/$defs/flagValue" }
+          },
+          "patternProperties": {
+            "^CARGO_TARGET_[A-Z0-9_]+_RUSTFLAGS$": { "$ref": "#/$defs/flagValue" },
+            "^CFLAGS_[A-Za-z0-9_]+$": { "$ref": "#/$defs/flagValue" },
+            "^CXXFLAGS_[A-Za-z0-9_]+$": { "$ref": "#/$defs/flagValue" }
+          },
+          "additionalProperties": false
+        },
+        "cargo_home": { "type": "string" },
+        "cargo_target_dir": { "$ref": "#/$defs/nullableString" },
+        "matrix_entry": { "type": "object" }
+      }
+    },
+    "native_toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "versions", "linker", "linker_version", "macos_sdk_version", "xcode_version", "active_developer_directory", "deployment_target"],
+      "properties": {
+        "scope": { "const": "host" },
+        "versions": { "$ref": "#/$defs/nativeVersions" },
+        "linker": { "$ref": "#/$defs/nullableString" },
+        "linker_version": { "$ref": "#/$defs/nullableString" },
+        "macos_sdk_version": { "$ref": "#/$defs/nullableString" },
+        "xcode_version": { "$ref": "#/$defs/nullableString" },
+        "active_developer_directory": { "$ref": "#/$defs/nullableString" },
+        "deployment_target": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "cross": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/crossRecord" }
+      ]
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cargo_lock_sha256", "manifests", "cargo_config", "cargo_home_config", "dependency_metadata_sha256", "dependency_tree_sha256", "matrix_sha256", "build_script_sha256", "collector_sha256", "workflow_sha256"],
+      "properties": {
+        "cargo_lock_sha256": { "$ref": "#/$defs/sha256" },
+        "manifests": { "$ref": "#/$defs/digestMap" },
+        "cargo_config": { "$ref": "#/$defs/digestMap" },
+        "cargo_home_config": { "$ref": "#/$defs/digestMap" },
+        "dependency_metadata_sha256": { "$ref": "#/$defs/sha256" },
+        "dependency_tree_sha256": { "$ref": "#/$defs/sha256" },
+        "matrix_sha256": { "$ref": "#/$defs/sha256" },
+        "build_script_sha256": { "$ref": "#/$defs/sha256" },
+        "collector_sha256": { "$ref": "#/$defs/sha256" },
+        "workflow_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "captured_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "nullableString": { "type": ["string", "null"] },
+    "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "digestMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/sha256" }
+    },
+    "flagValue": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "sha256"],
+          "properties": {
+            "value": { "const": "[REDACTED]" },
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        }
+      ]
+    },
+    "nativeVersions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cc", "gcc", "clang", "ld", "ar", "musl_gcc"],
+      "properties": {
+        "cc": { "$ref": "#/$defs/nullableString" },
+        "gcc": { "$ref": "#/$defs/nullableString" },
+        "clang": { "$ref": "#/$defs/nullableString" },
+        "ld": { "$ref": "#/$defs/nullableString" },
+        "ar": { "$ref": "#/$defs/nullableString" },
+        "musl_gcc": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "crossRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "image_digest", "container_architecture", "verification", "runtime", "runtime_versions", "native_toolchain", "target_toolchain", "linker", "linker_version", "version", "installation", "config_sha256", "custom_dockerfile", "base_image"],
+      "properties": {
+        "image": { "type": "string" },
+        "image_digest": { "type": "string", "pattern": "^ghcr\\.io/cross-rs/.+@sha256:[0-9a-f]{64}$" },
+        "container_architecture": { "type": "string" },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target", "expected_platform", "observed_platform", "image_digest", "checks", "verified"],
+          "properties": {
+            "target": { "type": "string" },
+            "expected_platform": { "$ref": "#/$defs/platform" },
+            "observed_platform": { "$ref": "#/$defs/platform" },
+            "image_digest": { "type": "string", "pattern": "^ghcr\\.io/cross-rs/.+@sha256:[0-9a-f]{64}$" },
+            "checks": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["target_supported", "image_identity", "digest_resolved", "platform_matches"],
+              "properties": {
+                "target_supported": { "type": "boolean" },
+                "image_identity": { "type": "boolean" },
+                "digest_resolved": { "type": "boolean" },
+                "platform_matches": { "type": "boolean" }
+              }
+            },
+            "verified": { "type": "boolean" }
+          }
+        },
+        "runtime": { "const": "docker" },
+        "runtime_versions": { "type": "object" },
+        "native_toolchain": { "$ref": "#/$defs/nativeVersions" },
+        "target_toolchain": { "$ref": "#/$defs/nullableString" },
+        "linker": { "$ref": "#/$defs/nullableString" },
+        "linker_version": { "$ref": "#/$defs/nullableString" },
+        "version": { "type": "string" },
+        "installation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "version", "locked"],
+          "properties": {
+            "source": { "const": "crates.io" },
+            "version": { "type": "string" },
+            "locked": { "const": true }
+          }
+        },
+        "config_sha256": { "$ref": "#/$defs/sha256" },
+        "custom_dockerfile": { "$ref": "#/$defs/nullableString" },
+        "base_image": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "architecture"],
+      "properties": {
+        "os": { "$ref": "#/$defs/nullableString" },
+        "architecture": { "$ref": "#/$defs/nullableString" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "build": { "properties": { "builder": { "const": "cross" } }, "required": ["builder"] } }, "required": ["build"] },
+      "then": { "properties": { "cross": { "$ref": "#/$defs/crossRecord" } } },
+      "else": { "properties": { "cross": { "type": "null" } } }
+    }
+  ]
+}
