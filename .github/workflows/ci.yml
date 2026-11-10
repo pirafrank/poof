@@ -49,7 +49,15 @@ jobs:
 
       - name: Run release script tests
         if: runner.os == 'Linux'
-        run: scripts/release/run_tests.sh
+        working-directory: scripts/release
+        run: |
+          ./setup_venv.sh
+          . ./.venv/bin/activate
+          echo "Running release script tests..."
+          ./run_tests.sh
+          echo "Running JSON Schema validation..."
+          ./run_schema_validation.sh
+          deactivate
 
       - name: Perform CI checks
         run: just ci

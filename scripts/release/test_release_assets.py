@@ -9,6 +9,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from jsonschema import Draft202012Validator
+
 from build_environment import CROSS_VERSION, collect, prepare_cross
 from finalize_assets import finalize, sha256
 
@@ -77,6 +79,109 @@ class ReleaseAssetsTests(unittest.TestCase):
 
 class EnvironmentTests(unittest.TestCase):
     """Check metadata collection and Cross image pinning."""
+
+    def test_collected_cargo_and_cross_records_match_schema(self):
+        """Validate collector output for native and Cross builds against the schema.
+        Catch drifts between the collector and schema in CI"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old_cwd = Path.cwd()
+            self.addCleanup(os.chdir, old_cwd)
+            os.chdir(root)
+            (root / ".cargo").mkdir()
+            (root / ".cargo/config.toml").write_text("")
+            (root / ".github/workflows").mkdir(parents=True)
+            (root / ".github/workflows/release.yml").write_text("workflow fixture")
+            (root / "Cargo.toml").write_text('[package]\nname="poof"\nversion="1.0.0"')
+            (root / "Cargo.lock").write_text("lock fixture")
+            (root / "build.rs").write_text("fn main() {}")
+            archive = root / "poof.tar.gz"
+            archive.write_bytes(b"archive fixture")
+
+            cargo_target = "x86_64-unknown-linux-musl"
+            cross_target = "x86_64-unknown-linux-gnu"
+            cargo_entry = {
+                "os": "ubuntu-24.04",
+                "target": cargo_target,
+                "builder": "cargo",
+            }
+            cross_entry = {
+                "os": "ubuntu-24.04",
+                "target": cross_target,
+                "builder": "cross",
+            }
+            (root / "matrix.jsonc").write_text(
+                json.dumps({"include": [cargo_entry, cross_entry]})
+            )
+            repository = f"ghcr.io/cross-rs/{cross_target}"
+            resolved_digest = repository + "@sha256:" + "a" * 64
+            (root / "Cross.toml").write_text(
+                f'[target."{cross_target}"]\nimage="{repository}:{CROSS_VERSION}"\n'
+            )
+
+            metadata = {
+                "packages": [
+                    {
+                        "id": "poof 1.0.0",
+                        "name": "poof",
+                        "version": "1.0.0",
+                        "manifest_path": str(root / "Cargo.toml"),
+                    }
+                ],
+                "workspace_members": ["poof 1.0.0"],
+                "resolve": {"nodes": [{"id": "poof 1.0.0", "features": []}]},
+            }
+
+            def probe(*args, required=False):
+                if args[:2] == ("cargo", "metadata"):
+                    return json.dumps(metadata)
+                if args[:3] == ("docker", "image", "inspect"):
+                    return json.dumps(
+                        [
+                            {
+                                "RepoDigests": [resolved_digest],
+                                "Os": "linux",
+                                "Architecture": "amd64",
+                                "Config": {"Env": []},
+                            }
+                        ]
+                    )
+                if args[:2] == ("docker", "version"):
+                    return "{}"
+                return "fixture"
+
+            schema_path = Path(__file__).with_name("build-environment.schema.json")
+            validator = Draft202012Validator(json.loads(schema_path.read_text()))
+            env_path = root / "github-env"
+            with (
+                patch.dict(
+                    os.environ,
+                    {
+                        "RUNNER_OS": "Linux",
+                        "RUNNER_ARCH": "X64",
+                        "GITHUB_ENV": str(env_path),
+                    },
+                ),
+                patch("build_environment.command", side_effect=probe),
+            ):
+                for builder, target, matrix_entry in (
+                    ("cargo", cargo_target, cargo_entry),
+                    ("cross", cross_target, cross_entry),
+                ):
+                    if builder == "cross":
+                        prepare_cross(target)
+                    collect(
+                        SimpleNamespace(
+                            archive=str(archive),
+                            target=target,
+                            runner="ubuntu-24.04",
+                            builder=builder,
+                            matrix=json.dumps(matrix_entry),
+                            output="record.json",
+                        )
+                    )
+                    with self.subTest(builder=builder):
+                        validator.validate(json.loads((root / "record.json").read_text()))
 
     def test_collector_allowlists_and_redacts_environment(self):
         """Record build metadata without writing secret environment values."""

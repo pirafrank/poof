@@ -3,3 +3,10 @@ __pycache__/
 
 # Ruff cache directory
 .ruff_cache/
+
+# Virtual environment directory
+.venv/
+
+# egg
+*.egg
+*.egg-info/
