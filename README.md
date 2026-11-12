@@ -147,6 +147,20 @@ poof help
 
 or read the [Usage](https://poof.fpira.com/docs/usage) page for additional information.
 
+## Agent Skill
+
+poof ships an official agent skill that teaches AI coding agents (pi, Claude Code,
+and many others) to install and manage pre-built tools with poof in user space,
+asking for approval before installs and shell changes. Install it with the `skills`
+CLI (requires Node.js 22.20+):
+
+```sh
+npx skills add pirafrank/poof
+```
+
+Then just ask your agent, e.g. *"install BurntSushi/ripgrep with poof"*. Add `-g`
+for a global install, or `--list` to preview without installing.
+
 ## GitHub Action
 
 Easy add `poof` to a runner `PATH` and use it to quickly install software.
