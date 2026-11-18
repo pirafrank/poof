@@ -278,9 +278,17 @@ jobs:
             Release notes for `${{ github.ref_name }}` are available here: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md
           files: artifacts/**/*
           generate_release_notes: true
-          draft: false
+          # Upload all assets while the release is still mutable; publish only after uploads finish.
+          draft: true
           prerelease: ${{ contains(github.ref, 'pre') || contains(github.ref, 'beta') || contains(github.ref, 'rc') || contains(github.ref, 'alpha') || contains(github.ref, 'nightly') }}
           # Note: drafts and prereleases cannot be set as latest.
           make_latest: ${{ !contains(github.ref, 'pre') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc') && !contains(github.ref, 'alpha') && !contains(github.ref, 'nightly') }}
           fail_on_unmatched_files: true
           # no need to specify GITHUB_TOKEN here, it is automatically provided by GitHub Actions
+
+      # Immutable releases reject asset uploads after publication, so publish only after uploads finish.
+      - name: Publish release after all assets are uploaded
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: gh release edit "$TAG_NAME" --draft=false
