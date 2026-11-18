@@ -1,5 +1,5 @@
-name: MacPorts Portfile
-run-name: MacPorts Portfile ${{ github.ref_name }}
+name: Release MacPorts Portfile
+run-name: Release MacPorts Portfile ${{ github.ref_name }}
 
 on:
   release:

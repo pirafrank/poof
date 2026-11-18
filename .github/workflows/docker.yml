@@ -1,5 +1,5 @@
-name: Docker
-run-name: Docker image for ${{ github.event.release.tag_name || github.ref_name }}
+name: Release Docker image
+run-name: Release Docker image for ${{ github.event.release.tag_name || github.ref_name }}
 
 # Required secrets:
 #   DOCKERHUB_USERNAME  - Docker Hub username
