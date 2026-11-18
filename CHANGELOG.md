@@ -2,7 +2,30 @@
 
 All notable changes to the project will be documented in this file.
 
-## [0.6.3] - 2026-11-06
+## [0.6.4-rc.1] - 2026-11-18
+
+### 🚀 Features
+
+- *(action)* Improved version pinning and reuse (#251)
+- Improve and generalize asset normalization and fix regressions in certain cases (#252)
+- Npm pipeline (#256)
+
+### 🐛 Bug Fixes
+
+- *(build)* Include install.sh in the Docker build context
+
+### 🔧 Setup & Quality
+
+- Validator and JSON Schema for build-environment JSON file (#253)
+- Added CI pipeline to test npm release
+
+### ⚙️ Miscellaneous Tasks
+
+- Fixed regression in tar archive
+- Rust 1.100.0 as toolchain (#257)
+- Better pipeline naming on GitHub
+
+## [0.6.3] - 2026-11-08
 
 ### 🐛 Bug Fixes
 
