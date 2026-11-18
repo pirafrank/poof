@@ -2,17 +2,7 @@
 
 All notable changes to the project will be documented in this file.
 
-## [0.6.4-rc.2] - 2026-11-18
-
-### 🐛 Bug Fixes
-
-- *(ci)* Avoid rate limit in CI Action pipeline
-
-### 🔧 Setup & Quality
-
-- *(release)* Support pre-release publishing with release immutability enabled
-
-## [0.6.4-rc.1] - 2026-11-18
+## [0.6.4-rc.3] - 2026-11-18
 
 ### 🚀 Features
 
@@ -23,17 +13,21 @@ All notable changes to the project will be documented in this file.
 ### 🐛 Bug Fixes
 
 - *(build)* Include install.sh in the Docker build context
+- *(ci)* Avoid rate limit in CI Action pipeline
 
 ### 🔧 Setup & Quality
 
 - Validator and JSON Schema for build-environment JSON file (#253)
 - Added CI pipeline to test npm release
+- *(release)* Support pre-release publishing with release immutability enabled
+- Do not run 'latest' tag checks on pre-release versions
 
 ### ⚙️ Miscellaneous Tasks
 
 - Fixed regression in tar archive
 - Rust 1.100.0 as toolchain (#257)
 - Better pipeline naming on GitHub
+- *(setup)* Ignore pre-release tags in changelog generation
 
 ## [0.6.3] - 2026-11-08
 
