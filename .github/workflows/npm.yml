@@ -1,5 +1,5 @@
-name: npm
-run-name: npm ${{ inputs.tag }}
+name: Release to npm
+run-name: Release ${{ inputs.tag }} to npm
 
 # Packages and publishes the five poof npm packages from an already-published,
 # signed GitHub release. Never rebuilds Rust and never touches release assets.

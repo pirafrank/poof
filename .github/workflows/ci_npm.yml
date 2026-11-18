@@ -1,0 +1,46 @@
+name: npm CI
+run-name: npm CI on ${{ github.ref_name }}
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ci_npm.yml'
+      - '.github/workflows/npm.yml'
+      - 'matrix.jsonc'
+      - 'npm/**'
+      - 'scripts/npm/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  packaging_tests:
+    name: npm packaging tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Run Python packaging tests
+        run: ./scripts/npm/run_python_tests.sh
+
+  launcher_tests:
+    name: npm launcher tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Run launcher tests
+        run: ./scripts/npm/run_launcher_tests.sh

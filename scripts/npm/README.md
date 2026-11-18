@@ -25,6 +25,9 @@ assets. They are used in the GitHub Actions workflow defined in
 
 ## Tests
 
-Run `./scripts/npm/run_tests.sh` from the repository root to run the Python
-packaging tests and Node launcher tests. The scripts require Python 3.11 or later;
-launcher tests require Node.js 18 or later, albeit Node.js 24 is recommended.
+Run `./scripts/npm/run_tests.sh` from the repository root to run both test suites.
+The GitHub Actions workflow `.github/workflows/ci_npm.yml` runs them independently
+in separate jobs, and only for changes to npm-related files. To run either suite
+on its own, use `scripts/npm/run_python_tests.sh` for packaging tests or
+`scripts/npm/run_launcher_tests.sh` for launcher tests. The packaging tests require
+Python 3.11 or later; launcher tests require Node.js 18 or later.
