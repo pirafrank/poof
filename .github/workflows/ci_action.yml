@@ -1,6 +1,9 @@
 name: CI poof GitHub Action
 run-name: Test action on ${{ github.ref_name }}
 
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 on:
   push:
     paths:
