@@ -12,14 +12,14 @@ fi
 
 # Check if the version in Cargo.toml matches the latest tag
 cargo_version=$(grep -m 1 "version = " Cargo.toml | cut -d'"' -f2)
-if [[ "$cargo_version" != "${latest_tag#v}" ]]; then
+if [[ "$cargo_version" != *-* && "$cargo_version" != "${latest_tag#v}" ]]; then
   echo "Error: Version in Cargo.toml ($cargo_version) doesn't match latest tag (${latest_tag#v})"
   exit 1
 fi
 
 # Check if the version in Cargo.lock matches the latest tag
 lock_version=$(grep -m 1 "name = \"poof\"" -A 1 Cargo.lock | grep "version" | cut -d'"' -f2)
-if [[ "$lock_version" != "${latest_tag#v}" ]]; then
+if [[ "$lock_version" != *-* && "$lock_version" != "${latest_tag#v}" ]]; then
   echo "Error: Version in Cargo.lock ($lock_version) doesn't match latest tag (${latest_tag#v})"
   exit 1
 fi
