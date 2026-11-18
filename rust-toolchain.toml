@@ -1,13 +1,3 @@
 [toolchain]
-channel = "1.99.1"
+channel = "1.100.0"
 components = [ "rustfmt", "clippy", "llvm-tools-preview", "rust-analyzer" ]
-
-[target]
-targets = [
-    "x86_64-unknown-linux-gnu",
-    "aarch64-unknown-linux-gnu",
-    "x86_64-unknown-linux-musl",
-    "aarch64-unknown-linux-musl",
-    "x86_64-apple-darwin",
-    "aarch64-apple-darwin",
-]
