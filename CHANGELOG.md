@@ -2,6 +2,16 @@
 
 All notable changes to the project will be documented in this file.
 
+## [0.6.4-rc.2] - 2026-11-18
+
+### 🐛 Bug Fixes
+
+- *(ci)* Avoid rate limit in CI Action pipeline
+
+### 🔧 Setup & Quality
+
+- *(release)* Support pre-release publishing with release immutability enabled
+
 ## [0.6.4-rc.1] - 2026-11-18
 
 ### 🚀 Features
