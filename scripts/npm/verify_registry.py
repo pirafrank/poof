@@ -138,7 +138,7 @@ def check_dist_tag_transition(current_latest: str | None, version: common.Versio
     releases may only move ``latest`` forward (or keep it equal).
     """
     if version.is_prerelease:
-        if current_latest is not None:
+        if current_latest is not None and current_latest != common.BOOTSTRAP_NPM_VERSION:
             existing = common.parse_npm_version(current_latest)
             if existing.is_prerelease:
                 raise NpmPackagingError(

@@ -24,6 +24,7 @@ from typing import Any
 REPOSITORY = "pirafrank/poof"
 SCOPE = "@pirafrank"
 BASE_PACKAGE = f"{SCOPE}/poof"
+BOOTSTRAP_NPM_VERSION = "0.0.1-bootstrap.0"
 BINARY_NAME = "poof"
 NPM_REGISTRY = "https://registry.npmjs.org"
 GITHUB_SERVER_URL = "https://github.com"

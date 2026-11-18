@@ -272,6 +272,13 @@ class DistTagTransitionTests(unittest.TestCase):
         self.assertEqual(result["action"], "publish-to-next")
         self.assertIsNone(result["new_latest"])
 
+    def test_prerelease_preserves_bootstrap_latest(self):
+        bootstrap = common.BOOTSTRAP_NPM_VERSION
+        result = vr.check_dist_tag_transition(bootstrap, common.parse_npm_version("0.6.4-rc.2"))
+        self.assertEqual(result["action"], "publish-to-next")
+        self.assertEqual(result["current_latest"], bootstrap)
+        self.assertEqual(result["new_latest"], bootstrap)
+
     def test_prerelease_latest_requires_human_repair(self):
         with self.assertRaisesRegex(NpmPackagingError, "already points at prerelease"):
             vr.check_dist_tag_transition("0.6.4-rc.0", common.parse_npm_version("0.6.4-rc.1"))
