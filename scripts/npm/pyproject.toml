@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "poof-npm-tools"
+version = "0.1.0"
+description = "Verification, staging, and publication support tools for poof npm packages"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.setuptools]
+packages = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"

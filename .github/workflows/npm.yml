@@ -1,0 +1,314 @@
+name: npm
+run-name: npm ${{ inputs.tag }}
+
+# Packages and publishes the five poof npm packages from an already-published,
+# signed GitHub release. Never rebuilds Rust and never touches release assets.
+# The platform matrix below is intentionally static: it mirrors the four
+# npm-annotated entries with specificities of npm pipelines without reliance
+# requiring custom entries in matrix.jsonc.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to package and publish (e.g. v0.6.3)
+        required: true
+        type: string
+
+permissions: {}
+
+# Never cancel a run that may be mid-publication.
+concurrency:
+  group: npm-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag }}
+
+jobs:
+  verify_release:
+    permissions:
+      contents: read
+      attestations: read
+    name: Verify release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repo at tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 1
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.4
+
+      - name: Verify release and download native archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/npm/verify_release.py \
+            --tag "$TAG" --downloads downloads --evidence evidence.json
+
+      - name: Upload verification evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: npm-verification
+          path: |
+            downloads
+            evidence.json
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0  # no compression
+
+  stage_packages:
+    permissions:
+      contents: read
+    name: Stage packages
+    needs: verify_release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repo at tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Download verification evidence
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-verification
+
+      - name: Stage and pack the five packages
+        run: |
+          python3 scripts/npm/stage_packages.py \
+            --evidence evidence.json --downloads downloads \
+            --out staging --report staging/report.json
+
+      - name: Upload staged tarballs
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: npm-staging
+          path: |
+            staging/tarballs
+            staging/report.json
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0  # no compression
+
+  reconcile_registry:
+    permissions:
+      contents: read
+    name: Reconcile registry
+    needs: stage_packages
+    runs-on: ubuntu-24.04
+    outputs:
+      decisions: ${{ steps.reconcile.outputs.decisions }}
+      dist_tag: ${{ steps.reconcile.outputs.dist_tag }}
+    steps:
+      - name: Clone repo at tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Download staged tarballs
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-staging
+          path: staging
+
+      - name: Reconcile registry against staged bytes
+        id: reconcile
+        run: |
+          python3 scripts/npm/verify_registry.py \
+            --staging staging/report.json --out reconciliation.json
+          echo "decisions=$(jq -c '.decisions' reconciliation.json)" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$(jq -r '.dist_tag' reconciliation.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload reconciliation
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: npm-reconciliation
+          path: reconciliation.json
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0  # no compression
+
+  publish_platform:
+    environment: publish-npm
+    permissions:
+      contents: read
+      id-token: write  # npm provenance via OIDC
+    name: Publish ${{ matrix.npm.name }}
+    needs: [ stage_packages, reconcile_registry ]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      # Static copy of the four npm-publishable targets; scripts/npm tests
+      # assert it still matches the targets derived from matrix.jsonc.
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            builder: cargo
+            npm: { name: '@pirafrank/poof-linux-x64', os: linux, cpu: x64 }
+          - os: ubuntu-24.04
+            target: aarch64-unknown-linux-musl
+            builder: cargo
+            npm: { name: '@pirafrank/poof-linux-arm64', os: linux, cpu: arm64 }
+          - os: macos-15
+            target: x86_64-apple-darwin
+            builder: cargo
+            npm: { name: '@pirafrank/poof-darwin-x64', os: darwin, cpu: x64 }
+          - os: macos-15
+            target: aarch64-apple-darwin
+            builder: cargo
+            npm: { name: '@pirafrank/poof-darwin-arm64', os: darwin, cpu: arm64 }
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          # Use Node.js version >=24.22.0 to ensure compatibility with npm trusted publishing
+          node-version: '>=24.22.0'
+
+      - name: Download staged tarballs
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-staging
+          path: staging
+
+      - name: Resolve publication decision
+        id: decision
+        env:
+          DECISIONS: ${{ needs.reconcile_registry.outputs.decisions }}
+          PACKAGE: ${{ matrix.npm.name }}
+        run: |
+          action=$(printf '%s' "$DECISIONS" | jq -r --arg name "$PACKAGE" '.[$name].action')
+          case "$action" in
+            publish|skip) ;;
+            *) echo "Unexpected registry decision for $PACKAGE: $action" >&2; exit 1 ;;
+          esac
+          filename=$(jq -r --arg name "$PACKAGE" \
+            '.platforms[] | select(.package_name == $name) | .tarball.filename' staging/report.json)
+          if [ -z "$filename" ] || [ ! -f "staging/tarballs/$filename" ]; then
+            echo "Missing staged tarball for $PACKAGE" >&2
+            exit 1
+          fi
+          echo "action=$action" >> "$GITHUB_OUTPUT"
+          echo "tarball=staging/tarballs/$filename" >> "$GITHUB_OUTPUT"
+
+      - name: Publish platform package with provenance
+        if: steps.decision.outputs.action == 'publish'
+        env:
+          TARBALL: ${{ steps.decision.outputs.tarball }}
+          DIST_TAG: ${{ needs.reconcile_registry.outputs.dist_tag }}
+        run: npm publish "$TARBALL" --provenance --access public --tag "$DIST_TAG"
+
+  publish_launcher:
+    environment: publish-npm
+    permissions:
+      contents: read
+      id-token: write  # npm provenance via OIDC
+    name: Publish @pirafrank/poof
+    needs: [ reconcile_registry, publish_platform ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          # Use Node.js version >=24.22.0 to ensure compatibility with npm trusted publishing
+          node-version: '>=24.22.0'
+
+      - name: Download staged tarballs
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-staging
+          path: staging
+
+      - name: Resolve publication decision
+        id: decision
+        env:
+          DECISIONS: ${{ needs.reconcile_registry.outputs.decisions }}
+        run: |
+          action=$(printf '%s' "$DECISIONS" | jq -r '.["@pirafrank/poof"].action')
+          case "$action" in
+            publish|skip) ;;
+            *) echo "Unexpected registry decision for @pirafrank/poof: $action" >&2; exit 1 ;;
+          esac
+          filename=$(jq -r '.base.tarball.filename' staging/report.json)
+          if [ -z "$filename" ] || [ ! -f "staging/tarballs/$filename" ]; then
+            echo "Missing staged launcher tarball" >&2
+            exit 1
+          fi
+          echo "action=$action" >> "$GITHUB_OUTPUT"
+          echo "tarball=staging/tarballs/$filename" >> "$GITHUB_OUTPUT"
+
+      - name: Publish launcher package with provenance
+        if: steps.decision.outputs.action == 'publish'
+        env:
+          TARBALL: ${{ steps.decision.outputs.tarball }}
+          DIST_TAG: ${{ needs.reconcile_registry.outputs.dist_tag }}
+        run: npm publish "$TARBALL" --provenance --access public --tag "$DIST_TAG"
+
+  verify_published:
+    permissions:
+      contents: read
+    name: Verify publication and write manifest
+    needs: publish_launcher
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repo at tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+
+      - name: Download verification evidence
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-verification
+
+      - name: Download staged tarballs
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-staging
+          path: staging
+
+      - name: Require all five packages published with matching bytes
+        run: |
+          python3 scripts/npm/verify_registry.py \
+            --staging staging/report.json --out registry-after.json --require-published
+
+      - name: Build release-to-npm manifest
+        run: |
+          python3 scripts/npm/release_manifest.py \
+            --evidence evidence.json --staging staging/report.json \
+            --registry-json registry-after.json --out release-to-npm-manifest.json
+
+      - name: Upload publication manifest
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: npm-release-manifest
+          path: |
+            release-to-npm-manifest.json
+            registry-after.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0  # no compression
