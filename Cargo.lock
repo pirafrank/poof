@@ -1392,7 +1392,6 @@ dependencies = [
  "clap_mangen",
  "dirs",
  "env_logger",
- "errno",
  "flate2",
  "glibc_version",
  "libc",
