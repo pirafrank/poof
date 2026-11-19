@@ -64,8 +64,11 @@ action phase that needs the user's approval.
    invocation prefix for subsequent CLI commands when not using a globally available command.
    For the current session,
    the user can eval the output of `poof init --shell <shell>`;
-   persistent setup is `poof enable --shell <shell>` (approval required; reload the shell
-   afterwards).
+   Persistent setup is `poof enable --shell <shell>` (approval required; reload the shell
+   afterwards). Use `enable` only when `poof` is directly installed and will remain resolvable
+   in future shells: it writes startup code that invokes `poof init`. Do not use `enable` via
+   `npx` or a project-local npm install, since those invocations may not be available when a
+   later shell loads. With those npm modes, use `init` output for temporary PATH setup only.
 3. **Install.** `poof install OWNER/REPO` for the latest release, or
    `poof install OWNER/REPO --tag vX.Y.Z` to pin. The CLI flag is `--tag`/`-t`; the
    `slug@tag` form is GitHub Action syntax, not CLI syntax.
