@@ -44,22 +44,26 @@ action phase that needs the user's approval.
    - Reviewed `install.sh` above (installs to `~/.local/bin`).
    - Distribution package manager (use the user's package manager; see the installation
      guide at https://poof.fpira.com/docs/installation).
-   - Homebrew: `brew install pirafrank/tap/poof` (macOS and Linux; the tap formula
-     supports x86_64 and aarch64).
+   - Homebrew: `brew install pirafrank/tap/poof` (the tap README documents tapping
+     `pirafrank/tap` and installing `pirafrank/tap/<FORMULA_NAME>`). The current formula
+     provides macOS and Linux builds for Intel x86_64 and Apple Silicon/aarch64.
    - `cargo install poof`.
-   - npm: `npm install --global @pirafrank/poof` for a globally available command,
+   - npm: `npm install --global @pirafrank/poof` for a globally installed command,
      `npx --yes @pirafrank/poof <args>` for one-off invocation, or
-     `npm install --save-dev @pirafrank/poof` for a project-local installation. The npm
-     launcher supports Linux and macOS on x64 and aarch64/arm64 (Linux uses static musl
-     binaries); Windows is unsupported.
+     `npm install --save-dev @pirafrank/poof` for a project-local installation (invoke it
+     with `npm exec -- poof <args>`). The npm launcher supports Linux and macOS on x64 and
+     aarch64/arm64 (Linux uses static musl binaries); Windows is unsupported.
 
-   Ask approval before any bootstrap install. For `npx`, explain that it downloads and runs
-   the package; invoke poof through `npx` rather than assuming it adds a persistent `poof`
-   command to the shell PATH. For global installs, verify the command resolves before
-   proceeding; report PATH setup only if needed.
-2. **Check PATH.** When invoking an installed `poof` executable directly, `poof check`
-   reports whether poof's own bin directory is on PATH. For the current session, the user can
-   eval the output of `poof init --shell <shell>`;
+   Ask approval before any bootstrap install. Use the matching invocation after installation:
+   `poof <args>` when directly installed and available on PATH, `npx --yes @pirafrank/poof
+   <args>` for one-off npm use, or `npm exec -- poof <args>` in the project with the local npm
+   package. Do not assume one-off or local npm use installs a persistent global command.
+2. **Check poof-managed PATH.** `poof check` checks whether poof's own `bin` directory
+   (where managed tools are linked) is on PATH; it does not check whether the `poof` CLI itself
+   is available. Run it through the appropriate invocation from step 1, and use that same
+   invocation prefix for subsequent CLI commands when not using a globally available command.
+   For the current session,
+   the user can eval the output of `poof init --shell <shell>`;
    persistent setup is `poof enable --shell <shell>` (approval required; reload the shell
    afterwards).
 3. **Install.** `poof install OWNER/REPO` for the latest release, or
