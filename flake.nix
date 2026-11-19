@@ -51,10 +51,11 @@
               pkg-config
             ];
 
-            # System C libraries required by bzip2-sys (bzip2 crate) and lzma-sys (xz2 crate).
+            # System C libraries required by bzip2-sys, lzma-sys, and zstd-sys.
             buildInputs = with pkgs; [
               bzip2
               xz
+              zstd
             ];
 
             # Derivation-level env vars consumed by build.rs (Option B).
