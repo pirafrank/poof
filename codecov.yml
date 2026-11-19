@@ -11,6 +11,8 @@ coverage:
 ignore:
   - "tests/*"
   - "src/core/tests/**"
+  - "*/tests.rs"
+  - "*/tests/*"
   - "build.rs"
 
 #
