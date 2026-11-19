@@ -169,51 +169,83 @@ pub struct UninstallArgs {
 #[derive(Subcommand, Clone)]
 pub enum Cmd {
     /// Only perform download for the platform in current directory. Do not install.
+    ///
+    /// Since: 0.2.0
     Download(CmdArgs),
 
     /// Download binary for the platform and install it
+    ///
+    /// Since: 0.2.0
     Install(CmdArgs),
 
     /// List all installed binaries and their versions
+    ///
+    /// Since: 0.3.0
     List(ListArgs),
 
     /// Show which repository provides a binary
+    ///
+    /// Since: 0.6.0
     Which(WhichArgs),
 
     /// List all binaries provided by the latest version of a repository
+    ///
+    /// Since: 0.6.0
     What(WhatArgs),
 
     /// Set an installed version of a slug as the default one
+    ///
+    /// Since: 0.3.0
     Use(UseArgs),
 
     /// Update installed binaries of a slug or all installed binaries to their latest versions
+    ///
+    /// Since: 0.5.0
     Update(UpdateArgs),
 
     /// Remove binary from PATH. Use 'poof use' to re-add it
+    ///
+    /// Since: 0.6.0
     Unlink(UnlinkArgs),
 
     /// Uninstall a version or all versions of a repository
+    ///
+    /// Since: 0.6.0
     Uninstall(UninstallArgs),
 
     /// Persistently add poof's bin directory to your shell PATH
+    ///
+    /// Since: 0.4.0
     Enable(ShellIntegrationArgs),
 
     /// Check if poof's bin directory is in the PATH
+    ///
+    /// Since: 0.3.0
     Check,
 
     /// Generate shell completions to stdout
+    ///
+    /// Since: 0.6.0
     Completions(ShellIntegrationArgs),
 
     /// Generate shell-specific init script to add poof bin directory to PATH
+    ///
+    /// Since: 0.6.0
     Init(ShellIntegrationArgs),
 
     /// Empty the cache directory
+    ///
+    /// Since: 0.5.0
     Clean,
 
     /// Show install and environment information
+    ///
+    /// Since: 0.4.0
     Info,
 
     /// Show version information
+    ///
+    /// Since: 0.2.0
     Version,
 }
 
@@ -237,3 +269,7 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Cmd,
 }
+
+#[cfg(test)]
+#[path = "cli/tests.rs"]
+mod tests;
