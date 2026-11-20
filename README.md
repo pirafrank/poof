@@ -329,6 +329,20 @@ file for details on how to contribute to this project.
 Please make sure to follow the [code of conduct](CODE_OF_CONDUCT.md) when
 contributing. Thank you!
 
+## Related repositories
+
+Certain related repositories that complement the poof project include:
+
+| Repository | Description |
+| --- | --- |
+| [poof-docs](https://github.com/pirafrank/poof-docs) | Official documentation website for poof |
+| [poof-azure-extension](https://github.com/pirafrank/poof-azure-extension) | Azure Pipelines extension for installing poof and packages |
+| [poof-azure-templates](https://github.com/pirafrank/poof-azure-templates) | Azure Pipelines YAML templates for deploying poof |
+| [poof-gitlab-component](https://gitlab.com/pirafrank/poof-gitlab-component) | GitLab CI/CD component for installing poof and packages |
+| [poof-bin (AUR)](https://aur.archlinux.org/packages/poof-bin) | Arch Linux user repository package for installing poof binaries, maintained with [AURA](https://github.com/pirafrank/aura) |
+| [homebrew-tap](https://github.com/pirafrank/homebrew-tap) | Homebrew tap with automated formulae for installing poof and other software |
+| [packages](https://github.com/pirafrank/packages) | Automated APT, YUM/DNF, and APK repository updates and asset publishing, including poof |
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE.md)
