@@ -12,6 +12,10 @@ on:
         description: Release tag to package and stage (e.g. v0.6.3)
         required: true
         type: string
+      dry_run:
+        description: Dry-run npm staging without submitting packages
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -236,6 +240,7 @@ jobs:
           PACKAGE: ${{ matrix.npm.name }}
           DECISIONS: ${{ needs.reconcile_registry.outputs.decisions }}
           DIST_TAG: ${{ needs.reconcile_registry.outputs.dist_tag }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           action=$(printf '%s' "$DECISIONS" | jq -er --arg name "$PACKAGE" '.[$name].action')
           case "$action" in
@@ -247,7 +252,11 @@ jobs:
             '(.platforms + [.base])[] | select(.package_name == $name) | .tarball.filename' staging/report.json)
           [[ "$filename" != */* && "$filename" != .* ]]
           test -f "staging/tarballs/$filename"
-          npm stage publish "staging/tarballs/$filename" \
+          publish_args=()
+          if [[ "$DRY_RUN" == "true" ]]; then
+            publish_args+=(--dry-run)
+          fi
+          npm stage publish "staging/tarballs/$filename" "${publish_args[@]}" \
             --provenance --access public --tag "$DIST_TAG" --registry https://registry.npmjs.org
 
 
@@ -280,6 +289,7 @@ jobs:
           PACKAGE: '@pirafrank/poof'
           DECISIONS: ${{ needs.reconcile_registry.outputs.decisions }}
           DIST_TAG: ${{ needs.reconcile_registry.outputs.dist_tag }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           action=$(printf '%s' "$DECISIONS" | jq -er --arg name "$PACKAGE" '.[$name].action')
           case "$action" in
@@ -291,11 +301,16 @@ jobs:
             '(.platforms + [.base])[] | select(.package_name == $name) | .tarball.filename' staging/report.json)
           [[ "$filename" != */* && "$filename" != .* ]]
           test -f "staging/tarballs/$filename"
-          npm stage publish "staging/tarballs/$filename" \
+          publish_args=()
+          if [[ "$DRY_RUN" == "true" ]]; then
+            publish_args+=(--dry-run)
+          fi
+          npm stage publish "staging/tarballs/$filename" "${publish_args[@]}" \
             --provenance --access public --tag "$DIST_TAG" --registry https://registry.npmjs.org
 
 
       - name: Approval instructions
+        if: ${{ !inputs.dry_run }}
         run: |
           echo "Staging run ID: $GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
           echo 'Approve all four platform packages before the launcher on npmjs.' >> "$GITHUB_STEP_SUMMARY"
