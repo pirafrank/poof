@@ -18,10 +18,28 @@ fn aliases_for<'a>(table: &'a [(&str, &'a [&str])], key: &str) -> Option<&'a [&'
 const OPERATING_SYSTEM: &[(&str, &[&str])] = &[
     // ("windows", &["windows", "win"]),
     ("macos", &["macos", "darwin", "osx", "mac"]),
-    ("linux", &["linux"]),
+    ("linux", &["linux", "musllinux"]),
     // ("openbsd", &["openbsd"]),
     // ("freebsd", &["freebsd"]),
     // ("netbsd", &["netbsd"]),
+];
+
+/// Known OS labels for targets poof cannot run.
+const UNSUPPORTED_OS: &[&str] = &[
+    "windows",
+    "win",
+    "freebsd",
+    "openbsd",
+    "netbsd",
+    "android",
+    "ios",
+    "tvos",
+    "watchos",
+    "solaris",
+    "illumos",
+    "dragonfly",
+    "haiku",
+    "aix",
 ];
 
 /// CPU architecture names and aliases recognized by release asset selection.
@@ -36,10 +54,11 @@ const CPU_ARCH: &[(&str, &[&str])] = &[
     // armhf is a more specific alias for armv7, so it should be listed before armv7,
     // yet it may be some armv6 asset, which armv7 would run anyway, so we list it
     // but after armv7 to let it have less priority than armv7.
-    // Also, ARM ABI suffixes are packaging metadata: armv7/armhf/arm aliases match hard-float
-    // targets, and the musl score adjustment handles musleabihf. Do NOT treat musleabi
-    // as equivalent: it is soft-float and may be incompatible. macOS universal assets
-    // match through the 'macos' OS label. Architecture-specific assets rank higher when available.
+    // ARM ABI suffixes are packaging metadata: armv7/armhf/arm aliases match the
+    // ARMv7 target. Statically linked soft-float executables may run on hard-float
+    // hardware, so their ABI suffixes are not architecture deal-breakers.
+    // macOS universal assets match through the 'macos' OS label.
+    // Architecture-specific assets rank higher when available.
     ("armv7", &["armv7l", "armv7", "armhf", "armv6", "arm"]),
     ("aarch64", &["aarch64", "arm64"]),
     // powerpc64le support
@@ -52,6 +71,25 @@ const CPU_ARCH: &[(&str, &[&str])] = &[
     ("s390x", &["s390x"]),
     // loongarch64 support
     ("loongarch64", &["loongarch64"]),
+];
+
+/// Known architecture labels for targets poof cannot run.
+const UNSUPPORTED_ARCH: &[&str] = &[
+    "m68k",
+    "mips",
+    "mipsel",
+    "mips64",
+    "mips64el",
+    "sparc",
+    "sparc64",
+    "wasm32",
+    "wasm64",
+    "riscv32",
+    "loongarch32",
+    "s390",
+    "ppc",
+    "ppc64",
+    "powerpc64",
 ];
 
 /// Returns `true` if `item` has what looks like a real file extension (non-empty, ≤4 chars, not all digits).
@@ -179,6 +217,13 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
         // unless the user is running a built poof on a yet unsupported operating system.
         return -1;
     };
+    if UNSUPPORTED_OS
+        .iter()
+        .any(|alias| contains_alias_token(&item, alias))
+    {
+        return -1;
+    }
+
     // Check if this OS matches our current OS.
     // matching_os will hold the matched alias among the values that matched.
     // Aliases are retrieved from OPERATING_SYSTEM using t.get_os() as the key.
@@ -187,6 +232,16 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
         .find(|alias| contains_alias_token(&item, alias))
         .map(|alias| alias.to_string());
     let found_os: bool = matching_os.is_some();
+    if !found_os
+        && OPERATING_SYSTEM.iter().any(|(os, aliases)| {
+            *os != current_os
+                && aliases
+                    .iter()
+                    .any(|alias| contains_alias_token(&item, alias))
+        })
+    {
+        return -1;
+    }
     if found_os {
         score += 5;
     }
@@ -210,6 +265,12 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
         // unless the user is running a built poof on a yet unsupported architecture.
         return -1;
     };
+    if UNSUPPORTED_ARCH
+        .iter()
+        .any(|alias| contains_alias_token(&item, alias))
+    {
+        return -1;
+    }
     // Check if architecture matches any alias for our current architecture.
     // matching_arch will hold the alias among the values that matched.
     // Aliases are retrieved from CPU_ARCH using current_arch as the key.

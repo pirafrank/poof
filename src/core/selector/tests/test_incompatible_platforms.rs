@@ -39,4 +39,55 @@ mod tests {
             Some(vec!["yt-dlp_linux".to_string()])
         );
     }
+
+    #[test]
+    fn test_rejects_assets_for_other_operating_systems() {
+        let linux = AssetTriple::new("linux".into(), "x86_64".into(), false);
+        for asset in [
+            "tool_macos_x86_64.zip",
+            "tool_windows_x86_64.zip",
+            "tool_freebsd_x86_64.tar.gz",
+            "tool_x86_64_linux_android.tar.gz",
+            "yt-dlp_win.zip",
+        ] {
+            assert_eq!(get_triple_score(asset, &linux), -1, "{asset}");
+        }
+
+        let macos = AssetTriple::new("macos".into(), "aarch64".into(), false);
+        assert_eq!(get_triple_score("tool_linux_aarch64.zip", &macos), -1);
+        assert!(get_triple_score("tool_darwin_aarch64.zip", &macos) > 0);
+    }
+
+    #[test]
+    fn test_rejects_unsupported_architectures() {
+        let platform = AssetTriple::new("linux".into(), "x86_64".into(), false);
+        for asset in [
+            "tool_linux_sparc64.zip",
+            "tool_linux_mips64.zip",
+            "tool_linux_wasm32.zip",
+            "tool_linux_m68k.zip",
+        ] {
+            assert_eq!(get_triple_score(asset, &platform), -1, "{asset}");
+        }
+        assert!(get_triple_score("tool_linux_x86_64.zip", &platform) > 0);
+    }
+
+    #[test]
+    fn test_yt_dlp_musllinux_selection() {
+        let assets: Vec<String> = ron::from_str(include_str!("assets/yt-dlp@yt-dlp.ron")).unwrap();
+        let cases = [
+            ("x86_64", false, "yt-dlp_linux"),
+            ("x86_64", true, "yt-dlp_musllinux"),
+            ("aarch64", false, "yt-dlp_linux_aarch64"),
+            ("aarch64", true, "yt-dlp_musllinux_aarch64"),
+        ];
+        for (arch, musl, expected) in cases {
+            let platform = AssetTriple::new("linux".into(), arch.into(), musl);
+            assert_eq!(
+                get_triple_compatible_assets(&assets, &platform, |asset| asset),
+                Some(vec![expected.to_string()]),
+                "{arch}, musl={musl}"
+            );
+        }
+    }
 }
