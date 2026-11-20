@@ -2,7 +2,8 @@
 
 use std::{
     ffi::OsString,
-    fs::OpenOptions,
+    fs::{File, OpenOptions},
+    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -53,10 +54,6 @@ fn install_with_fuse_check(
     let version: String = release.tag_name().strip_v();
     validate_version(&version).context("Release tag is not a safe version path component")?;
 
-    if assets.iter().any(|asset| is_appimage(asset.name())) {
-        check_fuse()?;
-    }
-
     let install_dir = get_install_dir(repo, &version)?;
     if check_if_installed(&install_dir)? {
         info!(
@@ -65,6 +62,9 @@ fn install_with_fuse_check(
         );
         return Ok(());
     } else {
+        if assets.iter().any(|asset| is_appimage(asset.name())) {
+            check_fuse()?;
+        }
         // installation should proceed, prepare install directory
         prepare_install_dir(&install_dir)?;
     }
@@ -141,11 +141,16 @@ fn process_install(
     // check if downloaded binary is an archive or an executable
     // and proceed accordingly.
     let is_executable = is_exec_for_current_arch(downloaded_file)?;
-    if is_appimage(asset_name) && !is_executable {
-        bail!(
-            "AppImage {} is not an executable for this architecture",
-            asset_name
-        );
+    if is_appimage(asset_name) {
+        let mut header = [0; 4];
+        let is_elf =
+            File::open(downloaded_file)?.read_exact(&mut header).is_ok() && header == *b"\x7fELF";
+        if !is_executable || !is_elf {
+            bail!(
+                "AppImage {} is not an ELF executable for this architecture",
+                asset_name
+            );
+        }
     }
     if is_executable {
         debug!("Downloaded file {} is an executable binary.", asset_name);
