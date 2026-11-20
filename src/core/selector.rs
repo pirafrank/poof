@@ -163,18 +163,33 @@ where
 {
     let mut map: HashMap<i32, Vec<T>> = HashMap::new();
     let mut max_score: i32 = 0;
+    let mut appimage_map: HashMap<i32, Vec<T>> = HashMap::new();
+    let mut max_appimage_score: i32 = 0;
     for asset in assets {
-        let score = get_triple_score(extractor_fn(asset), t);
+        let name = extractor_fn(asset);
+        let score = get_triple_score(name, t);
         if score > 0 {
-            max_score = max(max_score, score);
-            map.entry(score).or_default().push(asset.clone());
+            if is_appimage(name) {
+                max_appimage_score = max(max_appimage_score, score);
+                appimage_map.entry(score).or_default().push(asset.clone());
+            } else {
+                max_score = max(max_score, score);
+                map.entry(score).or_default().push(asset.clone());
+            }
         }
     }
     if max_score > 0 {
         map.get(&max_score).cloned()
+    } else if max_appimage_score > 0 {
+        appimage_map.get(&max_appimage_score).cloned()
     } else {
         None
     }
+}
+
+/// Return whether an asset has the AppImage executable suffix.
+pub(crate) fn is_appimage(name: &str) -> bool {
+    name.to_ascii_lowercase().ends_with(".appimage")
 }
 
 /// Get score for the input string
@@ -317,6 +332,13 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     // installing 64 bit binaries on 32 bit arm devices.
     if item.contains("arm64") && current_arch == "armv7" {
         return -1;
+    }
+
+    if is_appimage(&item) {
+        if !is_linux || !matches!(current_arch, "x86_64" | "aarch64") || !found_arch {
+            return -1;
+        }
+        return score + 4;
     }
 
     // FILENAME_PATTERN
