@@ -112,9 +112,11 @@ Here's where `poof` helps:
   - Linux (`x86_64`, `aarch64`, `armv7l`, `i686`, `ppc64le`, `s390x`, `riscv64gc`,
   `loongarch64`)
   - macOS (`x86_64`, `aarch64`)
-- AppImage installation is available on Linux `x86_64` and `aarch64` when
+- Type 2 AppImage installation is available on Linux `x86_64` and `aarch64` when
   `/dev/fuse` is accessible and `fusermount` or `fusermount3` is installed.
-  AppImages are selected only when no compatible bare executable or archive is available.
+  Type 1 AppImages are unsupported. AppImages are selected only when no compatible
+  bare executable or archive is available. The FUSE check is a best-effort host
+  capability check; older Type 2 runtimes may also require `libfuse2`.
 
 ## Quick start
 
