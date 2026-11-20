@@ -577,6 +577,35 @@ mod install_binary_tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_install_binary_keeps_executable_permissions_when_bin_name_conflicts() -> Result<()> {
+        use std::os::unix::fs::PermissionsExt;
+
+        let env = TestEnv::new()?;
+        env.with_test_env(|| -> Result<()> {
+            let source = env.home_dir.join("source/tool.AppImage");
+            env.create_platform_executable(&source)?;
+            fs::set_permissions(&source, fs::Permissions::from_mode(0o644))?;
+            let install_dir = env.create_dir("install")?;
+            let conflicting_bin = env.get_symlink_path("tool")?;
+            fs::write(&conflicting_bin, b"foreign command")?;
+
+            install_binary(
+                &TestEnv::test_slug(),
+                &source,
+                &install_dir,
+                &OsString::from("tool"),
+            )?;
+
+            let installed = install_dir.join("tool");
+            assert!(installed.is_file());
+            assert_ne!(fs::metadata(&installed)?.permissions().mode() & 0o111, 0);
+            assert_eq!(fs::read(&conflicting_bin)?, b"foreign command");
+            Ok(())
+        })
+    }
+
+    #[test]
     fn duplicate_commands_preserve_existing_destinations() -> Result<()> {
         let env = TestEnv::new()?;
         env.with_test_env(|| -> Result<()> {
@@ -874,6 +903,9 @@ mod process_install_tests {
         let asset_name = format!("tool-{}.AppImage", std::env::consts::ARCH);
         let downloaded_file = download_to.join(&asset_name);
         env.create_platform_executable(&downloaded_file)?;
+        let mut contents = fs::read(&downloaded_file)?;
+        contents[8..11].copy_from_slice(b"AI\x02");
+        fs::write(&downloaded_file, contents)?;
 
         env.with_test_env(|| {
             process_install(
@@ -886,6 +918,99 @@ mod process_install_tests {
             )
         })?;
         assert!(install_dir.join("tool").exists());
+        Ok(())
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+    #[test]
+    #[ignore = "requires POOF_TEST_APPIMAGE to point to a real x86_64 Type 2 AppImage"]
+    fn test_process_install_real_type_2_appimage() -> Result<()> {
+        use std::os::unix::fs::PermissionsExt;
+
+        // A locally downloaded fixture avoids redistributing a third-party AppImage.
+        // Verified example: https://github.com/AnimMouse/hello-world-appimage/releases/tag/v1
+        // SHA-256: c60924583828a245ba0b653397ea673258b7dc313a6e66f1ba19b1f891192e9a
+        let fixture = std::env::var("POOF_TEST_APPIMAGE")?;
+        let env = TestEnv::new()?;
+        let download_to = env.create_dir("download")?;
+        let install_dir = env.create_dir("install")?;
+        let asset_name = "hello-x86_64.AppImage".to_string();
+        let downloaded_file = download_to.join(&asset_name);
+        fs::copy(fixture, &downloaded_file)?;
+
+        env.with_test_env(|| {
+            process_install(
+                &TestEnv::test_slug(),
+                "1.0.0",
+                &downloaded_file,
+                &download_to,
+                &install_dir,
+                &asset_name,
+            )
+        })?;
+
+        let installed = install_dir.join("hello");
+        assert_eq!(fs::read(&installed)?, fs::read(&downloaded_file)?);
+        assert_ne!(fs::metadata(&installed)?.permissions().mode() & 0o111, 0);
+        Ok(())
+    }
+
+    #[cfg(all(
+        target_os = "linux",
+        any(target_arch = "x86_64", target_arch = "aarch64")
+    ))]
+    #[test]
+    fn test_process_install_rejects_appimage_without_type_2_marker() -> Result<()> {
+        let env = TestEnv::new()?;
+        let download_to = env.create_dir("download")?;
+        let install_dir = env.create_dir("install")?;
+        let asset_name = format!("tool-{}.AppImage", std::env::consts::ARCH);
+        let downloaded_file = download_to.join(&asset_name);
+
+        for marker in [*b"AI\x01", *b"\0\0\0", *b"AI\x03"] {
+            env.create_platform_executable(&downloaded_file)?;
+            let mut contents = fs::read(&downloaded_file)?;
+            contents[8..11].copy_from_slice(&marker);
+            fs::write(&downloaded_file, contents)?;
+
+            let error = process_install(
+                &TestEnv::test_slug(),
+                "1.0.0",
+                &downloaded_file,
+                &download_to,
+                &install_dir,
+                &asset_name,
+            )
+            .unwrap_err();
+            assert!(error
+                .to_string()
+                .contains("not a supported Type 2 AppImage"));
+            assert!(!install_dir.join("tool").exists());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_install_rejects_truncated_appimage() -> Result<()> {
+        let env = TestEnv::new()?;
+        let download_to = env.create_dir("download")?;
+        let install_dir = env.create_dir("install")?;
+        let asset_name = "tool-x86_64.AppImage".to_string();
+        let downloaded_file = download_to.join(&asset_name);
+        for contents in [b"\x7fELF".as_slice(), b"\x7fELF\0\0\0\0AI\x02".as_slice()] {
+            fs::write(&downloaded_file, contents)?;
+            let error = process_install(
+                &TestEnv::test_slug(),
+                "1.0.0",
+                &downloaded_file,
+                &download_to,
+                &install_dir,
+                &asset_name,
+            )
+            .unwrap_err();
+            assert!(error.to_string().contains("has an incomplete ELF header"));
+            assert!(!install_dir.join("tool").exists());
+        }
         Ok(())
     }
 

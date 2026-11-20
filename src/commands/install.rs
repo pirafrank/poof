@@ -140,17 +140,32 @@ fn process_install(
 ) -> Result<()> {
     // check if downloaded binary is an archive or an executable
     // and proceed accordingly.
-    let is_executable = is_exec_for_current_arch(downloaded_file)?;
-    if is_appimage(asset_name) {
-        let mut header = [0; 4];
-        let is_elf =
-            File::open(downloaded_file)?.read_exact(&mut header).is_ok() && header == *b"\x7fELF";
-        if !is_executable || !is_elf {
+    let appimage = is_appimage(asset_name);
+    if appimage {
+        let mut file = File::open(downloaded_file)?;
+        let mut header = [0; 20];
+        if file.read_exact(&mut header[..4]).is_err() {
+            bail!("AppImage {} has an incomplete ELF header", asset_name);
+        }
+        if header[..4] != *b"\x7fELF" {
             bail!(
                 "AppImage {} is not an ELF executable for this architecture",
                 asset_name
             );
         }
+        if file.read_exact(&mut header[4..]).is_err() {
+            bail!("AppImage {} has an incomplete ELF header", asset_name);
+        }
+        if header[8..11] != *b"AI\x02" {
+            bail!("AppImage {} is not a supported Type 2 AppImage", asset_name);
+        }
+    }
+    let is_executable = is_exec_for_current_arch(downloaded_file)?;
+    if appimage && !is_executable {
+        bail!(
+            "AppImage {} is not an ELF executable for this architecture",
+            asset_name
+        );
     }
     if is_executable {
         debug!("Downloaded file {} is an executable binary.", asset_name);
@@ -444,6 +459,11 @@ fn install_binary(
         return Ok(());
     }
 
+    // The installed file must be runnable even when a bin-directory conflict
+    // prevents creating its command symlink.
+    #[cfg(not(target_os = "windows"))]
+    filesys::make_executable(&installed_exec);
+
     let bin_dir: PathBuf = datadirs::get_bin_dir().context("Cannot determine bin directory")?;
     let symlink_path = bin_dir.join(exec_name);
 
@@ -478,15 +498,8 @@ fn install_binary(
         return Ok(());
     }
 
-    // make them executable
-    // Set executable permissions, platform-specific
-    // Note: Windows does not require setting executable permissions
-    // TODO: below we have the same issue as in line 166, Result that should
-    // be handled. we use the same workaround to ignore the warning
     #[cfg(not(target_os = "windows"))]
     {
-        // Make the file executable on Unix-like systems
-        filesys::make_executable(&installed_exec);
         // Make the new version the default command. Replace an existing symlink only
         // when its resolved target belongs to this repository; preserve foreign entries.
         let data_dir = datadirs::get_data_dir().context("Cannot determine data directory")?;
