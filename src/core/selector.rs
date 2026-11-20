@@ -232,6 +232,19 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
     let found_arch: bool = matching_arch.is_some();
 
     // ADDITIONAL CHECKS
+    // A named architecture from another target is incompatible unless the asset also
+    // names this target's architecture (for example, a multi-architecture asset).
+    if !found_arch
+        && CPU_ARCH.iter().any(|(arch, aliases)| {
+            *arch != current_arch
+                && aliases
+                    .iter()
+                    .any(|alias| contains_alias_token(&item, alias))
+        })
+    {
+        return -1;
+    }
+
     // fix to avoid mismatch between the asset and the target architecture
     // due to 'x86' being a substring of 'x86_64'.
     if (item.contains("x86_64") || item.contains("x86-64")) && current_arch == "x86" {
@@ -253,7 +266,10 @@ fn get_triple_score(input: &str, t: &AssetTriple) -> i32 {
         if !(found_os || found_arch) {
             return -1;
         }
-        score += 2;
+        // balance the bonus for bare executables with platform labels
+        // preferring them to archive files with extensions in final score comparison.
+        // we give +6 here, and archive files with supported extensions get +5.
+        score += 6;
     } else if found_arch && item.ends_with(matching_arch.as_ref().unwrap()) {
         // if the executable name ends with the matching architecture, we give it a lower bonus point.
         // this is likely a binary that is released as an executable without an archive.
