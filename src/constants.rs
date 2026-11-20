@@ -29,9 +29,9 @@ pub const GITHUB_SUBDIR: &str = "github.com";
 ///
 /// Multi-part extensions (e.g. `.tar.gz`) **must** appear before their single-part
 /// counterparts (e.g. `.gz`) so that the longest match wins during extension stripping.
-pub const SUPPORTED_EXTENSIONS: [&str; 15] = [
+pub const SUPPORTED_EXTENSIONS: [&str; 16] = [
     ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz", ".tbz2", ".zip", ".tar", ".gz",
-    ".xz", ".bz2", ".tar.zst", ".tzst", ".zst",
+    ".xz", ".bz2", ".tar.zst", ".tzst", ".zst", ".7z",
 ];
 
 /// Sentinel string returned when a value cannot be determined at runtime.

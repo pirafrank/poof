@@ -5,6 +5,17 @@ mod tests {
     use crate::models::asset_triple::AssetTriple;
 
     #[test]
+    fn test_linux_x86_64_7z_archive() {
+        let assets = ["tool-linux-x86_64.7z", "tool-windows-x86_64.7z"];
+        let platform = AssetTriple::new("linux".into(), "x86_64".into(), false);
+
+        assert_eq!(
+            get_triple_compatible_assets(&assets, &platform, |asset| asset),
+            Some(vec!["tool-linux-x86_64.7z"])
+        );
+    }
+
+    #[test]
     fn test_linux_x86_64_glibc() {
         let assets: Vec<String> =
             ron::from_str(include_str!("assets/jesseduffield@lazygit.ron")).unwrap();

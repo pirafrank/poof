@@ -127,10 +127,9 @@ fn test_strip_unsupported_extension() {
 }
 
 #[test]
-fn test_strip_unsupported_extension_7z() {
+fn test_strip_supported_extension_7z() {
     let path = PathBuf::from("archive.7z");
     let result = strip_supported_extensions(&path);
-    // Should fall back to file_stem which removes .7z
     assert_eq!(result, "archive");
 }
 
