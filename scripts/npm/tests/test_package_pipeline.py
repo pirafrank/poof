@@ -687,6 +687,31 @@ class StageAllTests(unittest.TestCase):
             self.assertEqual(call["argv"][:2], ["npm", "pack"])
             self.assertIn("--json", call["argv"])
 
+    def test_separate_release_tree_supplies_package_contents(self):
+        import shutil
+        source = self.tmp / "release-source"
+        shutil.copytree(NPM_DIR, source / "npm")
+        shutil.copyfile(REPO_ROOT / "matrix.jsonc", source / "matrix.jsonc")
+        launcher = b"// tagged launcher\n"
+        (source / "npm/bin/poof.js").write_bytes(launcher)
+        (source / "npm/README.md").write_text("Tagged readme\n")
+        template = common.read_json(source / "npm/package.json.template")
+        template["description"] = "Tagged description"
+        common.write_json(source / "npm/package.json.template", template)
+        matrix = common.load_matrix(source / "matrix.jsonc")
+        for entry in matrix["include"]:
+            entry["os"] = "tagged-runner"
+        common.write_json(source / "matrix.jsonc", matrix)
+        (source / "LICENSE.md").write_text("Tagged license\n")
+        report = sp.stage_all(self.evidence, self.downloads, self.out, source / "npm",
+                              source / "LICENSE.md", self.runner)
+        base = self.out / "packages/poof"
+        self.assertEqual((base / "bin/poof.js").read_bytes(), launcher)
+        self.assertEqual((base / "README.md").read_text(), "Tagged readme\n")
+        self.assertEqual((base / "LICENSE.md").read_text(), "Tagged license\n")
+        self.assertEqual(common.read_json(base / "package.json")["description"], "Tagged description")
+        self.assertTrue(all(p["runner"] == "tagged-runner" for p in report["platforms"]))
+
     def test_both_pack_json_shapes_are_exercised(self):
         self.stage()
         self.runner.shape = "array"

@@ -314,9 +314,9 @@ def enrich_with_registry(manifest: dict, records: dict[str, dict]) -> dict:
     """Attach post-publish registry facts, asserting they match the staged bytes.
 
     ``records`` maps package name to the registry observation produced by
-    ``verify_registry.py``. A mismatch between the published integrity and the
-    staged tarball integrity is a hard failure: it would mean the registry holds
-    bytes that were never verified.
+    ``observations`` field in the ``verify_registry.py`` report. A mismatch
+    between the published integrity and the staged tarball integrity is a hard
+    failure: it would mean the registry holds bytes that were never verified.
     """
     enriched = copy.deepcopy(manifest)
     seen = set()
@@ -367,7 +367,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--staging", type=Path, required=True, help="stage_packages.py report")
     parser.add_argument("--out", type=Path, required=True, help="manifest output path")
     parser.add_argument(
-        "--registry-json", type=Path, help="verify_registry.py observations to attach"
+        "--registry-json", type=Path, help="verify_registry.py reconciliation report to attach"
     )
     parser.add_argument("--generated-at", help="override timestamp (reproducibility/testing)")
     args = parser.parse_args(argv)
@@ -382,7 +382,8 @@ def main(argv: list[str] | None = None) -> int:
             generated_at=args.generated_at,
         )
         if args.registry_json:
-            manifest = enrich_with_registry(manifest, common.read_json(args.registry_json))
+            report = common.read_json(args.registry_json)
+            manifest = enrich_with_registry(manifest, report["observations"])
     except (NpmPackagingError, OSError, KeyError, json.JSONDecodeError) as error:
         print(f"release_manifest: {common.redact(str(error))}", file=sys.stderr)
         return 1

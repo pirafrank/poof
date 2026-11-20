@@ -184,7 +184,7 @@ class MatrixTests(unittest.TestCase):
         self.assertNotIn("registry-url", workflow)
         self.assertEqual(workflow.count("id-token: write"), 2)
         self.assertEqual(workflow.count("environment: publish-npm"), 2)
-        self.assertEqual(workflow.count("npm publish \"$TARBALL\" --provenance"), 2)
+        self.assertEqual(workflow.count('npm stage publish "staging/tarballs/$filename"'), 2)
 
     def test_matrix_carries_no_npm_specific_entries(self):
         matrix = common.load_matrix(MATRIX_PATH)
