@@ -10,7 +10,9 @@ from pathlib import Path
 
 from _support import REPO_ROOT, common, synthetic_evidence, synthetic_staging
 from npm import release_manifest as rm
+from npm import verify_registry as vr
 from npm.common import NpmPackagingError
+from test_verify_registry import FakeRegistry, observed_for
 
 GENERATED_AT = "2026-11-09T00:00:00+00:00"
 
@@ -354,10 +356,42 @@ class CliTests(unittest.TestCase):
 
     def test_enriches_from_registry_json(self):
         records = self.dir / "registry.json"
-        common.write_json(records, registry_records(build()))
-        self.assertEqual(rm.main(self.argv("--registry-json", str(records))), 0)
-        manifest = common.read_json(self.out)
-        self.assertEqual(manifest["publish"]["status"], "published")
+        for version in ("0.6.3", "0.6.4-rc.3"):
+            with self.subTest(version=version):
+                staging = synthetic_staging(version)
+                common.write_json(self.evidence, synthetic_evidence(version))
+                common.write_json(self.staging, staging)
+                versions = {
+                    f"{entry['package_name']}@{version}": observed_for(entry, "platform")
+                    for entry in staging["platforms"]
+                }
+                versions[f"{common.BASE_PACKAGE}@{version}"] = observed_for(
+                    staging["base"], "launcher"
+                )
+                fake = FakeRegistry(versions=versions)
+                report = vr.reconcile(fake.client(), staging, require_published=True)
+                common.write_json(records, report)
+                self.assertEqual(rm.main(self.argv("--registry-json", str(records))), 0)
+                manifest = common.read_json(self.out)
+                self.assertEqual(manifest["publish"]["status"], "published")
+                for package in manifest["packages"]:
+                    observation = report["observations"][package["name"]]
+                    self.assertEqual(package["registry"]["integrity"], observation["integrity"])
+                    self.assertEqual(package["registry"]["tarball"], observation["tarball"])
+                    self.assertEqual(package["registry"]["observed_at"], observation["observed_at"])
+
+    def test_registry_report_with_missing_or_mismatched_observation_fails(self):
+        for problem in ("missing", "integrity"):
+            with self.subTest(problem=problem):
+                observations = registry_records(build())
+                if problem == "missing":
+                    del observations[common.BASE_PACKAGE]
+                else:
+                    observations[common.BASE_PACKAGE]["integrity"] = "sha512-wrong"
+                records = self.dir / "registry.json"
+                common.write_json(records, {"observations": observations})
+                self.assertEqual(rm.main(self.argv("--registry-json", str(records))), 1)
+                self.assertFalse(self.out.exists())
 
     def test_fails_on_missing_input(self):
         self.evidence.unlink()
