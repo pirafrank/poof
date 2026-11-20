@@ -16,6 +16,42 @@ mod tests {
     }
 
     #[test]
+    fn test_appimage_is_linux_fallback_with_explicit_architecture() {
+        let appimage = "tool-x86_64.AppImage";
+        let linux = AssetTriple::new("linux".into(), "x86_64".into(), false);
+        assert_eq!(
+            get_triple_compatible_assets(&[appimage], &linux, |asset| asset),
+            Some(vec![appimage])
+        );
+        assert_eq!(
+            get_triple_compatible_assets(&[appimage, "tool-linux.zip"], &linux, |asset| asset),
+            Some(vec!["tool-linux.zip"])
+        );
+        assert_eq!(
+            get_triple_compatible_assets(&[appimage, "tool-linux"], &linux, |asset| asset),
+            Some(vec!["tool-linux"])
+        );
+
+        let arm64 = AssetTriple::new("linux".into(), "aarch64".into(), false);
+        assert_eq!(
+            get_triple_compatible_assets(&["tool-aarch64.appimage"], &arm64, |asset| asset),
+            Some(vec!["tool-aarch64.appimage"])
+        );
+        let macos = AssetTriple::new("macos".into(), "x86_64".into(), false);
+        let armv7 = AssetTriple::new("linux".into(), "arm".into(), false);
+        for platform in [&macos, &armv7] {
+            assert_eq!(
+                get_triple_compatible_assets(&[appimage], platform, |asset| asset),
+                None
+            );
+        }
+        assert_eq!(
+            get_triple_compatible_assets(&["tool.AppImage"], &linux, |asset| asset),
+            None
+        );
+    }
+
+    #[test]
     fn test_linux_x86_64_glibc() {
         let assets: Vec<String> =
             ron::from_str(include_str!("assets/jesseduffield@lazygit.ron")).unwrap();

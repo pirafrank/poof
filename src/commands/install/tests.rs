@@ -863,6 +863,29 @@ mod process_install_tests {
     use super::*;
 
     #[test]
+    fn test_process_install_rejects_non_executable_appimage() -> Result<()> {
+        let env = TestEnv::new()?;
+        let download_to = env.create_dir("download")?;
+        let install_dir = env.create_dir("install")?;
+        let downloaded_file = download_to.join("tool-x86_64.AppImage");
+        fs::write(&downloaded_file, b"not an executable")?;
+
+        let error = process_install(
+            &TestEnv::test_slug(),
+            "1.0.0",
+            &downloaded_file,
+            &download_to,
+            &install_dir,
+            &"tool-x86_64.AppImage".to_string(),
+        )
+        .unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("not an executable for this architecture"));
+        Ok(())
+    }
+
+    #[test]
     fn test_process_install_executable_path() -> Result<()> {
         let env = TestEnv::new()?;
         let downloaded_file = env.home_dir.join("downloaded/mybin-linux-x86_64");
@@ -1485,6 +1508,56 @@ mod install_binaries_tests {
 #[cfg(test)]
 mod select_assets_success_tests {
     use super::*;
+
+    #[cfg(all(
+        target_os = "linux",
+        any(target_arch = "x86_64", target_arch = "aarch64")
+    ))]
+    #[test]
+    fn test_appimage_fuse_check_precedes_download_and_install_directory() -> Result<()> {
+        use mockito::Server;
+        use serde_json::json;
+
+        let mut server = Server::new();
+        let env = TestEnv::new()?;
+        let data_home = env.home_dir.join("data");
+        let asset_name = format!("tool-{}.AppImage", std::env::consts::ARCH);
+        let release = server
+            .mock("GET", "/testuser/testrepo/releases/latest")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                json!({
+                    "tag_name": "v1.0.0",
+                    "published_at": "2024-01-01T00:00:00Z",
+                    "assets": [{
+                        "name": asset_name,
+                        "browser_download_url": format!("{}/asset", server.url()),
+                        "content_type": "application/octet-stream"
+                    }]
+                })
+                .to_string(),
+            )
+            .create();
+
+        let error = temp_env::with_vars(
+            [
+                ("POOF_GITHUB_API_URL", Some(server.url().as_str())),
+                ("HOME", Some(env.home_dir.to_str().unwrap())),
+                ("XDG_DATA_HOME", Some(data_home.to_str().unwrap())),
+            ],
+            || {
+                install_with_fuse_check("testuser/testrepo", None, || {
+                    anyhow::bail!("FUSE unavailable")
+                })
+            },
+        )
+        .unwrap_err();
+        release.assert();
+        assert!(error.to_string().contains("FUSE unavailable"));
+        assert!(!data_home.exists());
+        Ok(())
+    }
 
     #[test]
     fn test_select_assets_success_with_mock() -> Result<()> {

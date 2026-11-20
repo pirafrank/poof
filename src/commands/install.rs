@@ -2,6 +2,7 @@
 
 use std::{
     ffi::OsString,
+    fs::OpenOptions,
     path::{Path, PathBuf},
 };
 
@@ -12,7 +13,7 @@ use which::which;
 
 use crate::{
     commands::{self, download::download_asset},
-    core::selector::platforms_strings,
+    core::selector::{is_appimage, platforms_strings},
     files::{
         archives, datadirs, filesys,
         magic::is_exec_for_current_arch,
@@ -36,12 +37,25 @@ use log::{debug, info, warn};
 /// PATH check. On Unix-like platforms a symlink is also created in the bin
 /// directory so the binary is available in `PATH`.
 pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
+    install_with_fuse_check(repo, tag, ensure_appimage_fuse)
+}
+
+/// Install a release using the supplied AppImage FUSE capability check.
+fn install_with_fuse_check(
+    repo: &str,
+    tag: Option<&str>,
+    check_fuse: impl FnOnce() -> Result<()>,
+) -> Result<()> {
     Slug::validate(repo)?;
     let (release, mut assets) = select_assets(repo, tag)?;
     // Stable asset order determines which binary is kept if normalized names collide.
     assets.sort_by(|left, right| left.name().cmp(right.name()));
     let version: String = release.tag_name().strip_v();
     validate_version(&version).context("Release tag is not a safe version path component")?;
+
+    if assets.iter().any(|asset| is_appimage(asset.name())) {
+        check_fuse()?;
+    }
 
     let install_dir = get_install_dir(repo, &version)?;
     if check_if_installed(&install_dir)? {
@@ -100,6 +114,21 @@ pub fn install(repo: &str, tag: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Check the host capabilities needed by the AppImage runtime before installation.
+fn ensure_appimage_fuse() -> Result<()> {
+    let device_accessible = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/fuse")
+        .is_ok();
+    let helper_available = which("fusermount").is_ok() || which("fusermount3").is_ok();
+    anyhow::ensure!(
+        device_accessible && helper_available,
+        "AppImage installation requires accessible /dev/fuse and fusermount or fusermount3"
+    );
+    Ok(())
+}
+
 /// Installs a single downloaded asset: extracts archives or copies bare executables into `install_dir`.
 fn process_install(
     slug: &Slug,
@@ -111,7 +140,14 @@ fn process_install(
 ) -> Result<()> {
     // check if downloaded binary is an archive or an executable
     // and proceed accordingly.
-    if is_exec_for_current_arch(downloaded_file)? {
+    let is_executable = is_exec_for_current_arch(downloaded_file)?;
+    if is_appimage(asset_name) && !is_executable {
+        bail!(
+            "AppImage {} is not an executable for this architecture",
+            asset_name
+        );
+    }
+    if is_executable {
         debug!("Downloaded file {} is an executable binary.", asset_name);
         let file_name = &downloaded_file
             .file_name()
