@@ -1,17 +1,15 @@
 name: Release to npm
 run-name: Release ${{ inputs.tag }} to npm
 
-# Packages and publishes the five poof npm packages from an already-published,
+# Packages and stages the five poof npm packages from an already-published,
 # signed GitHub release. Never rebuilds Rust and never touches release assets.
-# The platform matrix below is intentionally static: it mirrors the four
-# npm-annotated entries with specificities of npm pipelines without reliance
-# requiring custom entries in matrix.jsonc.
+# Scripts come from one main snapshot; package contents come from the signed release.
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to package and publish (e.g. v0.6.3)
+        description: Release tag to package and stage (e.g. v0.6.3)
         required: true
         type: string
 
@@ -31,13 +29,25 @@ jobs:
       contents: read
       attestations: read
     name: Verify release
+    outputs:
+      infrastructure_sha: ${{ steps.revisions.outputs.infrastructure_sha }}
+      source_sha: ${{ steps.revisions.outputs.source_sha }}
     runs-on: ubuntu-24.04
     steps:
-      - name: Clone repo at tag
+      - name: Clone packaging infrastructure
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ env.TAG }}
+          ref: refs/heads/main
+          path: infrastructure
+          persist-credentials: false
           fetch-depth: 1
+
+      - name: Clone release sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          path: release-source
+          persist-credentials: false
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
@@ -48,8 +58,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 scripts/npm/verify_release.py \
-            --tag "$TAG" --downloads downloads --evidence evidence.json
+          python3 infrastructure/scripts/npm/verify_release.py \
+            --tag "$TAG" --matrix release-source/matrix.jsonc \
+            --downloads downloads --evidence evidence.json
+
+      - name: Record and validate revisions
+        id: revisions
+        run: |
+          infrastructure_sha=$(git -C infrastructure rev-parse HEAD)
+          source_sha=$(git -C release-source rev-parse HEAD)
+          test "$source_sha" = "$(jq -r .commit evidence.json)"
+          echo "infrastructure_sha=$infrastructure_sha" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
+          jq -n --arg infrastructure_sha "$infrastructure_sha" --arg source_sha "$source_sha" \
+            --arg run_id "$GITHUB_RUN_ID" --arg tag "$TAG" \
+            '{infrastructure_sha:$infrastructure_sha,source_sha:$source_sha,run_id:$run_id,tag:$tag}' > revisions.json
 
       - name: Upload verification evidence
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -58,8 +81,9 @@ jobs:
           path: |
             downloads
             evidence.json
+            revisions.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 30
           compression-level: 0  # no compression
 
   stage_packages:
@@ -69,26 +93,39 @@ jobs:
     needs: verify_release
     runs-on: ubuntu-24.04
     steps:
-      - name: Clone repo at tag
+      - name: Clone packaging infrastructure
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.verify_release.outputs.infrastructure_sha }}
+          path: infrastructure
+          persist-credentials: false
           fetch-depth: 1
 
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 24
+          node-version: '24'
 
       - name: Download verification evidence
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: npm-verification
 
+      - name: Clone verified release sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.verify_release.outputs.source_sha }}
+          path: release-source
+          persist-credentials: false
+
+      - name: Pin npm
+        run: npm install --global npm@11.21.3
+
       - name: Stage and pack the five packages
         run: |
-          python3 scripts/npm/stage_packages.py \
+          python3 infrastructure/scripts/npm/stage_packages.py \
             --evidence evidence.json --downloads downloads \
+            --npm-dir release-source/npm --license release-source/LICENSE.md \
             --out staging --report staging/report.json
 
       - name: Upload staged tarballs
@@ -99,29 +136,31 @@ jobs:
             staging/tarballs
             staging/report.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 30
           compression-level: 0  # no compression
 
   reconcile_registry:
     permissions:
       contents: read
     name: Reconcile registry
-    needs: stage_packages
+    needs: [verify_release, stage_packages]
     runs-on: ubuntu-24.04
     outputs:
       decisions: ${{ steps.reconcile.outputs.decisions }}
       dist_tag: ${{ steps.reconcile.outputs.dist_tag }}
     steps:
-      - name: Clone repo at tag
+      - name: Clone packaging infrastructure
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.verify_release.outputs.infrastructure_sha }}
+          path: infrastructure
+          persist-credentials: false
           fetch-depth: 1
 
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 24
+          node-version: '24'
 
       - name: Download staged tarballs
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
@@ -132,7 +171,7 @@ jobs:
       - name: Reconcile registry against staged bytes
         id: reconcile
         run: |
-          python3 scripts/npm/verify_registry.py \
+          python3 infrastructure/scripts/npm/verify_registry.py \
             --staging staging/report.json --out reconciliation.json
           echo "decisions=$(jq -c '.decisions' reconciliation.json)" >> "$GITHUB_OUTPUT"
           echo "dist_tag=$(jq -r '.dist_tag' reconciliation.json)" >> "$GITHUB_OUTPUT"
@@ -143,7 +182,7 @@ jobs:
           name: npm-reconciliation
           path: reconciliation.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 30
           compression-level: 0  # no compression
 
   publish_platform:
@@ -189,32 +228,28 @@ jobs:
           name: npm-staging
           path: staging
 
-      - name: Resolve publication decision
-        id: decision
-        env:
-          DECISIONS: ${{ needs.reconcile_registry.outputs.decisions }}
-          PACKAGE: ${{ matrix.npm.name }}
-        run: |
-          action=$(printf '%s' "$DECISIONS" | jq -r --arg name "$PACKAGE" '.[$name].action')
-          case "$action" in
-            publish|skip) ;;
-            *) echo "Unexpected registry decision for $PACKAGE: $action" >&2; exit 1 ;;
-          esac
-          filename=$(jq -r --arg name "$PACKAGE" \
-            '.platforms[] | select(.package_name == $name) | .tarball.filename' staging/report.json)
-          if [ -z "$filename" ] || [ ! -f "staging/tarballs/$filename" ]; then
-            echo "Missing staged tarball for $PACKAGE" >&2
-            exit 1
-          fi
-          echo "action=$action" >> "$GITHUB_OUTPUT"
-          echo "tarball=staging/tarballs/$filename" >> "$GITHUB_OUTPUT"
+      - name: Pin npm
+        run: npm install --global npm@11.21.3
 
-      - name: Publish platform package with provenance
-        if: steps.decision.outputs.action == 'publish'
+      - name: Submit package for approval
         env:
-          TARBALL: ${{ steps.decision.outputs.tarball }}
+          PACKAGE: ${{ matrix.npm.name }}
+          DECISIONS: ${{ needs.reconcile_registry.outputs.decisions }}
           DIST_TAG: ${{ needs.reconcile_registry.outputs.dist_tag }}
-        run: npm publish "$TARBALL" --provenance --access public --tag "$DIST_TAG"
+        run: |
+          action=$(printf '%s' "$DECISIONS" | jq -er --arg name "$PACKAGE" '.[$name].action')
+          case "$action" in
+            skip) echo "$PACKAGE is already published with matching bytes"; exit 0 ;;
+            publish) ;;
+            *) echo "Unexpected registry decision: $action" >&2; exit 1 ;;
+          esac
+          filename=$(jq -er --arg name "$PACKAGE" \
+            '(.platforms + [.base])[] | select(.package_name == $name) | .tarball.filename' staging/report.json)
+          [[ "$filename" != */* && "$filename" != .* ]]
+          test -f "staging/tarballs/$filename"
+          npm stage publish "staging/tarballs/$filename" \
+            --provenance --access public --tag "$DIST_TAG" --registry https://registry.npmjs.org
+
 
   publish_launcher:
     environment: publish-npm
@@ -237,27 +272,31 @@ jobs:
           name: npm-staging
           path: staging
 
-      - name: Resolve publication decision
-        id: decision
-        env:
-          DECISIONS: ${{ needs.reconcile_registry.outputs.decisions }}
-        run: |
-          action=$(printf '%s' "$DECISIONS" | jq -r '.["@pirafrank/poof"].action')
-          case "$action" in
-            publish|skip) ;;
-            *) echo "Unexpected registry decision for @pirafrank/poof: $action" >&2; exit 1 ;;
-          esac
-          filename=$(jq -r '.base.tarball.filename' staging/report.json)
-          if [ -z "$filename" ] || [ ! -f "staging/tarballs/$filename" ]; then
-            echo "Missing staged launcher tarball" >&2
-            exit 1
-          fi
-          echo "action=$action" >> "$GITHUB_OUTPUT"
-          echo "tarball=staging/tarballs/$filename" >> "$GITHUB_OUTPUT"
+      - name: Pin npm
+        run: npm install --global npm@11.21.3
 
-      - name: Publish launcher package with provenance
-        if: steps.decision.outputs.action == 'publish'
+      - name: Submit package for approval
         env:
-          TARBALL: ${{ steps.decision.outputs.tarball }}
+          PACKAGE: '@pirafrank/poof'
+          DECISIONS: ${{ needs.reconcile_registry.outputs.decisions }}
           DIST_TAG: ${{ needs.reconcile_registry.outputs.dist_tag }}
-        run: npm publish "$TARBALL" --provenance --access public --tag "$DIST_TAG"
+        run: |
+          action=$(printf '%s' "$DECISIONS" | jq -er --arg name "$PACKAGE" '.[$name].action')
+          case "$action" in
+            skip) echo "$PACKAGE is already published with matching bytes"; exit 0 ;;
+            publish) ;;
+            *) echo "Unexpected registry decision: $action" >&2; exit 1 ;;
+          esac
+          filename=$(jq -er --arg name "$PACKAGE" \
+            '(.platforms + [.base])[] | select(.package_name == $name) | .tarball.filename' staging/report.json)
+          [[ "$filename" != */* && "$filename" != .* ]]
+          test -f "staging/tarballs/$filename"
+          npm stage publish "staging/tarballs/$filename" \
+            --provenance --access public --tag "$DIST_TAG" --registry https://registry.npmjs.org
+
+
+      - name: Approval instructions
+        run: |
+          echo "Staging run ID: $GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Approve all four platform packages before the launcher on npmjs.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Then run npm_verify.yml with this staging run ID.' >> "$GITHUB_STEP_SUMMARY"
