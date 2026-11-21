@@ -2,18 +2,22 @@
 
 All notable changes to the project will be documented in this file.
 
-## [0.6.4-rc.3] - 2026-11-18
+Documentation available at [poof.fpira.com](https://poof.fpira.com).
+
+## [0.6.4] - 2026-11-21
 
 ### 🚀 Features
 
 - *(action)* Improved version pinning and reuse (#251)
 - Improve and generalize asset normalization and fix regressions in certain cases (#252)
 - Npm pipeline (#256)
+- Poof skill (install via npx skills) (#258)
 
 ### 🐛 Bug Fixes
 
 - *(build)* Include install.sh in the Docker build context
 - *(ci)* Avoid rate limit in CI Action pipeline
+- Include zstd among Nix system packages (#259)
 
 ### 🔧 Setup & Quality
 
@@ -28,6 +32,7 @@ All notable changes to the project will be documented in this file.
 - Rust 1.100.0 as toolchain (#257)
 - Better pipeline naming on GitHub
 - *(setup)* Ignore pre-release tags in changelog generation
+- *(ci)* Enhance npm publishing with dry-run option and registry fixes (#260)
 
 ## [0.6.3] - 2026-11-08
 
