@@ -175,7 +175,13 @@ fn process_install(
         // Remove platform and version labels from bare executable names for use in PATH.
         // Keep meaningful suffixes: "cosign-linux-pivkey-pkcs11key-amd64" becomes
         // "cosign-pivkey-pkcs11key", rather than shortening every variant to "cosign".
-        let exec_name = normalized_asset_name(&file_name.to_string_lossy(), version);
+        let file_name = file_name.to_string_lossy();
+        let exec_name = if appimage {
+            // The suffix is case-insensitive; preserve meaningful dots in the command name.
+            normalized_exec_name(&file_name[..file_name.len() - ".appimage".len()], version)
+        } else {
+            normalized_asset_name(&file_name, version)
+        };
         install_binary(
             slug,
             downloaded_file,

@@ -897,27 +897,36 @@ mod process_install_tests {
     ))]
     #[test]
     fn test_process_install_appimage_uses_command_name_without_suffix() -> Result<()> {
-        let env = TestEnv::new()?;
-        let download_to = env.create_dir("download")?;
-        let install_dir = env.create_dir("install")?;
-        let asset_name = format!("tool-{}.AppImage", std::env::consts::ARCH);
-        let downloaded_file = download_to.join(&asset_name);
-        env.create_platform_executable(&downloaded_file)?;
-        let mut contents = fs::read(&downloaded_file)?;
-        contents[8..11].copy_from_slice(b"AI\x02");
-        fs::write(&downloaded_file, contents)?;
+        for (name, suffix) in [
+            ("tool", "AppImage"),
+            ("tool", "appimage"),
+            ("tool", "APPIMAGE"),
+            ("tool.helper", "AppImage"),
+        ] {
+            let env = TestEnv::new()?;
+            let download_to = env.create_dir("download")?;
+            let install_dir = env.create_dir("install")?;
+            let asset_name = format!("{name}-{}.{suffix}", std::env::consts::ARCH);
+            let downloaded_file = download_to.join(&asset_name);
+            env.create_platform_executable(&downloaded_file)?;
+            let mut contents = fs::read(&downloaded_file)?;
+            contents[8..11].copy_from_slice(b"AI\x02");
+            fs::write(&downloaded_file, contents)?;
 
-        env.with_test_env(|| {
-            process_install(
-                &TestEnv::test_slug(),
-                "1.0.0",
-                &downloaded_file,
-                &download_to,
-                &install_dir,
-                &asset_name,
-            )
-        })?;
-        assert!(install_dir.join("tool").exists());
+            env.with_test_env(|| {
+                process_install(
+                    &TestEnv::test_slug(),
+                    "1.0.0",
+                    &downloaded_file,
+                    &download_to,
+                    &install_dir,
+                    &asset_name,
+                )
+            })?;
+            assert!(install_dir.join(name).exists(), "{asset_name}");
+            assert!(!install_dir.join(&asset_name).exists());
+            assert_eq!(fs::read_dir(&install_dir)?.count(), 1);
+        }
         Ok(())
     }
 
