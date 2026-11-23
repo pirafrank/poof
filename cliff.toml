@@ -99,4 +99,4 @@ topo_order = false
 # sort the commits inside sections by oldest/newest order
 sort_commits = "oldest"
 # Ignores pre-release tag boundaries and rolls their commits into the next stable tag
-ignore_tags = "-(alpha|beta|rc)"
+ignore_tags = "-(pre|alpha|beta|rc)"
