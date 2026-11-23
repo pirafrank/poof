@@ -3,7 +3,7 @@
 //! Sets compile-time environment variables: git commit hash, build date,
 //! C library name/version, and linking mode (static vs dynamic).
 
-use chrono::Utc;
+use jiff::Timestamp;
 use std::{env, process::Command};
 
 #[macro_use]
@@ -84,9 +84,10 @@ fn main() {
 
     // BUILD_DATE: use the env var when set (e.g. injected by the Nix flake for
     // reproducibility).  Falls back to the current UTC time for normal cargo builds.
-    let build_date = env::var("BUILD_DATE").unwrap_or_else(|_| {
-        let now = Utc::now();
-        now.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+    let build_date = std::env::var("BUILD_DATE").unwrap_or_else(|_| {
+        Timestamp::now()
+            .strftime("%Y-%m-%d %H:%M:%S UTC")
+            .to_string()
     });
 
     // Set the environment variables

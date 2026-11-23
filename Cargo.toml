@@ -63,5 +63,5 @@ ron = "0.12"
 
 [build-dependencies]
 build_cfg = "1.1.0"
-chrono = "0.4"
+jiff = { version = "0.2", default-features = false, features = ["std"] }
 glibc_version = "0.1.2"
