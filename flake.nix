@@ -38,7 +38,8 @@
 
           poof = pkgs.rustPlatform.buildRustPackage {
             pname = "poof";
-            version = "0.6.0";
+            # Single source of truth: read the version from Cargo.toml so it never drifts.
+            version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
 
             # Filter out build artifacts and editor noise so the source hash stays stable.
             src = pkgs.lib.cleanSource ./.;
